@@ -1,0 +1,31 @@
+# === CopyMyPage .gitignore ===
+# Keep this file at repo root. Adjust as needed.
+
+# System / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Dependencies (add when used)
+vendor/
+node_modules/
+
+# Build artifacts & archives
+dist/
+*.zip
+
+# Logs & temp
+*.log
+tmp/
+cache/
+
+# Local-only media & design drafts
+media_local/
+
+# Third-party extensions (local only, never commit)
+src/_vendor_extensions/
+pkg_copymypage/packages/*.zip
+
+# OS / editor misc
+*.swp
