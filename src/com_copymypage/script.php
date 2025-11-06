@@ -7,6 +7,8 @@
  * @since       0.0.1
  */
 
+\defined('_JEXEC') or die;
+
 use Joomla\CMS\Installer\InstallerAdapter;
 use Joomla\CMS\Installer\InstallerScriptInterface;
 use Joomla\CMS\Language\Text;
@@ -16,8 +18,6 @@ use Joomla\DI\ServiceProviderInterface;
 use Joomla\Filesystem\File;
 use Joomla\Filesystem\Folder;
 use Joomla\Filesystem\Path;
-
-\defined('_JEXEC') or die;
 
 /**
  * CopyMyPage Service Provider + Installer Script
