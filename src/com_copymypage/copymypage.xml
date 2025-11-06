@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" method="upgrade">
+	<name>com_copymypage</name>
+	<author>Marc Heinrich</author>
+	<creationDate>2025-11</creationDate>
+	<copyright>(C) 2025 Marc Heinrich</copyright>
+	<license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+	<authorEmail>heinrich-marc@gmx.de</authorEmail>
+	<authorUrl>https://copymypage.de</authorUrl>
+	<version>0.0.1</version>
+	<description>COM_COPYMYPAGE_XML_DESCRIPTION</description>
+  	<namespace path="src">Joomla\Component\CopyMyPage</namespace>
+
+	<!-- Installer script (Service Provider aware) -->
+	<scriptfile>script.php</scriptfile>
+
+	<!-- Site -->
+	<files folder="site">
+		<folder>forms</folder>
+		<folder>src</folder>
+		<folder>tmpl</folder>
+		<folder>language</folder>
+	</files>
+
+	<!-- Media assets -->
+	<media folder="media" destination="com_copymypage">
+		<folder>css</folder>
+		<folder>js</folder>
+		<folder>images</folder>
+		<filename>joomla.asset.json</filename>
+	</media>
+
+	<!-- Libraries files -->
+	<files folder="libraries">
+		<filename destination="libraries/src/WebAsset/AssetItem">CopyMyPageAssetItem.php</filename>
+	</files>
+
+	<!-- Admin -->
+	<administration>
+		<menu img="class:gears">com_copymypage</menu>
+		<files folder="admin">
+			<folder>src</folder>
+			<folder>services</folder>
+			<folder>tmpl</folder>
+      		<folder>language</folder>
+      		<filename>access.xml</filename>
+			<filename>config.xml</filename>
+		</files>		
+	</administration>
+
+</extension>

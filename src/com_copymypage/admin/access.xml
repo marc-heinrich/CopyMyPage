@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<access component="com_copymypage">
+  <section name="component">
+    <action name="core.admin"      title="JACTION_ADMIN"      description="JLIB_RULES_SETTING_ADMIN" />
+    <action name="core.manage"     title="JACTION_MANAGE"     description="JLIB_RULES_SETTING_ACCESS_COMPONENT" />
+    <action name="core.create"     title="JACTION_CREATE"     description="JLIB_RULES_SETTING_CREATE" />
+    <action name="core.delete"     title="JACTION_DELETE"     description="JLIB_RULES_SETTING_DELETE" />
+    <action name="core.edit"       title="JACTION_EDIT"       description="JLIB_RULES_SETTING_EDIT" />
+    <action name="core.edit.state" title="JACTION_EDITSTATE"  description="JLIB_RULES_SETTING_EDIT_STATE" />
+    <action name="core.edit.own"   title="JACTION_EDITOWN"    description="JLIB_RULES_SETTING_EDIT_OWN" />
+  </section>
+</access>

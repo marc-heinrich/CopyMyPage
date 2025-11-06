@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <!-- Eigener (leer) Platzhalter-Tab -->
+  <fieldset
+    name="component"
+    label="COM_COPYMYPAGE"
+    description="COM_COPYMYPAGE_XML_DESCRIPTION">
+    <field
+      name="placeholder_note"
+      type="note"
+      label="COM_COPYMYPAGE"
+      description="COM_COPYMYPAGE_XML_DESCRIPTION" />
+  </fieldset>
+
+  <!-- Standard-Reiter "Berechtigungen" -->
+  <fieldset
+    name="permissions"
+    label="JCONFIG_PERMISSIONS_LABEL"
+    description="JCONFIG_PERMISSIONS_DESC">
+    <field
+      name="rules"
+      type="rules"
+      label="JCONFIG_PERMISSIONS_LABEL"
+      filter="rules"
+      validate="rules"
+      component="com_copymypage"
+      section="component" />
+  </fieldset>
+</config>
