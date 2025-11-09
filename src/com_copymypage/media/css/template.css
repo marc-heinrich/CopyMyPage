@@ -1,0 +1,14 @@
+/**
+ * @package     Joomla.Site
+ * @subpackage  Templates.CopyMyPage
+ * @copyright   (C) 2025 Open Source Matters, Inc.
+ * @license     GNU General Public License version 3 or later
+ * @since       0.0.1
+ * @syntax		Joomla! Coding Standards - camelCase CSS Variables
+ * @see			https://developer.joomla.org/coding-standards/css.html
+**/
+
+:root {
+  --cmp-accent: #04cbd0; /* Türkis */
+  --cmp-dark:   #061225; /* Dunkles Blau/Anthrazit */
+}
