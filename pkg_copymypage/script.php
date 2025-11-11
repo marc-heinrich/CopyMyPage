@@ -22,6 +22,7 @@ use Joomla\CMS\Log\Log;
 use Joomla\CMS\Version;
 use Joomla\DI\Container;
 use Joomla\DI\ServiceProviderInterface;
+use Joomla\Filesystem\Folder;
 use Joomla\Filesystem\Helper;
 
 return new class () implements ServiceProviderInterface
@@ -100,6 +101,8 @@ return new class () implements ServiceProviderInterface
                  */
                 public function install(InstallerAdapter $adapter): bool
                 {
+                    // Create image folder structure on fresh install
+                    $this->createImageFolders($adapter);
                     return true;
                 }
 
@@ -201,6 +204,8 @@ return new class () implements ServiceProviderInterface
                  */
                 public function uninstall(InstallerAdapter $adapter): bool
                 {
+                    // Remove image folder tree on uninstall.
+                    $this->removeImageFolders($adapter);
                     return true;
                 }
 
@@ -365,6 +370,119 @@ return new class () implements ServiceProviderInterface
                     $manifest = $adapter->getManifest();
                     return isset($manifest->version) ? (string) $manifest->version : null;
                 }
+
+                /**
+                 * Create image folders under /images/{packageName}/{type}/{id}
+                 * based on <files><file type="…" id="…"/></files> in the package manifest.
+                 */
+                protected function createImageFolders(InstallerAdapter $adapter): void
+                {
+                    $manifest    = $adapter->getManifest();
+                    $rawName     = (string) ($manifest->packagename ?: preg_replace('/^pkg_/', '', (string) $manifest->name));
+                    $packageName = preg_replace('/[^a-z0-9._-]+/i', '', $rawName) ?: 'package';
+                    $basePath    = JPATH_ROOT . '/images/' . $packageName;
+
+                    // Guard: files section present?
+                    if (!isset($manifest->files) || !isset($manifest->files->file)) {
+                        return;
+                    }
+
+                    // Collect types and deduplicate IDs.
+                    $types = [];
+                    foreach ($manifest->files->file as $file) {
+                        $type = (string) ($file['type'] ?? '');
+                        $id   = (string) ($file['id'] ?? '');
+                        if ($type === '' || $id === '') {
+                            continue;
+                        }
+                        $types[$type][$id] = true;
+                    }
+
+                    foreach ($types as $type => $idsSet) {
+                        $typePath = $basePath . '/' . $type;
+
+                        if (!is_dir($typePath)) {
+                            try {
+                                if (Folder::create($typePath)) {
+                                    Factory::getApplication()->enqueueMessage(
+                                        Text::sprintf('PKG_COPYMYPAGE_MSG_MEDIA_FOLDER_CREATED', $typePath),
+                                        'message'
+                                    );
+                                } else {
+                                    Factory::getApplication()->enqueueMessage(
+                                        Text::sprintf('PKG_COPYMYPAGE_ERR_MEDIA_FOLDER_CREATE_FAILED', $typePath),
+                                        'warning'
+                                    );
+                                }
+                            } catch (\Throwable $e) {
+                                Factory::getApplication()->enqueueMessage(
+                                    Text::sprintf('PKG_COPYMYPAGE_ERR_MEDIA_FOLDER_EXCEPTION', $typePath, $e->getMessage()),
+                                    'error'
+                                );
+                            }
+                        }
+
+                        foreach (array_keys($idsSet) as $id) {
+                            $idPath = $typePath . '/' . $id;
+
+                            if (!is_dir($idPath)) {
+                                try {
+                                    if (Folder::create($idPath)) {
+                                        Factory::getApplication()->enqueueMessage(
+                                            Text::sprintf('PKG_COPYMYPAGE_MSG_MEDIA_FOLDER_CREATED', $idPath),
+                                            'message'
+                                        );
+                                    } else {
+                                        Factory::getApplication()->enqueueMessage(
+                                            Text::sprintf('PKG_COPYMYPAGE_ERR_MEDIA_FOLDER_CREATE_FAILED', $idPath),
+                                            'warning'
+                                        );
+                                    }
+                                } catch (\Throwable $e) {
+                                    Factory::getApplication()->enqueueMessage(
+                                        Text::sprintf('PKG_COPYMYPAGE_ERR_MEDIA_FOLDER_EXCEPTION', $idPath, $e->getMessage()),
+                                        'error'
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+
+                /**
+                 * Remove the entire image folder tree /images/{packageName}.
+                 */
+                protected function removeImageFolders(InstallerAdapter $adapter): void
+                {
+                    $manifest    = $adapter->getManifest();
+                    $rawName     = (string) ($manifest->packagename ?: preg_replace('/^pkg_/', '', (string) $manifest->name));
+                    $packageName = preg_replace('/[^a-z0-9._-]+/i', '', $rawName) ?: 'package';
+                    $basePath    = JPATH_ROOT . '/images/' . $packageName;
+
+                    if (!is_dir($basePath)) {
+                        return;
+                    }
+
+                    try {
+                        if (Folder::delete($basePath)) {
+                            Factory::getApplication()->enqueueMessage(
+                                Text::sprintf('PKG_COPYMYPAGE_MSG_MEDIA_FOLDER_REMOVED', $basePath),
+                                'message'
+                            );
+                        } else {
+                            Factory::getApplication()->enqueueMessage(
+                                Text::sprintf('PKG_COPYMYPAGE_ERR_MEDIA_FOLDER_REMOVE_FAILED', $basePath),
+                                'warning'
+                            );
+                        }
+                    } catch (\Throwable $e) {
+                        Factory::getApplication()->enqueueMessage(
+                            Text::sprintf('PKG_COPYMYPAGE_ERR_MEDIA_FOLDER_EXCEPTION', $basePath, $e->getMessage()),
+                            'error'
+                        );
+                    }
+                }
+
             }
         );
     }

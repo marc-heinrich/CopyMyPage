@@ -9,7 +9,7 @@
     <license>https://www.gnu.org/licenses/gpl-3.0.html GNU/GPL</license>
     <authorEmail>heinrich-marc@gmx.de</authorEmail>
     <authorUrl>https://copymypage.de</authorUrl>
-    <version>0.0.2</version>
+    <version>0.0.1</version>
 
     <!-- Short description via language constant -->
     <description>PKG_COPYMYPAGE_XML_DESCRIPTION</description>
