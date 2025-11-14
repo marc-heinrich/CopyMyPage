@@ -7,14 +7,16 @@
 	<license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
 	<authorEmail>heinrich-marc@gmx.de</authorEmail>
 	<authorUrl>https://copymypage.de</authorUrl>
-	<version>0.0.1</version>
-	<description>COM_COPYMYPAGE_XML_DESCRIPTION</description>
+	<version>0.0.1</version>	
   	<namespace path="src">Joomla\Component\CopyMyPage</namespace>
+
+	<!-- Short description via language constant -->
+	<description>COM_COPYMYPAGE_XML_DESCRIPTION</description>
 
 	<!-- Installer script (Service Provider aware) -->
 	<scriptfile>script.php</scriptfile>
 
-	<!-- Site -->
+	<!-- Site area -->
 	<files folder="site">
 		<folder>forms</folder>
 		<folder>src</folder>
@@ -35,7 +37,7 @@
 		<filename destination="libraries/src/WebAsset/AssetItem">CopyMyPageAssetItem.php</filename>
 	</files>
 
-	<!-- Admin -->
+	<!-- Admin area -->
 	<administration>
 		<menu img="class:gears">com_copymypage</menu>
 		<files folder="admin">

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="template" client="site">
+    <name>copymypage</name>
+    <author>Marc Heinrich</author>
+	<creationDate>2025-11</creationDate>
+	<copyright>(C) 2025 Marc Heinrich</copyright>
+	<license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+	<authorEmail>heinrich-marc@gmx.de</authorEmail>
+	<authorUrl>https://copymypage.de</authorUrl>
+	<version>0.0.1</version>
+
+    <!-- Short description via language constant -->
+    <description>TPL_COPYMYPAGE_XML_DESCRIPTION</description>
+    
+    <!-- Template files -->
+    <files>
+        <filename>component.php</filename>
+        <filename>error.php</filename>
+        <filename>index.php</filename>
+        <filename>offline.php</filename>
+        <folder>html</folder>
+    </files>
+
+    <!-- Template positions -->
+    <positions>
+        <position>navbar</position>
+        <position>mobilemenu</position>
+        <position>hero</position>
+        <position>gallery</position>
+        <position>team</position>
+        <position>counts</position>
+        <position>tickets</position>
+        <position>contact</position>
+        <position>footer</position>
+        <position>debug</position>
+        <!-- used directly in the error.php -->
+        <position>error</position>
+    </positions>
+
+    <!-- Language files -->
+    <languages>
+        <language tag="de-DE">language/de-DE/tpl_copymypage.ini</language>
+        <language tag="de-DE">language/de-DE/tpl_copymypage.sys.ini</language>
+
+        <language tag="en-GB">language/en-GB/tpl_copymypage.ini</language>
+        <language tag="en-GB">language/en-GB/tpl_copymypage.sys.ini</language>
+
+        <language tag="es-ES">language/es-ES/tpl_copymypage.ini</language>
+        <language tag="es-ES">language/es-ES/tpl_copymypage.sys.ini</language>
+
+        <language tag="fr-FR">language/fr-FR/tpl_copymypage.ini</language>
+        <language tag="fr-FR">language/fr-FR/tpl_copymypage.sys.ini</language>
+
+        <language tag="it-IT">language/it-IT/tpl_copymypage.ini</language>
+        <language tag="it-IT">language/it-IT/tpl_copymypage.sys.ini</language>
+    </languages>
+    
+</extension>
