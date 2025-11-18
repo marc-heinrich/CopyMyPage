@@ -1,14 +1,78 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc.
+ * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.1
- * @syntax		Joomla! Coding Standards - camelCase CSS Variables
- * @see			https://developer.joomla.org/coding-standards/css.html
-**/
+ * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
+ * @see         https://developer.joomla.org/coding-standards/css.html
+ */
 
 :root {
-  --cmp-accent: #04cbd0; /* Türkis */
-  --cmp-dark:   #061225; /* Dunkles Blau/Anthrazit */
+    --cmp-color-background-default: #fff;
+    --cmp-color-background-default-rgb: 255, 255, 255;
+
+    --cmp-color-text-default: #061225;
+    --cmp-color-text-default-rgb: 6, 18, 37;
+
+    --cmp-font-family-base: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+    /* Brand / Logo / Design colors */
+    --cmp-color-accent: #04cbd0;
+    --cmp-color-accent-strong: #00979c;
+    --cmp-color-accent-soft: #c4f4f5;
+
+    --cmp-color-logo-dark: #061225;
+    --cmp-color-logo-light: #fff;
+
+    --cmp-color-surface: #f5f7fb;
+    --cmp-color-border-muted: #d5dde8;
+}
+
+/* ==========================================================================
+   OFFLINE PAGE
+   ========================================================================== */
+
+.cmp-offline-page {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--cmp-color-background-default);
+    color: var(--cmp-color-text-default);
+    font-family: var(--cmp-font-family-base);
+}
+
+.cmp-offline-page-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.cmp-offline-page-logo-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 90vw;
+    max-height: 70vh;
+}
+
+.cmp-offline-page-logo {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+@media (min-width: 992px) {
+    .cmp-offline-page-logo-wrapper {
+        max-width: 600px;
+        max-height: 600px;
+    }
 }
