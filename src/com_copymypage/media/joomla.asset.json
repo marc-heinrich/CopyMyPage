@@ -21,7 +21,8 @@
       "type": "style",
       "uri": "com_copymypage/template.css",
       "dependencies": [
-        "uikit"
+        "uikit",
+        "bootstrap"
       ]
     },
     {
