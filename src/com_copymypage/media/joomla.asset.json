@@ -1,53 +1,62 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
-  "name": "copymypage",
-  "version": "0.0.1",
-  "description": "Asset definitions for CopyMyPage components.",
+  "name": "com_copymypage",
+  "version": "0.0.2",
+  "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "(C) 2025 Open Source Matters, Inc. <https://www.joomla.org>",
   "assets": [
+    {
+      "name": "copymypage.site",
+      "type": "preset",
+      "dependencies": [
+        "uikit#style",
+        "uikit#script",
+        "bootstrap#style",
+        "bootstrap#script",
+        "template#style"
+      ]
+    },
     {
       "name": "copymypage.site.offline",
       "type": "preset",
       "dependencies": [
-        "template#style",
-        "uikit#style",
-        "uikit#script",
-        "bootstrap#style",
-        "bootstrap#script"
+        "template#style"
       ]
     },
     {
       "name": "template",
       "type": "style",
-      "uri": "com_copymypage/template.css",
-      "dependencies": [
-        "uikit",
-        "bootstrap"
-      ]
+      "uri": "com_copymypage/template.css"
     },
     {
       "name": "uikit",
       "type": "style",
       "uri": "com_copymypage/uikit/uikit.css",
       "version": "3.24.2"
-    },  
+    },
     {
       "name": "uikit",
       "type": "script",
       "uri": "com_copymypage/uikit/uikit.js",
-      "version": "3.24.2"
+      "version": "3.24.2",
+      "attributes": {
+        "defer": true
+      }
     },
     {
       "name": "bootstrap",
       "type": "style",
       "uri": "com_copymypage/bootstrap/bootstrap.css",
-      "version": "5.3.x"
+      "version": "5.3.8"
     },
     {
       "name": "bootstrap",
       "type": "script",
       "uri": "com_copymypage/bootstrap/bootstrap.js",
-      "version": "5.3.x"
+      "version": "5.3.8",
+      "attributes": {
+        "defer": true
+      }
     }
   ]
 }
