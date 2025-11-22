@@ -26,7 +26,8 @@
     {
       "name": "template",
       "type": "style",
-      "uri": "com_copymypage/template.css"
+      "uri": "com_copymypage/template.css",
+      "version": "0.0.2"
     },
     {
       "name": "uikit",
