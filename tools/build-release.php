@@ -40,34 +40,38 @@ final class BuildRelease
         $this->assertSemver($this->version);
         $this->assertZipAvailable();
 
-        $distDir     = $this->root . '/dist';
-        $packagesDir = $this->root . '/pkg_copymypage/packages';
+        $distDir        = $this->root . '/dist';
+        $subpackagesDir = $this->root . '/pkg_copymypage/subpackages';
 
         $this->ensureDir($distDir);
-        $this->ensureDir($packagesDir);
+        $this->ensureDir($subpackagesDir);
 
         // 1) Build core extension zips from src/* (excluding _vendor_extensions)
         $src = $this->root . '/src';
+
         foreach (scandir($src) ?: [] as $entry) {
             if ($entry === '.' || $entry === '..' || $entry === '_vendor_extensions') {
                 continue;
             }
+
             $extPath = $src . '/' . $entry;
+
             if (is_dir($extPath)) {
                 $zipName = $entry . '.zip';
-                $zipPath = $packagesDir . '/' . $zipName;
+                $zipPath = $subpackagesDir . '/' . $zipName;
 
-                echo "[zip]    {$entry} -> pkg_copymypage/packages/{$zipName}\n";
+                echo "[zip]    {$entry} -> pkg_copymypage/subpackages/{$zipName}\n";
                 $this->zipDirectory($extPath, $zipPath);
             }
         }
 
-        // 2) Optionally copy vendor zips into packages/
+        // 2) Optionally copy vendor zips into subpackages/
         if ($this->includeVendors) {
             $vendorDir = $this->root . '/src/_vendor_extensions';
+
             if (is_dir($vendorDir)) {
                 foreach (glob($vendorDir . '/*.zip') ?: [] as $vendorZip) {
-                    $target = $packagesDir . '/' . basename($vendorZip);
+                    $target = $subpackagesDir . '/' . basename($vendorZip);
                     echo "[vendor] + " . basename($vendorZip) . "\n";
                     copy($vendorZip, $target);
                 }
@@ -76,6 +80,7 @@ final class BuildRelease
 
         // 3) Create final package zip in dist/
         $packageZip = $distDir . '/pkg_copymypage-' . $this->version . '.zip';
+
         echo "[pkg]   dist/" . basename($packageZip) . "\n";
         $this->zipPackage($packageZip);
 
@@ -85,12 +90,14 @@ final class BuildRelease
     private function zipDirectory(string $dir, string $zipFile): void
     {
         $zip = new ZipArchive();
+
         if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new \RuntimeException("Cannot create zip: {$zipFile}");
         }
 
         $dir = rtrim($dir, DIRECTORY_SEPARATOR);
-        $it  = new \RecursiveIteratorIterator(
+
+        $it = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
             \RecursiveIteratorIterator::SELF_FIRST
         );
@@ -98,9 +105,11 @@ final class BuildRelease
         foreach ($it as $file) {
             /** @var \SplFileInfo $file */
             $path = $file->getRealPath();
+
             if ($path === false) {
                 continue;
             }
+
             $localName = ltrim(str_replace($dir, '', $path), DIRECTORY_SEPARATOR);
 
             if ($file->isDir()) {
@@ -119,42 +128,49 @@ final class BuildRelease
         $pkgRoot = $this->root . '/pkg_copymypage';
 
         $zip = new ZipArchive();
+
         if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             throw new \RuntimeException("Cannot create package zip: {$zipFile}");
         }
 
-        // Include: pkg_copymypage.xml, pkg_script.php, packages/*.zip, changelogs/changelog.xml, README.md
+        // Include: pkg_copymypage.xml, script.php, subpackages/*.zip, changelogs/changelog.xml, README.md
         $include = [
             'pkg_copymypage.xml',
-            'pkg_script.php',
+            'script.php',
             'README.md',
         ];
 
         foreach ($include as $file) {
-            $path = "{$pkgRoot}/{$file}";
+            $path = $pkgRoot . '/' . $file;
+
             if (is_file($path)) {
                 $zip->addFile($path, $file);
             }
         }
 
         // changelogs
-        $changelog = "{$pkgRoot}/changelogs/changelog.xml";
+        $changelog = $pkgRoot . '/changelogs/changelog.xml';
+
         if (is_file($changelog)) {
             $zip->addFile($changelog, 'changelogs/changelog.xml');
         }
 
-        // packages
-        $packagesDir = "{$pkgRoot}/packages";
-        if (is_dir($packagesDir)) {
-            $it = new \DirectoryIterator($packagesDir);
+        // subpackages
+        $subpackagesDir = $pkgRoot . '/subpackages';
+
+        if (is_dir($subpackagesDir)) {
+            $it = new \DirectoryIterator($subpackagesDir);
+
             foreach ($it as $f) {
                 if ($f->isDot() || !$f->isFile()) {
                     continue;
                 }
+
                 if (strtolower($f->getExtension()) !== 'zip') {
                     continue;
                 }
-                $zip->addFile($f->getPathname(), 'packages/' . $f->getFilename());
+
+                $zip->addFile($f->getPathname(), 'subpackages/' . $f->getFilename());
             }
         }
 
@@ -185,6 +201,7 @@ final class BuildRelease
 
 (static function (): void {
     $argv = $_SERVER['argv'] ?? [];
+
     if (count($argv) < 2) {
         fwrite(STDERR, "Usage: php tools/build-release.php <MAJOR.MINOR.PATCH> [--include-vendor]\n");
         exit(1);

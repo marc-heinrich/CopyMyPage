@@ -1,87 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension type="module" client="site" method="upgrade" version="6.0">
-    <name>mod_copymypage_dev</name>
-    <author>Marc Heinrich</author>
-    <creationDate>2025-11</creationDate>
-    <copyright>(C) 2025 Open Source Matters, Inc.</copyright>
-    <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
-    <authorEmail>heinrich-marc@gmx.de</authorEmail>
-    <authorUrl>https://copymypage.de</authorUrl>
-    <version>0.0.2</version>
-    
-    <!-- Short description via language constant -->
-    <description>MOD_COPYMYPAGE_DEV_XML_DESCRIPTION</description>
-
-    <!-- Joomla 6 namespace mapping for the module -->
-    <namespace path="src">Joomla\Module\CopyMyPageDev</namespace>
-
-    <!-- Module files -->
-    <files>
-        <filename module="mod_copymypage_dev">mod_copymypage_dev.php</filename>
-        <filename>mod_copymypage_dev.xml</filename>
-        <folder>services</folder>
-        <folder>src</folder>
-        <folder>tmpl</folder>
-    </files>
-
-    <!-- Language files -->
-    <languages>
-        <language tag="de-DE">language/de-DE/mod_copymypage_dev.ini</language>
-        <language tag="de-DE">language/de-DE/mod_copymypage_dev.sys.ini</language>
-
-        <language tag="en-GB">language/en-GB/mod_copymypage_dev.ini</language>
-        <language tag="en-GB">language/en-GB/mod_copymypage_dev.sys.ini</language>
-
-        <language tag="es-ES">language/es-ES/mod_copymypage_dev.ini</language>
-        <language tag="es-ES">language/es-ES/mod_copymypage_dev.sys.ini</language>
-
-        <language tag="fr-FR">language/fr-FR/mod_copymypage_dev.ini</language>
-        <language tag="fr-FR">language/fr-FR/mod_copymypage_dev.sys.ini</language>
-
-        <language tag="it-IT">language/it-IT/mod_copymypage_dev.ini</language>
-        <language tag="it-IT">language/it-IT/mod_copymypage_dev.sys.ini</language>
-    </languages>
-
-    <!-- Config params for the module -->
-    <config>
-        <fields name="params">
-            <fieldset
-                name="basic"
-                label="MOD_COPYMYPAGE_DEV_FIELDSET_BASIC_LABEL"
-                description="MOD_COPYMYPAGE_DEV_FIELDSET_BASIC_DESC"
-            >
-                <field
-                    name="moduleclass_sfx"
-                    type="text"
-                    label="JFIELD_MODULE_CLASS_SFX_LABEL"
-                    description="JFIELD_MODULE_CLASS_SFX_DESC"
-                    filter="STRING"
-                />
-
-                <field
-                    name="show_module_info"
-                    type="radio"
-                    label="MOD_COPYMYPAGE_DEV_FIELD_SHOW_MODULE_INFO_LABEL"
-                    description="MOD_COPYMYPAGE_DEV_FIELD_SHOW_MODULE_INFO_DESC"
-                    class="btn-group btn-group-yesno"
-                    default="1"
-                >
-                    <option value="1">JYES</option>
-                    <option value="0">JNO</option>
-                </field>
-
-                <field
-                    name="show_menu_info"
-                    type="radio"
-                    label="MOD_COPYMYPAGE_DEV_FIELD_SHOW_MENU_INFO_LABEL"
-                    description="MOD_COPYMYPAGE_DEV_FIELD_SHOW_MENU_INFO_DESC"
-                    class="btn-group btn-group-yesno"
-                    default="1"
-                >
-                    <option value="1">JYES</option>
-                    <option value="0">JNO</option>
-                </field>
-            </fieldset>
-        </fields>
-    </config>
+  <name>mod_copymypage_dev</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2025-11</creationDate>
+  <copyright>(C) 2025 Open Source Matters, Inc.</copyright>
+  <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.2</version>
+  <!-- Short description via language constant -->
+  <description>MOD_COPYMYPAGE_DEV_XML_DESCRIPTION</description>
+  <!-- Joomla 6 namespace mapping for the module -->
+  <namespace path="src">Joomla\Module\CopyMyPageDev</namespace>
+  <!-- Module files -->
+  <files>
+    <filename module="mod_copymypage_dev">mod_copymypage_dev.php</filename>
+    <filename>mod_copymypage_dev.xml</filename>
+    <folder>services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+  </files>
+  <!-- Language files -->
+  <languages>
+    <language tag="de-DE">language/de-DE/mod_copymypage_dev.ini</language>
+    <language tag="de-DE">language/de-DE/mod_copymypage_dev.sys.ini</language>
+    <language tag="en-GB">language/en-GB/mod_copymypage_dev.ini</language>
+    <language tag="en-GB">language/en-GB/mod_copymypage_dev.sys.ini</language>
+    <language tag="es-ES">language/es-ES/mod_copymypage_dev.ini</language>
+    <language tag="es-ES">language/es-ES/mod_copymypage_dev.sys.ini</language>
+    <language tag="fr-FR">language/fr-FR/mod_copymypage_dev.ini</language>
+    <language tag="fr-FR">language/fr-FR/mod_copymypage_dev.sys.ini</language>
+    <language tag="it-IT">language/it-IT/mod_copymypage_dev.ini</language>
+    <language tag="it-IT">language/it-IT/mod_copymypage_dev.sys.ini</language>
+  </languages>
+  <!-- Config params for the module -->
+  <config>
+    <fields name="params">
+      <fieldset name="basic" label="MOD_COPYMYPAGE_DEV_FIELDSET_BASIC_LABEL" description="MOD_COPYMYPAGE_DEV_FIELDSET_BASIC_DESC">
+        <field name="moduleclass_sfx" type="text" label="JFIELD_MODULE_CLASS_SFX_LABEL" description="JFIELD_MODULE_CLASS_SFX_DESC" filter="STRING"/>
+        <field name="show_module_info" type="radio" label="MOD_COPYMYPAGE_DEV_FIELD_SHOW_MODULE_INFO_LABEL" description="MOD_COPYMYPAGE_DEV_FIELD_SHOW_MODULE_INFO_DESC" class="btn-group btn-group-yesno" default="1">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field name="show_menu_info" type="radio" label="MOD_COPYMYPAGE_DEV_FIELD_SHOW_MENU_INFO_LABEL" description="MOD_COPYMYPAGE_DEV_FIELD_SHOW_MENU_INFO_DESC" class="btn-group btn-group-yesno" default="1">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+      </fieldset>
+    </fields>
+  </config>
 </extension>

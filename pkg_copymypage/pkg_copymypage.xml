@@ -1,59 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension type="package" method="upgrade">
-    <packagename>copymypage</packagename>
-    <packager>Marc Heinrich</packager>
-    <name>CopyMyPage</name>
-    <author>Marc Heinrich</author>
-    <creationDate>2025-11</creationDate>
-    <copyright>(C) 2025 Marc Heinrich</copyright>
-    <license>https://www.gnu.org/licenses/gpl-3.0.html GNU/GPL</license>
-    <authorEmail>heinrich-marc@gmx.de</authorEmail>
-    <authorUrl>https://copymypage.de</authorUrl>
-    <version>0.0.1</version>
-
-    <!-- Short description via language constant -->
-    <description>PKG_COPYMYPAGE_XML_DESCRIPTION</description>
-
-    <!-- Installer script (Service Provider aware) -->
-    <scriptfile>script.php</scriptfile>
-
-    <!-- Subpackage files -->
-    <files folder="subpackages">
-        <file id="com_copymypage" type="component">com_copymypage.zip</file>
-        <file id="copymypage" type="template" client="site">tpl_copymypage.zip</file>
-        <!-- Example for future extensions:
-        <file id="mod_cmp_intro" type="module" client="site">mod_cmp_intro.zip</file>
-        <file id="tpl_cmp_default" type="template" client="site">tpl_cmp_default.zip</file>
-        <file id="plg_system_cmp" type="plugin" group="system">plg_system_cmp.zip</file>
-        -->
-    </files>    
-
-    <!-- Language files for package description and system strings -->
-    <languages>
-        <language tag="de-DE">language/de-DE/pkg_copymypage.ini</language>
-        <language tag="de-DE">language/de-DE/pkg_copymypage.sys.ini</language>
-        
-        <language tag="en-GB">language/en-GB/pkg_copymypage.ini</language>
-        <language tag="en-GB">language/en-GB/pkg_copymypage.sys.ini</language>        
-
-        <language tag="es-ES">language/es-ES/pkg_copymypage.ini</language>
-        <language tag="es-ES">language/es-ES/pkg_copymypage.sys.ini</language>
-
-        <language tag="fr-FR">language/fr-FR/pkg_copymypage.ini</language>
-        <language tag="fr-FR">language/fr-FR/pkg_copymypage.sys.ini</language>
-
-        <language tag="it-IT">language/it-IT/pkg_copymypage.ini</language>
-        <language tag="it-IT">language/it-IT/pkg_copymypage.sys.ini</language>
-    </languages>
-
-    <!-- Changelog reference -->
-    <changelogurl>https://update.copymypage.de/changelogs/pkg_copymypage.xml</changelogurl>
-
-    <!-- Update server -->
-    <updateservers>
-        <server type="extension" priority="1" name="CopyMyPage Update Site">
-            https://update.copymypage.de/update.xml
-        </server>
-    </updateservers>
-
+  <packagename>copymypage</packagename>
+  <packager>Marc Heinrich</packager>
+  <name>CopyMyPage</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2025-11</creationDate>
+  <copyright>(C) 2025 Marc Heinrich</copyright>
+  <license>https://www.gnu.org/licenses/gpl-3.0.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.2</version>
+  <!-- Short description via language constant -->
+  <description>PKG_COPYMYPAGE_XML_DESCRIPTION</description>
+  <!-- Installer script (Service Provider aware) -->
+  <scriptfile>script.php</scriptfile>
+  <!-- Subpackage files -->
+  <files folder="subpackages">
+    <file id="com_copymypage" type="component">com_copymypage.zip</file>
+    <file id="copymypage" type="template" client="site">tpl_copymypage.zip</file>
+    <file id="mod_copymypage_dev" type="module" client="site">mod_copymypage_dev.zip</file>
+    <!-- Example for future extensions:
+      <file id="plg_system_cmp" type="plugin" group="system">plg_system_cmp.zip</file>
+    -->
+  </files>
+  <!-- Language files for package description and system strings -->
+  <languages>
+    <language tag="de-DE">language/de-DE/pkg_copymypage.ini</language>
+    <language tag="de-DE">language/de-DE/pkg_copymypage.sys.ini</language>
+    <language tag="en-GB">language/en-GB/pkg_copymypage.ini</language>
+    <language tag="en-GB">language/en-GB/pkg_copymypage.sys.ini</language>
+    <language tag="es-ES">language/es-ES/pkg_copymypage.ini</language>
+    <language tag="es-ES">language/es-ES/pkg_copymypage.sys.ini</language>
+    <language tag="fr-FR">language/fr-FR/pkg_copymypage.ini</language>
+    <language tag="fr-FR">language/fr-FR/pkg_copymypage.sys.ini</language>
+    <language tag="it-IT">language/it-IT/pkg_copymypage.ini</language>
+    <language tag="it-IT">language/it-IT/pkg_copymypage.sys.ini</language>
+  </languages>
+  <!-- Changelog reference -->
+  <changelogurl>https://update.copymypage.de/changelogs/pkg_copymypage.xml</changelogurl>
+  <!-- Update server -->
+  <updateservers>
+    <server type="extension" priority="1" name="CopyMyPage Update Site">https://update.copymypage.de/update.xml</server>
+  </updateservers>
 </extension>

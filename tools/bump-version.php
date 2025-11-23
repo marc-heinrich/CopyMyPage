@@ -92,16 +92,27 @@ final class BumpVersion
     private function isLikelyJoomlaManifest(string $file): bool
     {
         $basename = basename($file);
-        if (\in_array($basename, ['templateDetails.xml'], true)) {
+
+        // Components: com_*.xml oder dein spezielles Schema
+        if (preg_match('/^com_.*\.xml$/', $basename) === 1) {
             return true;
         }
 
-        // Generic heuristic: com_*.xml, mod_*.xml, plg_*.xml, pkg_*.xml etc.
-        if (preg_match('/^(com|mod|plg|pkg|tpl|lib)_[a-z0-9_]+\.xml$/i', $basename) === 1) {
+        // Speziell für CopyMyPage, falls das Manifest "copymypage.xml" heißt
+        if ($basename === 'copymypage.xml') {
             return true;
         }
 
-        // Fallback: keep conservative
+        // Module
+        if (preg_match('/^mod_.*\.xml$/', $basename) === 1) {
+            return true;
+        }
+
+        // Templates
+        if ($basename === 'templateDetails.xml') {
+            return true;
+        }
+
         return false;
     }
 
