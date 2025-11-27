@@ -4,26 +4,46 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.1
+ * @since       0.0.3
  */
 
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Language\Text;
 
 /** @var \Joomla\CMS\Document\HtmlDocument $this */
 
-// Set the page title.
-$this->setTitle(Factory::getApplication()->get('sitename'));
+$app = Factory::getApplication();
 
-// Register & load web assets.
-$wa = $this->getWebAssetManager();
-$wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
-$wa->usePreset($this->template .'.site.offline');
+// Send a proper 503 status for maintenance/offline pages.
+if (!headers_sent()) {
+    $app->setHeader('Status', '503 Service Unavailable', true);
+    $app->setHeader('Retry-After', '3600', true);
+    http_response_code(503);
+}
 
-// Favicon handling & progressive web app preparation.
-$logoPath = 'com_' . $this->template . '/logo/';
+// Basic document setup.
+$this->setHtml5(true);
+
+// Title + meta description for SEO / Lighthouse.
+$this->setTitle(Text::_('TPL_COPYMYPAGE_OFFLINE_META_TITLE'));
+$this->setMetaData('robots', 
+    'noindex, nofollow', 
+    'name');
+$this->setMetaData('description',
+    Text::_('TPL_COPYMYPAGE_OFFLINE_META_DESCRIPTION'),
+    'name'
+);
+
+// Logo + favicon paths.
+// Adjust to the actual image size if necessary.
+$logoPath   = 'com_' . $this->template . '/logo/';
+$logoWidth  = 600;  
+$logoHeight = 600; 
+
+// Favicons & PWA assets.
 $this->addHeadLink(
     HTMLHelper::_('image', $logoPath .'favicon.svg', '', [], true, 1),
     'icon',
@@ -53,8 +73,48 @@ $this->addHeadLink(
     <head>
         <jdoc:include type="metas" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <jdoc:include type="styles" />
-        <jdoc:include type="scripts" />
+        <style>
+            :root {
+                --cmp-color-background-default: #fff;
+                --cmp-color-background-default-rgb: 255, 255, 255;
+                --cmp-color-text-default: #061225;
+                --cmp-color-text-default-rgb: 6, 18, 37;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+            }
+            body.cmp-offline-page {
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background-color: var(--cmp-color-background-default);
+                color: var(--cmp-color-text-default);
+            }
+            .cmp-offline-page-main {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.5rem;
+            }
+            .cmp-offline-page-logo-wrapper {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                max-width: 90vw;
+            }
+            .cmp-offline-page-logo {
+                display: block;
+                max-width: 100%;
+                height: auto;
+            }
+        </style>
     </head>
     <body class="cmp-offline-page">
         <main class="cmp-offline-page-main" role="main">
@@ -63,7 +123,13 @@ $this->addHeadLink(
                     'image',
                     $logoPath . 'logo-cmp-text-subtitles-1.png',
                     'CopyMyPage – Your website. Just copy it.',
-                    ['class' => 'cmp-offline-page-logo'],
+                    [
+                        'class'    => 'cmp-offline-page-logo',
+                        'width'    => (string) $logoWidth,
+                        'height'   => (string) $logoHeight,
+                        'loading'  => 'eager',
+                        'decoding' => 'async',
+                    ],
                     true
                 ); ?>
             </picture>
