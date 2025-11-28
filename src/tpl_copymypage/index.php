@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.2
+ * @since       0.0.3
  */
 
 \defined('_JEXEC') or die;
@@ -19,17 +19,25 @@ $app   = Factory::getApplication();
 $input = $app->getInput();
 $wa    = $this->getWebAssetManager();
 
-// Set the page title if not already set.
-if (!$this->getTitle()) {
+// Ensure HTML5 output mode for the document.
+$this->setHtml5(true);
+
+// Title fallback: only if no view/menu has set a title.
+if ($this->getTitle() === '') {
     $this->setTitle($app->get('sitename'));
 }
+
+// Global, non-changeable meta tags.
+$this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
+     ->setMetaData('robots', 'index, follow');
 
 // Register and load web assets (aligned with offline.php).
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
 $wa->usePreset($this->template . '.site');
 
-// Favicon handling & progressive web app preparation (aligned with offline.php).
+// Favicon handling & PWA assets (aligned with offline.php).
 $logoPath = 'com_' . $this->template . '/logo/';
+
 $this->addHeadLink(
     HTMLHelper::_('image', $logoPath . 'favicon.svg', '', [], true, 1),
     'icon',
@@ -63,7 +71,7 @@ $itemId    = $input->getCmd('Itemid', '');
 $menu      = $app->getMenu()->getActive();
 $pageClass = $menu !== null ? (string) $menu->getParams()->get('pageclass_sfx', '') : '';
 
-// Build body classes (simplified Cassiopeia-style).
+// Build body classes (Cassiopeia-like).
 $bodyClasses = [
     'cmp-site',
     $option ?: 'no-option',
@@ -84,13 +92,15 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
 <html lang="<?php echo $this->language; ?>" dir="<?php echo $this->direction; ?>">
     <head>
         <jdoc:include type="metas" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <jdoc:include type="styles" />
         <jdoc:include type="scripts" />
     </head>
     <body class="<?php echo $bodyClass; ?>">
 
+        <!-- Page Wrapper -->
         <div id="page" class="cmp-page">
+
+            <!-- Header -->
             <header id="top" class="cmp-header" role="banner">
                 <?php if ($this->countModules('navbar')) : ?>
                     <nav class="cmp-navbar" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_NAVBAR'); ?>">
@@ -105,6 +115,7 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
                 <?php endif; ?>
             </header>
 
+            <!-- Main Content -->
             <main id="main-content" class="cmp-main" role="main">
                 <?php if ($this->countModules('hero')) : ?>
                     <section class="cmp-section cmp-hero" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_HERO'); ?>">
@@ -147,6 +158,7 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
                 <jdoc:include type="component" />
             </main>
 
+            <!-- Footer -->
             <footer class="cmp-footer" role="contentinfo">
                 <?php if ($this->countModules('footer')) : ?>
                     <div class="cmp-footer-modules">
@@ -155,7 +167,14 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
                 <?php endif; ?>
             </footer>
 
+            <!-- Back to top button -->
+            <a href="#main-content" id="back-top" class="cmp-back-to-top" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_BACKTOTOP'); ?>">
+                <span class="icon-arrow-up icon-fw" aria-hidden="true"></span>
+            </a>
+            
+            <!-- Debug area if active -->
             <jdoc:include type="modules" name="debug" style="none" />
+            
         </div>
     </body>
 </html>

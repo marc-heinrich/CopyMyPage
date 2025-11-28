@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.2
+ * @since       0.0.3
  */
 
 namespace Joomla\Component\CopyMyPage\Site\View\Onepage;
@@ -64,22 +64,38 @@ class HtmlView extends BaseHtmlView
         if ($menu && $menu->title) {
             $title = $menu->title;
         } else {
-            $title = Text::_('COM_COPYMYPAGE_ONEPAGE_TITLE');
+            $title = Text::_('COM_COPYMYPAGE_VIEW_ONEPAGE_TITLE');
         }
 
         $document->setTitle($title);
 
+        // Prepare defaults for meta description and keywords.
+        $metaDescription = '';
+        $metaKeywords    = '';
+
         if ($this->params instanceof Registry) {
             $metaDescription = (string) $this->params->get('meta_description', '');
             $metaKeywords    = (string) $this->params->get('meta_keywords', '');
-
-            if ($metaDescription !== '') {
-                $document->setDescription($metaDescription);
-            }
-
-            if ($metaKeywords !== '') {
-                $document->setMetaData('keywords', $metaKeywords);
-            }
         }
+
+        // Fallback to template-level defaults if nothing is set in menu/component params.
+        if ($metaDescription === '') {
+            $metaDescription = Text::_('COM_COPYMYPAGE_VIEW_ONEPAGE_META_DESCRIPTION');
+        }
+
+        if ($metaKeywords === '') {
+            $metaKeywords = Text::_('COM_COPYMYPAGE_VIEW_ONEPAGE_META_KEYWORDS');
+        }
+
+        if ($metaDescription !== '') {
+            // Uses Document::setDescription(), which also drives getMetaData('description').
+            $document->setDescription($metaDescription);
+        }
+
+        if ($metaKeywords !== '') {
+            $document->setMetaData('keywords', $metaKeywords);
+        }
+
+        // Important: do NOT touch "robots" here.
     }
 }

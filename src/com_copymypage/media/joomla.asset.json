@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "(C) 2025 Open Source Matters, Inc. <https://www.joomla.org>",
   "assets": [
@@ -13,21 +13,30 @@
         "uikit#script",
         "bootstrap#style",
         "bootstrap#script",
-        "template#style"
-      ]
-    },
-    {
-      "name": "copymypage.site.offline",
-      "type": "preset",
-      "dependencies": [
-        "template#style"
+        "joomla.fontawesome#style",
+        "template#style",
+        "copymypage#script"
       ]
     },
     {
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.css",
-      "version": "0.0.2"
+      "version": "0.0.3"
+    },
+    {
+      "name": "copymypage",
+      "type": "script",
+      "uri": "com_copymypage/copymypage.js",
+      "version": "0.0.3",
+      "class": "CopyMyPageAssetItem",
+      "dependencies": [
+        "core",
+        "messages"
+      ],
+      "attributes": {
+        "defer": true
+      }      
     },
     {
       "name": "uikit",
@@ -58,6 +67,11 @@
       "attributes": {
         "defer": true
       }
+    },
+    {
+      "name": "joomla.fontawesome",
+      "type": "style",
+      "uri": "system/joomla-fontawesome.min.css"
     }
   ]
 }

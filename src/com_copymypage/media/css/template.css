@@ -3,76 +3,78 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.1
+ * @since       0.0.3
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
 
 :root {
-    --cmp-color-background-default: #fff;
-    --cmp-color-background-default-rgb: 255, 255, 255;
 
-    --cmp-color-text-default: #061225;
-    --cmp-color-text-default-rgb: 6, 18, 37;
-
+    /* Font families */
     --cmp-font-family-base: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto,
         "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif,
         "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
     /* Brand / Logo / Design colors */
-    --cmp-color-accent: #04cbd0;
-    --cmp-color-accent-strong: #00979c;
-    --cmp-color-accent-soft: #c4f4f5;
-
+    --cmp-color: #04cbd0;
+    --cmp-color-strong: #00979c;
+    --cmp-color-soft: #c4f4f5;
     --cmp-color-logo-dark: #061225;
-    --cmp-color-logo-light: #fff;
-
+    --cmp-color-logo-light: #ffffff;
     --cmp-color-surface: #f5f7fb;
-    --cmp-color-border-muted: #d5dde8;
+    --cmp-color-muted: #d5dde8;
+    --cmp-color-background-default: #ffffff;
+    --cmp-color-text-default: #061225;
+
+    /* Borders */
+    --cmp-border-radius: 0.25rem;
+    --cmp-border-radius-lg: 0.5rem;
+    --cmp-border-radius-sm: 0.125rem;
+    --cmp-border-width: 1px;
+    --cmp-border-width-lg: 2px;
+    --cmp-border-width-sm: 0.5px;
+    --cmp-border-color: var(--cmp-color);
+    --cmp-border-muted: var(--cmp-color-muted);
 }
 
 /* ==========================================================================
-   OFFLINE PAGE
+   Back to top link
    ========================================================================== */
-
-.cmp-offline-page {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
+.cmp-back-to-top {
+    position: fixed;
+    inset-inline-end: 1rem;
+    bottom: 1rem;
+    z-index: 10000;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0.5rem;
+    border-radius: var(--cmp-border-radius-lg);
+    border: var(--cmp-border-width) solid var(--cmp-border-color);
     background-color: var(--cmp-color-background-default);
     color: var(--cmp-color-text-default);
-    font-family: var(--cmp-font-family-base);
+    pointer-events: all;
+    opacity: 0;
+    transition: opacity 0.2s ease-in;
 }
 
-.cmp-offline-page-main {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
+.cmp-back-to-top.visible {
+    opacity: 1;
 }
 
-.cmp-offline-page-logo-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    max-width: 90vw;
-    max-height: 70vh;
+.cmp-back-to-top:hover {
+    background-color: var(--cmp-color);
+    color: var(--cmp-color-logo-light);
+    border-color: var(--cmp-border-color);
 }
 
-.cmp-offline-page-logo {
-    display: block;
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    object-fit: contain;
+.cmp-back-to-top:focus {
+    outline: none;
 }
 
-@media (min-width: 992px) {
-    .cmp-offline-page-logo-wrapper {
-        max-width: 600px;
-        max-height: 600px;
-    }
+.cmp-back-to-top:focus-visible {
+    outline: 0.125rem solid var(--cmp-color);
+    outline-offset: 0.125rem;
 }

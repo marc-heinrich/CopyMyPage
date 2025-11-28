@@ -27,15 +27,20 @@ if (!headers_sent()) {
 // Basic document setup.
 $this->setHtml5(true);
 
+// Ensure that view-specific keywords do not leak into the offline page.
+$head = $this->getHeadData();
+
+if (isset($head['metaTags']['name']['keywords'])) {
+    unset($head['metaTags']['name']['keywords']);
+}
+
+$this->setHeadData($head);
+
 // Title + meta description for SEO / Lighthouse.
 $this->setTitle(Text::_('TPL_COPYMYPAGE_OFFLINE_META_TITLE'));
-$this->setMetaData('robots', 
-    'noindex, nofollow', 
-    'name');
-$this->setMetaData('description',
-    Text::_('TPL_COPYMYPAGE_OFFLINE_META_DESCRIPTION'),
-    'name'
-);
+$this->setMetaData('robots', 'noindex, nofollow')
+     ->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
+     ->setMetaData('description', Text::_('TPL_COPYMYPAGE_OFFLINE_META_DESCRIPTION'));
 
 // Logo + favicon paths.
 // Adjust to the actual image size if necessary.
@@ -72,7 +77,6 @@ $this->addHeadLink(
 <html lang="<?php echo $this->language; ?>" dir="<?php echo $this->direction; ?>">
     <head>
         <jdoc:include type="metas" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             :root {
                 --cmp-color-background-default: #fff;
