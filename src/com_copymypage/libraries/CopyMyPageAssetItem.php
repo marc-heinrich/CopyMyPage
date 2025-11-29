@@ -75,6 +75,17 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     protected $formID = '#contact-form';
 
     /**
+     * The scroll position at which the back-to-top button appears.
+     * Default value is 20px.
+     * 
+     * @var int
+     * 
+     * This will eventually be stored as a component parameter in the database.
+     * @since 0.0.3
+     */
+    protected $scrollTopPosition = 100;
+
+    /**
      * Prepare the parameters and initialize the CopyMyPage JS.
      * 
      * @param Document $doc The document object
@@ -82,10 +93,10 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     public function onAttachCallback(Document $doc): void
     {
         // Add language strings for error messages.
-        $this->_addLanguageStrings();
+        $this->addLanguageStrings();
 
         // Prepare the parameters as an associative array.
-        $params = $this->_getParams();
+        $params = $this->getParams();
 
         // Encode parameters to JSON.
         $jsonParams = json_encode($params);
@@ -107,7 +118,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     /**
      * Adds necessary language strings for error handling.
      */
-    private function _addLanguageStrings(): void
+    private function addLanguageStrings(): void
     {
         Text::script('TPL_COPYMYPAGE_JS_ERROR_BACKTOTOP_NOT_FOUND');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND');
@@ -121,7 +132,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
      *
      * @return array The parameters for CopyMyPage.
      */
-    private function _getParams(): array
+    private function getParams(): array
     {
         return [
             'backToTopID'      => $this->backToTopID,
@@ -129,6 +140,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
             'mobileMenuClass'  => $this->mobileMenuClass,
             'pageWrapperClass' => $this->pageWrapperClass,
             'formID'           => $this->formID,
+            'scrollTopPosition'=> $this->scrollTopPosition,
         ];
     }
 }

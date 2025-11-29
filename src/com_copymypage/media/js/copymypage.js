@@ -31,6 +31,9 @@ window.CopyMyPage = window.CopyMyPage || {};
                 console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_BACKTOTOP_NOT_FOUND'));
                 return;
             }
+
+            // Set the scroll position threshold (default to 100px if not provided).
+            this.scrollTopPosition = params.scrollTopPosition || 100;
         }
 
         /**
@@ -63,7 +66,7 @@ window.CopyMyPage = window.CopyMyPage || {};
          * Private method: Checks scroll position and shows/hides the back-to-top button.
          */
         _checkScrollPos() {
-            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+            if (document.body.scrollTop > this.scrollTopPosition || document.documentElement.scrollTop > this.scrollTopPosition) {
                 this.backToTopButton.classList.add('visible');
             } else {
                 this.backToTopButton.classList.remove('visible');
@@ -121,14 +124,6 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
-         * Static method for handling AJAX requests with Joomla API.
-         * @param {Object} options - AJAX options for the request.
-         */
-        static request(options) {
-            return Joomla.request(options);
-        }
-
-        /**
          * Private method: Debounced scroll event handler for better performance.
          */
         _debouncedScroll() {
@@ -137,6 +132,14 @@ window.CopyMyPage = window.CopyMyPage || {};
                 window.requestAnimationFrame(() => this._checkScrollPos());
             }, 100);
         }
+
+        /**
+         * Static method for handling AJAX requests with Joomla API.
+         * @param {Object} options - AJAX options for the request.
+         */
+        static request(options) {
+            return Joomla.request(options);
+        }        
     }
 
     // Expose the class globally as window.CopyMyPage
