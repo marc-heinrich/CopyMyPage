@@ -15,7 +15,7 @@
         "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif,
         "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-    /* Brand / Logo / Design colors */
+    /* Colors */
     --cmp-color: #04cbd0;
     --cmp-color-strong: #00979c;
     --cmp-color-soft: #c4f4f5;
@@ -25,6 +25,7 @@
     --cmp-color-muted: #d5dde8;
     --cmp-color-background-default: #ffffff;
     --cmp-color-text-default: #061225;
+    --cmp-color-text-muted: #6c757d;
 
     /* Borders */
     --cmp-border-radius: 0.25rem;
@@ -35,16 +36,48 @@
     --cmp-border-width-sm: 0.5px;
     --cmp-border-color: var(--cmp-color);
     --cmp-border-muted: var(--cmp-color-muted);
+
+    /* Shadows */
+    --cmp-box-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --cmp-box-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --cmp-box-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);   
+
+    /* Font sizes */
+    --cmp-font-size-base: 1rem;
+    --cmp-font-size-sm: 0.875rem;            
+    --cmp-font-size-lg: 1.25rem;
+    --cmp-font-size-xl: 1.5rem;
+
+    /* Headings */
+    --cmp-font-size-heading: 2rem;
+    --cmp-font-size-heading-sm: 1.75rem;
+    --cmp-font-size-heading-lg: 2.5rem; 
+
+    /* Spacing */
+    --cmp-spacing-xs: 0.25rem;
+    --cmp-spacing-sm: 0.5rem;
+    --cmp-spacing-md: 1rem;
+    --cmp-spacing-lg: 1.5rem;
+    --cmp-spacing-xl: 2rem;
+
+    /* Z-index */
+    --cmp-z-index-dropdown: 1000;   
+    --cmp-z-index-backto-top: 1010;
+    --cmp-z-index-sticky: 1020;
+    --cmp-z-index-modal-backdrop: 1040;
+    --cmp-z-index-modal: 1050;  
+    --cmp-z-index-tooltip: 1060;
 }
 
 /* ==========================================================================
    Back to top link
    ========================================================================== */
+
 .cmp-back-to-top {
     position: fixed;
     inset-inline-end: 1rem;
     bottom: 1rem;
-    z-index: 10000;
+    z-index: var(--cmp-z-index-backto-top);
     display: inline-flex;
     align-items: center;
     justify-content: center;
