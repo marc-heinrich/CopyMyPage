@@ -8,6 +8,10 @@
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
 
+/* ==========================================================================
+   FOUNDATIONS - Design tokens (CSS custom properties)
+   ========================================================================== */
+
 :root {
 
     /* Font families */
@@ -40,18 +44,18 @@
     /* Shadows */
     --cmp-box-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --cmp-box-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-    --cmp-box-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);   
+    --cmp-box-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
 
     /* Font sizes */
     --cmp-font-size-base: 1rem;
-    --cmp-font-size-sm: 0.875rem;            
+    --cmp-font-size-sm: 0.875rem;
     --cmp-font-size-lg: 1.25rem;
     --cmp-font-size-xl: 1.5rem;
 
     /* Headings */
     --cmp-font-size-heading: 2rem;
     --cmp-font-size-heading-sm: 1.75rem;
-    --cmp-font-size-heading-lg: 2.5rem; 
+    --cmp-font-size-heading-lg: 2.5rem;
 
     /* Spacing */
     --cmp-spacing-xs: 0.25rem;
@@ -61,17 +65,39 @@
     --cmp-spacing-xl: 2rem;
 
     /* Z-index */
-    --cmp-z-index-dropdown: 1000;   
+    --cmp-z-index-dropdown: 1000;
     --cmp-z-index-backto-top: 1010;
     --cmp-z-index-sticky: 1020;
     --cmp-z-index-modal-backdrop: 1040;
-    --cmp-z-index-modal: 1050;  
+    --cmp-z-index-modal: 1050;
     --cmp-z-index-tooltip: 1060;
 }
 
 /* ==========================================================================
-   Back to top link
+   BASE - Global element defaults (body, headings, links, etc.)
    ========================================================================== */
+
+/* Placeholder for future base styles
+   Example:
+   body {
+       font-family: var(--cmp-font-family-base);
+       font-size: var(--cmp-font-size-base);
+       color: var(--cmp-color-text-default);
+       background-color: var(--cmp-color-background-default);
+   }
+*/
+
+/* ==========================================================================
+   LAYOUT - Structural containers (header, main, footer, grid, etc.)
+   ========================================================================== */
+
+/* Placeholder for future layout styles */
+
+/* ==========================================================================
+   COMPONENTS - System UI
+   ========================================================================== */
+
+/* SYSTEM - Back to top link */
 
 .cmp-back-to-top {
     position: fixed;
@@ -88,13 +114,14 @@
     border: var(--cmp-border-width) solid var(--cmp-border-color);
     background-color: var(--cmp-color-background-default);
     color: var(--cmp-color-text-default);
-    pointer-events: all;
+    pointer-events: none;
     opacity: 0;
     transition: opacity 0.2s ease-in;
 }
 
 .cmp-back-to-top.visible {
     opacity: 1;
+    pointer-events: auto;
 }
 
 .cmp-back-to-top:hover {
@@ -111,3 +138,24 @@
     outline: 0.125rem solid var(--cmp-color);
     outline-offset: 0.125rem;
 }
+
+@media (max-width: 767.98px) {
+    .cmp-back-to-top {
+        min-width: 2.25rem;
+        min-height: 2.25rem;
+        inset-inline-end: 0.75rem;
+        bottom: 0.75rem;
+    }
+}
+
+/* ==========================================================================
+   COMPONENTS - Sections (hero, gallery, team, tickets, contact, footer)
+   ========================================================================== */
+
+/* Placeholder for future section components */
+
+/* ==========================================================================
+   UTILITIES - Helper classes (spacing, visibility, text helpers)
+   ========================================================================== */
+
+/* Placeholder for future utility classes */
