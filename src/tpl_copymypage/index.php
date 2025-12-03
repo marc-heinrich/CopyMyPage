@@ -12,6 +12,7 @@
 use Joomla\CMS\Factory;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /** @var \Joomla\CMS\Document\HtmlDocument $this */
 
@@ -70,6 +71,7 @@ $task      = $input->getCmd('task', '');
 $itemId    = $input->getCmd('Itemid', '');
 $menu      = $app->getMenu()->getActive();
 $pageClass = $menu !== null ? (string) $menu->getParams()->get('pageclass_sfx', '') : '';
+$isOnepage = CopyMyPageHelper::isOnepage($option, $view);
 
 // Build body classes (Cassiopeia-like).
 $bodyClasses = [
@@ -79,6 +81,7 @@ $bodyClasses = [
     $layout ? 'layout-' . $layout : 'no-layout',
     $task ? 'task-' . $task : 'no-task',
     $itemId ? 'itemid-' . $itemId : '',
+    $isOnepage ? 'is-onepage' : 'no-onepage',
     $pageClass,
 ];
 
