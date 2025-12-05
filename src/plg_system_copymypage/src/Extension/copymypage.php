@@ -7,14 +7,14 @@
  * @since       0.0.3
  */
 
-namespace Joomla\Plugin\System\Copymypage\Extension;
+namespace Joomla\Plugin\System\CopyMyPage\Extension;
 
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Application\CMSApplicationInterface;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\CMSPlugin;
-use Joomla\Component\CopyMyPage\Administrator\Service\Registry as CopyMyPageHelperRegistry;
+use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\DI\Container;
 use Joomla\Event\SubscriberInterface;
 
@@ -26,7 +26,7 @@ use Joomla\Event\SubscriberInterface;
  *
  * @since  0.0.3
  */
-final class Copymypage extends CMSPlugin implements SubscriberInterface
+final class CopyMyPage extends CMSPlugin implements SubscriberInterface
 {
     /**
      * The application object.
@@ -63,13 +63,13 @@ final class Copymypage extends CMSPlugin implements SubscriberInterface
     {
         $container = Factory::getContainer();
 
-        if (! $container->has(CopyMyPageHelperRegistry::class)) {
+        if (! $container->has(CopyMyPageRegistry::class)) {
             $container
-                ->alias(CopyMyPageHelperRegistry::class, 'copymypage.helper.registry')
+                ->alias(CopyMyPageRegistry::class, 'copymypage.registry')
                 ->share(
-                    'copymypage.helper.registry',
+                    'copymypage.registry',
                     static function (Container $c) {
-                        return new CopyMyPageHelperRegistry();
+                        return new CopyMyPageRegistry();
                     },
                     true
                 );

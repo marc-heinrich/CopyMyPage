@@ -14,12 +14,12 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\DI\Container;
 use Joomla\DI\ServiceProviderInterface;
-use Joomla\Plugin\System\Copymypage\Extension\Copymypage;
+use Joomla\Plugin\System\CopyMyPage\Extension\CopyMyPage;
 
 /**
  * Service provider for the CopyMyPage system plugin.
  *
- * Wires the Copymypage plugin into Joomla's DI container so that it can be
+ * Wires the CopyMyPage plugin into Joomla's DI container so that it can be
  * instantiated and its subscribed events can be dispatched.
  *
  * @since  0.0.3
@@ -43,7 +43,7 @@ return new class () implements ServiceProviderInterface {
                 $config = (array) PluginHelper::getPlugin('system', 'copymypage');
 
                 // Instantiate the plugin class with its configuration.
-                $plugin = new Copymypage($config);
+                $plugin = new CopyMyPage($config);
 
                 // Inject the current application instance.
                 $plugin->setApplication(Factory::getApplication());

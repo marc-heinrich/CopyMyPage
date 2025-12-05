@@ -15,16 +15,16 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\MVC\Controller\Exception;
-use Joomla\Component\CopyMyPage\Administrator\Service\ModelRegistry;
+use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 
 /**
  * Controller for displaying views in com_copymypage.
  *
  * This controller is responsible for routing incoming requests
- * to the appropriate view and layout. It also integrates with
- * the ModelRegistry to enrich the primary model with additional
- * data from foreign models (for example com_users) based on the
- * current view and layout.
+ * to the appropriate view and layout. For the "dashboard" view it
+ * integrates with the CopyMyPage helper registry to enrich the
+ * primary model with additional data (for example from com_users)
+ * based on the current layout.
  *
  * @since  0.0.2
  */
@@ -52,16 +52,16 @@ class DisplayController extends BaseController
      * Method to display a view.
      *
      * This method sets up the view and its layout, manages the
-     * primary model, and uses the ModelRegistry to allow handlers
-     * to enrich the model with additional data based on the current
-     * view and layout.
+     * primary model, and for the "dashboard" view uses the helper
+     * registry from the DI container to attach extra data to the
+     * model's state based on the current layout.
      *
      * @param   boolean  $cachable   If true, enables caching for the view.
      * @param   array    $urlparams  Array of URL parameters to pass safely.
      *
      * @return  static   Returns this object for method chaining.
      *
-     * @since   0.0.2
+     * @since   0.0.3
      *
      * @throws  Exception\ResourceNotFound  If the view or model cannot be loaded.
      */
@@ -89,8 +89,9 @@ class DisplayController extends BaseController
             );
         }
 
-        // Enrich the primary model using the ModelRegistry, if a handler is registered.
-        $this->enrichModelWithRegistryHandler($model, $vName, $lName);
+        // For the dashboard view, load extra data via the helper registry
+        // and store it in the model state as "extra_data".
+        $this->attachDashboardExtraDataFromHelper($model, $vName, $lName);
 
         // Associate the model with the view, set the layout, and pass the document.
         $view->setModel($model, true);
@@ -105,11 +106,12 @@ class DisplayController extends BaseController
     }
 
     /**
-     * Enrich the primary model using a registered handler from the ModelRegistry.
+     * Attach extra data to the primary model using a helper from the DI container.
      *
-     * The handler is looked up by a key composed of the current view and layout
-     * (for example "dashboard.profile") and, if present, will receive the
-     * primary model and the current user.
+     * This method only acts for the "dashboard" view. It uses the current layout
+     * name as the service key in the helper registry (for example "user"), resolves
+     * the corresponding helper class from the DI container, calls its getExtraData()
+     * method and stores the returned data in the model's state under "extra_data".
      *
      * @param   object  $primaryModel  The primary model instance for the active view.
      * @param   string  $viewName      The current view name.
@@ -117,31 +119,54 @@ class DisplayController extends BaseController
      *
      * @return  void
      *
-     * @since   0.0.2
+     * @since   0.0.3
      */
-    protected function enrichModelWithRegistryHandler($primaryModel, string $viewName, string $layoutName): void
+    protected function attachDashboardExtraDataFromHelper(object $primaryModel, string $viewName, string $layoutName): void
     {
-        // Get the ModelRegistry from the DI container.
+        // Only the "dashboard" view uses helper-based extra data.
+        if ($viewName !== 'dashboard') {
+            return;
+        }
+
+        // The model must support setState() to store extra data.
+        if (!\method_exists($primaryModel, 'setState')) {
+            return;
+        }
+
         $container = Factory::getContainer();
 
-        if (!$container->has(ModelRegistry::class)) {
+        // If the helper registry is not registered in the container, bail out.
+        if (!$container->has(CopyMyPageRegistry::class)) {
             return;
         }
 
-        // Look up the handler by the "view.layout" key.
-        $registry = $container->get(ModelRegistry::class);
-        $key      = $viewName . '.' . $layoutName;
-        $user     = $this->app->getIdentity();
+        /** @var CopyMyPageRegistry $registry */
+        $registry = $container->get(CopyMyPageRegistry::class);
 
-        if (!$registry->hasHandler($key)) {
+        // Use the layout name as the service key, e.g. "user".
+        $serviceKey = $layoutName;
+
+        if (!$registry->hasService($serviceKey)) {
             return;
         }
 
-        $handler = $registry->getHandler($key);
+        $handler = $registry->getService($serviceKey);
 
-        // Invoke the handler to enrich the primary model.
-        if (\is_callable($handler)) {
-            $handler($primaryModel, $user);
+        // If the handler is a class name, instantiate it.
+        if (\is_string($handler) && \class_exists($handler)) {
+            $handler = new $handler();
         }
+
+        // Expect a helper with a generic getExtraData() method.
+        if (!\is_object($handler) || !\method_exists($handler, 'getExtraData')) {
+            return;
+        }
+
+        // Let the helper load the external model (via bootComponent) and return raw data.
+        $extraData = $handler->getExtraData();
+
+        // Store the extra data and the layout name in the model state.
+        $primaryModel->setState('extra_data', $extraData);
+        $primaryModel->setState('form_name', $layoutName);
     }
 }

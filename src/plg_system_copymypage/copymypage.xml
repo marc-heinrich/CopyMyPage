@@ -3,15 +3,11 @@
     <name>plg_system_copymypage</name>
     <author>Marc Heinrich</author>
     <creationDate>2025-12-03</creationDate>
-    <copyright>(C) 2025 Open Source Matters, Inc.</copyright>
-    <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
-    <authorEmail>heinrich-marc@gmx.de</authorEmail>
-    <authorUrl>https://copymypage.de</authorUrl>
     <version>0.0.3</version>
     <description>PLG_SYSTEM_COPYMYPAGE_XML_DESCRIPTION</description>
 
     <!-- Namespace for the plugin classes (src/Extension/Copymypage.php, etc.) -->
-    <namespace path="src">Joomla\Plugin\System\Copymypage</namespace>
+    <namespace path="src">Joomla\Plugin\System\CopyMyPage</namespace>
 
     <!-- Files and folders belonging to this plugin -->
     <files>
@@ -19,7 +15,7 @@
         <folder>src</folder>
     </files>
 
-    <!-- Language files (can be enabled once the files exist)
+    <!-- Language files (Platzhalter – Dateien kannst du später anlegen) 
     <languages>
         <language tag="de-DE">language/de-DE/plg_system_copymypage.ini</language>
         <language tag="de-DE">language/de-DE/plg_system_copymypage.sys.ini</language>
@@ -35,6 +31,7 @@
 
         <language tag="it-IT">language/it-IT/plg_system_copymypage.ini</language>
         <language tag="it-IT">language/it-IT/plg_system_copymypage.sys.ini</language>
-    </languages>
+    </languages>+
     -->
+    
 </extension>
