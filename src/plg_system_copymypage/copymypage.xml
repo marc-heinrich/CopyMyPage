@@ -11,27 +11,9 @@
 
     <!-- Files and folders belonging to this plugin -->
     <files>
+        <folder>language</folder>
         <folder plugin="copymypage">services</folder>
         <folder>src</folder>
     </files>
-
-    <!-- Language files (Platzhalter – Dateien kannst du später anlegen) 
-    <languages>
-        <language tag="de-DE">language/de-DE/plg_system_copymypage.ini</language>
-        <language tag="de-DE">language/de-DE/plg_system_copymypage.sys.ini</language>
-
-        <language tag="en-GB">language/en-GB/plg_system_copymypage.ini</language>
-        <language tag="en-GB">language/en-GB/plg_system_copymypage.sys.ini</language>
-
-        <language tag="es-ES">language/es-ES/plg_system_copymypage.ini</language>
-        <language tag="es-ES">language/es-ES/plg_system_copymypage.sys.ini</language>
-
-        <language tag="fr-FR">language/fr-FR/plg_system_copymypage.ini</language>
-        <language tag="fr-FR">language/fr-FR/plg_system_copymypage.sys.ini</language>
-
-        <language tag="it-IT">language/it-IT/plg_system_copymypage.ini</language>
-        <language tag="it-IT">language/it-IT/plg_system_copymypage.sys.ini</language>
-    </languages>+
-    -->
     
 </extension>

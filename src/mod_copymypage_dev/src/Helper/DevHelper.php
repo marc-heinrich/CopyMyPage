@@ -1,13 +1,13 @@
 <?php
 /**
  * @package     Joomla.Site
- * @subpackage  Components.CopyMyPage
+ * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.2
  */
 
-namespace Joomla\Module\CopyMyPageDev\Site\Helper;
+namespace Joomla\Module\CopyMyPage\Site\Helper;
 
 \defined('_JEXEC') or die;
 

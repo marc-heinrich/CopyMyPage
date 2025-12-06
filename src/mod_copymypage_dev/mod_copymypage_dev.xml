@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<extension type="module" client="site" method="upgrade" version="6.0">
+<extension type="module" client="site" method="upgrade">
   <name>mod_copymypage_dev</name>
   <author>Marc Heinrich</author>
   <creationDate>2025-11</creationDate>
@@ -11,7 +11,7 @@
   <!-- Short description via language constant -->
   <description>MOD_COPYMYPAGE_DEV_XML_DESCRIPTION</description>
   <!-- Joomla 6 namespace mapping for the module -->
-  <namespace path="src">Joomla\Module\CopyMyPageDev</namespace>
+  <namespace path="src">Joomla\Module\CopyMyPage</namespace>
   <!-- Module files -->
   <files>
     <filename module="mod_copymypage_dev">mod_copymypage_dev.php</filename>
@@ -19,20 +19,8 @@
     <folder>services</folder>
     <folder>src</folder>
     <folder>tmpl</folder>
+    <folder>language</folder>
   </files>
-  <!-- Language files -->
-  <languages>
-    <language tag="de-DE">language/de-DE/mod_copymypage_dev.ini</language>
-    <language tag="de-DE">language/de-DE/mod_copymypage_dev.sys.ini</language>
-    <language tag="en-GB">language/en-GB/mod_copymypage_dev.ini</language>
-    <language tag="en-GB">language/en-GB/mod_copymypage_dev.sys.ini</language>
-    <language tag="es-ES">language/es-ES/mod_copymypage_dev.ini</language>
-    <language tag="es-ES">language/es-ES/mod_copymypage_dev.sys.ini</language>
-    <language tag="fr-FR">language/fr-FR/mod_copymypage_dev.ini</language>
-    <language tag="fr-FR">language/fr-FR/mod_copymypage_dev.sys.ini</language>
-    <language tag="it-IT">language/it-IT/mod_copymypage_dev.ini</language>
-    <language tag="it-IT">language/it-IT/mod_copymypage_dev.sys.ini</language>
-  </languages>
   <!-- Config params for the module -->
   <config>
     <fields name="params">

@@ -1,7 +1,7 @@
 <?php
 /**
  * @package     Joomla.Site
- * @subpackage  Components.CopyMyPage
+ * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.2
@@ -27,11 +27,11 @@ return new class () implements ServiceProviderInterface
     public function register(Container $container): void
     {
         $container->registerServiceProvider(
-            new ModuleDispatcherFactory('\\Joomla\\Module\\CopyMyPageDev')
+            new ModuleDispatcherFactory('\\Joomla\\Module\\CopyMyPage')
         );
 
         $container->registerServiceProvider(
-            new HelperFactory('\\Joomla\\Module\\CopyMyPageDev\\Site\\Helper\\DevHelper')
+            new HelperFactory('\\Joomla\\Module\\CopyMyPage\\Site\\Helper\\DevHelper')
         );
 
         $container->registerServiceProvider(new Module());

@@ -1,7 +1,7 @@
 <?php
 /**
  * @package     Joomla.Site
- * @subpackage  Components.CopyMyPage
+ * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.2
@@ -11,7 +11,7 @@
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Helper\ModuleHelper;
-use Joomla\Module\CopyMyPageDev\Site\Helper\DevHelper;
+use Joomla\Module\CopyMyPage\Site\Helper\DevHelper;
 
 /** @var \Joomla\Registry\Registry $params */
 /** @var \stdClass $module */

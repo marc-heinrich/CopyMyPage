@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension type="template" client="site" method="upgrade">
-  <name>copymypage</name>
+  <name>tpl_copymypage</name>
   <author>Marc Heinrich</author>
   <creationDate>2025-11</creationDate>
   <copyright>(C) 2025 Marc Heinrich</copyright>
