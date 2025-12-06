@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension type="template" client="site" method="upgrade">
-  <name>tpl_copymypage</name>
+  <name>copymypage</name>
   <author>Marc Heinrich</author>
   <creationDate>2025-11</creationDate>
   <copyright>(C) 2025 Marc Heinrich</copyright>
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <!-- Short description via language constant -->
   <description>TPL_COPYMYPAGE_XML_DESCRIPTION</description>
   <!-- Template files -->

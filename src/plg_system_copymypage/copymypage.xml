@@ -1,19 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <extension type="plugin" group="system" method="upgrade">
-    <name>plg_system_copymypage</name>
-    <author>Marc Heinrich</author>
-    <creationDate>2025-12-03</creationDate>
-    <version>0.0.3</version>
-    <description>PLG_SYSTEM_COPYMYPAGE_XML_DESCRIPTION</description>
-
-    <!-- Namespace for the plugin classes (src/Extension/Copymypage.php, etc.) -->
-    <namespace path="src">Joomla\Plugin\System\CopyMyPage</namespace>
-
-    <!-- Files and folders belonging to this plugin -->
-    <files>
-        <folder>language</folder>
-        <folder plugin="copymypage">services</folder>
-        <folder>src</folder>
-    </files>
-    
+  <name>plg_system_copymypage</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2025-12-03</creationDate>
+  <version>0.0.3</version>
+  <description>PLG_SYSTEM_COPYMYPAGE_XML_DESCRIPTION</description>
+  <!-- Namespace for the plugin classes (src/Extension/Copymypage.php, etc.) -->
+  <namespace path="src">Joomla\Plugin\System\CopyMyPage</namespace>
+  <!-- Files and folders belonging to this plugin -->
+  <files>
+    <folder>language</folder>
+    <folder plugin="copymypage">services</folder>
+    <folder>src</folder>
+  </files>
 </extension>

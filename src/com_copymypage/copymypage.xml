@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <namespace path="src">Joomla\Component\CopyMyPage</namespace>
   <!-- Short description via language constant -->
   <description>COM_COPYMYPAGE_XML_DESCRIPTION</description>
