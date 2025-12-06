@@ -11,7 +11,7 @@
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Helper\ModuleHelper;
-use Joomla\Module\CopyMyPage\Site\Helper\DevHelper;
+use Joomla\Module\CopyMyPage\Dev\Site\Helper\DevHelper;
 
 /** @var \Joomla\Registry\Registry $params */
 /** @var \stdClass $module */

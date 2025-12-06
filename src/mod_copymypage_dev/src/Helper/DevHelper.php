@@ -7,7 +7,7 @@
  * @since       0.0.2
  */
 
-namespace Joomla\Module\CopyMyPage\Site\Helper;
+namespace Joomla\Module\CopyMyPage\Dev\Site\Helper;
 
 \defined('_JEXEC') or die;
 

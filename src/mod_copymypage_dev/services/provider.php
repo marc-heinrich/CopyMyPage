@@ -27,11 +27,11 @@ return new class () implements ServiceProviderInterface
     public function register(Container $container): void
     {
         $container->registerServiceProvider(
-            new ModuleDispatcherFactory('\\Joomla\\Module\\CopyMyPage')
+            new ModuleDispatcherFactory('\\Joomla\\Module\\CopyMyPage\\Dev')
         );
 
         $container->registerServiceProvider(
-            new HelperFactory('\\Joomla\\Module\\CopyMyPage\\Site\\Helper\\DevHelper')
+            new HelperFactory('\\Joomla\\Module\\CopyMyPage\\Dev\\Site\\Helper\\DevHelper')
         );
 
         $container->registerServiceProvider(new Module());
