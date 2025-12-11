@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.3
+ * @since       0.0.4
  */
 
 \defined('_JEXEC') or die;
@@ -124,37 +124,37 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
                 <?php if ($isOnepage) : ?>
 
                     <?php if ($this->countModules('hero')) : ?>
-                        <section class="cmp-section cmp-hero" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_HERO'); ?>">
+                        <section class="cmp-section cmp-section--hero" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_HERO'); ?>">
                             <jdoc:include type="modules" name="hero" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('gallery')) : ?>
-                        <section class="cmp-section cmp-gallery" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_GALLERY'); ?>">
+                        <section class="cmp-section cmp-section--gallery" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_GALLERY'); ?>">
                             <jdoc:include type="modules" name="gallery" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('team')) : ?>
-                        <section class="cmp-section cmp-team" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_TEAM'); ?>">
+                        <section class="cmp-section cmp-section--team" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_TEAM'); ?>">
                             <jdoc:include type="modules" name="team" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('counts')) : ?>
-                        <section class="cmp-section cmp-counts" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_COUNTS'); ?>">
+                        <section class="cmp-section cmp-section--counts" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_COUNTS'); ?>">
                             <jdoc:include type="modules" name="counts" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('tickets')) : ?>
-                        <section class="cmp-section cmp-tickets" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_TICKETS'); ?>">
+                        <section class="cmp-section cmp-section--tickets" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_TICKETS'); ?>">
                             <jdoc:include type="modules" name="tickets" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('contact')) : ?>
-                        <section class="cmp-section cmp-contact" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_CONTACT'); ?>">
+                        <section class="cmp-section cmp-section--contact" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_CONTACT'); ?>">
                             <jdoc:include type="modules" name="contact" style="none" />
                         </section>
                     <?php endif; ?>

@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.3
+ * @since       0.0.4
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -32,12 +32,12 @@
     --cmp-color-text-muted: #6c757d;
 
     /* Borders */
-    --cmp-border-radius: 0.25rem;
-    --cmp-border-radius-lg: 0.5rem;
     --cmp-border-radius-sm: 0.125rem;
-    --cmp-border-width: 1px;
-    --cmp-border-width-lg: 2px;
+    --cmp-border-radius: 0.25rem;
+    --cmp-border-radius-lg: 0.5rem;    
     --cmp-border-width-sm: 0.5px;
+    --cmp-border-width: 1px;
+    --cmp-border-width-lg: 2px;    
     --cmp-border-color: var(--cmp-color);
     --cmp-border-muted: var(--cmp-color-muted);
 
@@ -47,15 +47,20 @@
     --cmp-box-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
 
     /* Font sizes */
-    --cmp-font-size-base: 1rem;
+    --cmp-font-size-xs: 0.75rem;
     --cmp-font-size-sm: 0.875rem;
+    --cmp-font-size: 1rem;
     --cmp-font-size-lg: 1.25rem;
     --cmp-font-size-xl: 1.5rem;
 
     /* Headings */
-    --cmp-font-size-heading: 2rem;
-    --cmp-font-size-heading-sm: 1.75rem;
-    --cmp-font-size-heading-lg: 2.5rem;
+    --cmp-font-size-heading-sm: clamp(1.25rem, 2.2vw, 1.75rem);
+    --cmp-font-size-heading: clamp(1.5rem, 2.4vw, 2rem);
+    --cmp-font-size-heading-lg: clamp(1.75rem, 2.8vw, 2.5rem);
+    --cmp-font-size-heading-xl: clamp(2rem, 3.2vw, 3rem);
+    --cmp-font-size-heading-2xl: clamp(2.5rem, 4vw, 3.5rem);
+    --cmp-font-size-heading-3xl: clamp(3rem, 4.8vw, 4rem);
+    --cmp-font-size-heading-4xl: clamp(3.5rem, 5.6vw, 5rem);
 
     /* Spacing */
     --cmp-spacing-xs: 0.25rem;
@@ -63,6 +68,13 @@
     --cmp-spacing-md: 1rem;
     --cmp-spacing-lg: 1.5rem;
     --cmp-spacing-xl: 2rem;
+
+    /* Letter spacing */
+    --cmp-letter-spacing-xs: -0.1rem;
+    --cmp-letter-spacing-sm: -0.05rem;
+    --cmp-letter-spacing: 0; 
+    --cmp-letter-spacing-lg: 0.05rem;
+    --cmp-letter-spacing-xl: 0.1rem;
 
     /* Z-index */
     --cmp-z-index-dropdown: 1000;
@@ -77,15 +89,11 @@
    BASE - Global element defaults (body, headings, links, etc.)
    ========================================================================== */
 
-/* Placeholder for future base styles
-   Example:
-   body {
-       font-family: var(--cmp-font-family-base);
-       font-size: var(--cmp-font-size-base);
-       color: var(--cmp-color-text-default);
-       background-color: var(--cmp-color-background-default);
-   }
-*/
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
 
 /* ==========================================================================
    LAYOUT - Structural containers (header, main, footer, grid, etc.)
@@ -98,7 +106,6 @@
    ========================================================================== */
 
 /* SYSTEM - Back to top link */
-
 .cmp-back-to-top {
     position: fixed;
     inset-inline-end: 1rem;
@@ -149,10 +156,169 @@
 }
 
 /* ==========================================================================
-   COMPONENTS - Sections (hero, gallery, team, tickets, contact, footer)
+   COMPONENTS - Modules (hero, gallery, team, tickets, contact, footer)
    ========================================================================== */
 
-/* Placeholder for future section components */
+/* Basics for all modules */
+
+/* Module - Slideshow */
+.cmp-module--slideshow {
+    position: relative;
+}
+
+.cmp-module--slideshow .uk-position-center {
+    padding: 2rem;
+}
+
+/* Text overlay inside the slideshow */
+.cmp-module--slideshow .cmp-slideshow-overlay {
+    color: var(--cmp-color-logo-light);
+    text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+}
+
+.cmp-module--slideshow .cmp-slideshow-overlay h2,
+.cmp-module--slideshow .cmp-slideshow-overlay p {
+    margin: 0;
+}
+
+.cmp-module--slideshow .cmp-slideshow-overlay h2 {
+    font-weight: 700;
+    font-size: var(--cmp-font-size-heading-3xl);
+    line-height: 1.1;
+    letter-spacing: var(--cmp-letter-spacing-xs);
+    text-transform: uppercase;
+    margin-bottom: var(--cmp-spacing-sm);
+}
+
+.cmp-module--slideshow .cmp-slideshow-overlay p {
+    font-weight: 400;
+    font-size: var(--cmp-font-size-heading-lg);
+    line-height: 1.4;
+}
+
+/* Slidenav arrows – circular buttons with inner running ring */
+.cmp-module--slideshow .uk-slidenav-previous,
+.cmp-module--slideshow .uk-slidenav-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 9999px;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--cmp-color-logo-light);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ensure the UIKit icon stays above the animated ring */
+.cmp-module--slideshow .uk-slidenav-previous span,
+.cmp-module--slideshow .uk-slidenav-next span {
+    position: relative;
+    z-index: 1;
+}
+
+/* Animated inner ring only on the border */
+.cmp-module--slideshow .uk-slidenav-previous::before,
+.cmp-module--slideshow .uk-slidenav-next::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: conic-gradient(
+        from 0deg,
+        rgba(255, 255, 255, 0.0) 0deg,
+        rgba(255, 255, 255, 0.9) 60deg,
+        rgba(255, 255, 255, 0.0) 120deg,
+        rgba(255, 255, 255, 0.9) 180deg,
+        rgba(255, 255, 255, 0.0) 240deg,
+        rgba(255, 255, 255, 0.9) 300deg,
+        rgba(255, 255, 255, 0.0) 360deg
+    );
+
+    /* Show only the ring border, keep the inner area calm */
+    -webkit-mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 2px),
+        #000 calc(100% - 1px)
+    );
+    mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - 2px),
+        #000 calc(100% - 1px)
+    );
+
+    opacity: 0;
+    transform: rotate(0deg);
+    z-index: 0;
+    animation: cmp-slidenav-ring 4s linear infinite;
+}
+
+/* Keyframes for the running ring effect – short active phase, long pause */
+@keyframes cmp-slidenav-ring {
+    0% {
+        opacity: 0;
+        transform: rotate(0deg);
+    }
+
+    70% {
+        opacity: 0;
+        transform: rotate(0deg);
+    }
+
+    80% {
+        opacity: 1;
+        transform: rotate(120deg);
+    }
+
+    90% {
+        opacity: 1;
+        transform: rotate(240deg);
+    }
+
+    100% {
+        opacity: 0;
+        transform: rotate(360deg);
+    }
+}
+
+/* Dot navigation – small bullets inside the slideshow image */
+.cmp-module--slideshow .uk-slideshow-nav {
+    position: absolute;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+}
+
+/* Override UIKit spacing inside slideshow */
+.cmp-module--slideshow .uk-dotnav {
+    margin-left: 0;
+}
+
+.cmp-module--slideshow .uk-dotnav > * {
+    padding-left: 0.35rem;
+}
+
+/* Base dot style: small, subtle, without border, with soft shadow */
+.cmp-module--slideshow .uk-dotnav > * > * {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    border: none;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
+}
+
+/* Active slide dot – almost white, slightly larger, stronger shadow */
+.cmp-module--slideshow .uk-dotnav > .uk-active > * {
+    background-color: rgba(255, 255, 255, 0.95);
+    border: none;
+    transform: scale(1.15);
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
+}
 
 /* ==========================================================================
    UTILITIES - Helper classes (spacing, visibility, text helpers)

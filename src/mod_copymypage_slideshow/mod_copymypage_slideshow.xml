@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="module" client="site" method="upgrade">
+  <name>mod_copymypage_slideshow</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2025-12</creationDate>
+  <copyright>(C) 2025 Open Source Matters, Inc.</copyright>
+  <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.4</version>
+
+  <!-- Short description via language constant -->
+  <description>MOD_COPYMYPAGE_SLIDESHOW_XML_DESCRIPTION</description>
+
+  <!-- Joomla 6 namespace mapping for the module -->
+  <namespace path="src">Joomla\Module\CopyMyPage\Slideshow</namespace>
+
+  <!-- Module files -->
+  <files>
+    <filename module="mod_copymypage_slideshow">mod_copymypage_slideshow.php</filename>
+    <filename>mod_copymypage_slideshow.xml</filename>
+    <folder>services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+    <folder>language</folder>
+  </files>
+
+  <!-- Basic module params (alles weitere später) -->
+  <config>
+    <fields name="params">
+      <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
+        <field
+          name="moduleclass_sfx"
+          type="text"
+          label="JFIELD_MODULECLASS_SFX_LABEL"
+          description="JFIELD_MODULECLASS_SFX_DESC"
+          filter="STRING"
+        />
+      </fieldset>
+    </fields>
+  </config>
+</extension>
