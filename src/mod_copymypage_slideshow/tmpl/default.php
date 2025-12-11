@@ -30,7 +30,7 @@ if ($moduleClassSfx !== '') {
                     <img
                         src="<?php echo htmlspecialchars($slide['src'], ENT_QUOTES, 'UTF-8'); ?>"
                         alt="<?php echo htmlspecialchars($slide['alt'], ENT_QUOTES, 'UTF-8'); ?>"
-                        <?php if (!empty($slide['is_lazy'])) : ?>
+                        <?php if (!empty($slide['is_lazy']) && $slide['is_lazy'] === true) : ?>
                             loading="lazy"
                             decoding="async"
                         <?php endif; ?>
