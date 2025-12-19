@@ -25,17 +25,17 @@ return new class () implements ServiceProviderInterface {
      */
     public function register(Container $container): void
     {
-        // Registering the Module Dispatcher for the Navbar module
+        // Registering the Module Dispatcher for the Navbar module.
         $container->registerServiceProvider(
             new ModuleDispatcherFactory('\\Joomla\\Module\\CopyMyPage\\Navbar')
         );
 
-        // Registering the Helper for the Navbar module
+        // Registering the Helper for the Navbar module.
         $container->registerServiceProvider(
             new HelperFactory('\\Joomla\\Module\\CopyMyPage\\Navbar\\Site\\Helper')
         );
 
-        // Registering the core Module service
+        // Registering the core Module service.
         $container->registerServiceProvider(new Module());
     }
 };
