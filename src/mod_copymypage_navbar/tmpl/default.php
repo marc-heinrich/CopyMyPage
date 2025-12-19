@@ -14,7 +14,7 @@ use Joomla\CMS\Uri\Uri;
 
 /**
  * This is the fallback layout.
- * It is rendered when the module is published in an unsupported position.
+ * It is rendered when the module is published in an unsupported position or the layout file doesn't exist.
  */
 
 // Build an absolute URL to the Module Manager (works on any domain).
