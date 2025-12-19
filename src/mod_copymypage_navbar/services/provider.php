@@ -32,7 +32,7 @@ return new class () implements ServiceProviderInterface {
 
         // Registering the Helper for the Navbar module
         $container->registerServiceProvider(
-            new HelperFactory('\\Joomla\\Module\\CopyMyPage\\Navbar\\Site\\Helper\\NavbarHelper')
+            new HelperFactory('\\Joomla\\Module\\CopyMyPage\\Navbar\\Site\\Helper')
         );
 
         // Registering the core Module service

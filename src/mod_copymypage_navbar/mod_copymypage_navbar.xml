@@ -23,7 +23,7 @@
     <folder>language</folder>
   </files>
 
-  <!-- Basic module params (alles weitere später) -->
+  <!-- Basic module params -->
   <config>
     <fields name="params">
       <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
@@ -34,6 +34,27 @@
           description="MOD_COPYMYPAGE_NAVBAR_LOGO_DESC"
           filter="STRING"
         />
+
+        <field
+          name="layout_variant"
+          type="list"
+          label="MOD_COPYMYPAGE_NAVBAR_LAYOUT_VARIANT_LABEL"
+          description="MOD_COPYMYPAGE_NAVBAR_LAYOUT_VARIANT_DESC"
+          default="default"
+        >
+          <option value="default">JDEFAULT</option>
+
+          <!-- Divider: Navbar -->
+          <option value="" disabled="disabled">──────── Navbar ────────</option>
+          <option value="navbar_uikit">UIkit</option>
+          <option value="navbar_bootstrap">Bootstrap</option>
+
+          <!-- Divider: Mobile menu -->
+          <option value="" disabled="disabled">────── Mobile menu ──────</option>
+          <option value="mobilemenu_mmenu">mmenu.js</option>
+          <option value="mobilemenu_offcanvas">Offcanvas</option>
+        </field>
+
         <field
           name="moduleclass_sfx"
           type="text"

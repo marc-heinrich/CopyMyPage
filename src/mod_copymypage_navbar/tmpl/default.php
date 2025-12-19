@@ -2,35 +2,29 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2025 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  */
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 
-// Retrieve Navbar parameters from the dispatcher.
-$logo = $displayData['logo'];  
-$stickyClass = $displayData['sticky'] ? 'uk-sticky' : '';  
-$moduleClassSfx = $displayData['moduleclass_sfx'];  
+/**
+ * This is the fallback layout.
+ * It is rendered when the module is published in an unsupported position.
+ */
 
-// Build the final module class with the optional suffix.
-$moduleClass = 'cmp-module cmp-module--navbar ' . $stickyClass;
-
-if ($moduleClassSfx !== '') {
-    $moduleClass .= ' ' . htmlspecialchars($moduleClassSfx, ENT_QUOTES, 'UTF-8');
-}
+// Build an absolute URL to the Module Manager (works on any domain).
+$modulesUrl = Uri::root() . 'administrator/index.php?option=com_modules&view=modules';
 ?>
-
-<nav id="navbar" class="<?php echo $moduleClass; ?>" uk-sticky="sel-target: .uk-navbar-container; cls-active: uk-navbar-sticky">
-    <div class="uk-container">
-        <div class="uk-navbar-left">
-            <!-- Logo linked to the root of the site -->
-            <a href="<?php echo Uri::root(); ?>" class="uk-navbar-item uk-logo">
-                <img src="<?php echo $logo; ?>" alt="Logo" class="cmp-logo">
-            </a>
-        </div>
+<div class="cmp-module cmp-module--navbar cmp-module--navbar-fallback">
+    <div class="uk-alert-warning" uk-alert="animation: uk-animation-scale-up; duration: 1000">
+        <a class="uk-alert-close" uk-close></a>
+        <p>
+            <?php echo Text::sprintf('MOD_COPYMYPAGE_NAVBAR_ALERT_INVALID_POSITION', htmlspecialchars($modulesUrl, ENT_QUOTES, 'UTF-8')); ?>
+        </p>
     </div>
-</nav>
+</div>
