@@ -52,7 +52,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             default      => 'default',
         };
 
-        // Read a single variant value (e.g. "navbar_uikit", "mobilemmenu_mmenu", "default").
+        // Read a single variant value (e.g. "navbar_uikit", "mobilemenu_mmenu", "default").
         $layoutVariant = strtolower(trim((string) $displayData['params']->get('layout_variant', 'default')));
 
         // Build the final layout name:

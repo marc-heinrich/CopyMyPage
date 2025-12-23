@@ -29,7 +29,7 @@ class NavbarHelper
     public static function getParams(): array
     {
         return [
-            'logo'              => 'media/com_copymypage/images/logo/logo-copymypage.png', // Default logo
+            'logo'              => 'media/com_copymypage/images/logo/logo-cmp-1.png', // Default logo
             'sticky'            => true,  // Default sticky option (true = sticky)
             'moduleclass_sfx'   => '',    // Default module class suffix
         ];

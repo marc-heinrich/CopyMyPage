@@ -77,9 +77,9 @@
     --cmp-letter-spacing-xl: 0.1rem;
 
     /* Z-index */
-    --cmp-z-index-dropdown: 1000;
     --cmp-z-index-backto-top: 1010;
     --cmp-z-index-sticky: 1020;
+    --cmp-z-index-dropdown: 1030;    
     --cmp-z-index-modal-backdrop: 1040;
     --cmp-z-index-modal: 1050;
     --cmp-z-index-tooltip: 1060;
@@ -88,7 +88,6 @@
 /* ==========================================================================
    BASE - Global element defaults (body, headings, links, etc.)
    ========================================================================== */
-
 html,
 body {
     margin: 0;
@@ -98,14 +97,86 @@ body {
 /* ==========================================================================
    LAYOUT - Structural containers (header, main, footer, grid, etc.)
    ========================================================================== */
-
-/* Placeholder for future layout styles */
+/* 	HEADER
+   ========================================================================== */
+.cmp-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--cmp-z-index-sticky);
+}
 
 /* ==========================================================================
    COMPONENTS - System UI
    ========================================================================== */
+/* 	NAVBAR
+   ========================================================================== */
+.cmp-navbar-container {
+    background-color: transparent;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
 
-/* SYSTEM - Back to top link */
+.cmp-navbar-container.cmp-navbar--top {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.cmp-navbar-container.cmp-navbar--scrolled {
+    background-color: #fff;
+    box-shadow: var(--cmp-box-shadow-md);
+}
+
+/* Desktop nav items + icons */
+.cmp-navbar-nav,
+.cmp-navbar-icons {
+    margin: 0;
+}
+
+/* 	LOGO
+   ========================================================================== */
+.cmp-navbar-logo {
+    display: block;
+    width: auto;
+    height: auto;
+    max-height: 32px; /* Desktop */
+    max-width: 140px; /* Desktop */
+}
+
+/* Mobile (< 960px, matches UIkit @m breakpoint) */
+@media (max-width: 959px) {
+    .cmp-navbar-logo {
+        max-height: 28px; /* Mobile */
+        max-width: 120px; /* Mobile */
+    }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+    .cmp-navbar-logo {
+        max-height: 24px;
+        max-width: 110px;
+    }
+}
+
+.cmp-navbar-logo-link {
+    display: inline-flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+/* 	MOBILE TOGGLE
+   ========================================================================== */
+.cmp-navbar-toggle {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* 	BACK TO TOP BUTTON
+   ========================================================================== */
 .cmp-back-to-top {
     position: fixed;
     inset-inline-end: 1rem;
@@ -125,28 +196,23 @@ body {
     opacity: 0;
     transition: opacity 0.2s ease-in;
 }
-
 .cmp-back-to-top.visible {
     opacity: 1;
     pointer-events: auto;
 }
-
 .cmp-back-to-top:hover {
     background-color: var(--cmp-color);
     color: var(--cmp-color-logo-light);
     border-color: var(--cmp-border-color);
 }
-
 .cmp-back-to-top:focus {
     outline: none;
 }
-
 .cmp-back-to-top:focus-visible {
     outline: 0.125rem solid var(--cmp-color);
     outline-offset: 0.125rem;
 }
-
-@media (max-width: 767.98px) {
+@media (max-width: 767px) {
     .cmp-back-to-top {
         min-width: 2.25rem;
         min-height: 2.25rem;
@@ -154,33 +220,28 @@ body {
         bottom: 0.75rem;
     }
 }
-
 /* ==========================================================================
    COMPONENTS - Modules (hero, gallery, team, tickets, contact, footer)
    ========================================================================== */
-
-/* Basics for all modules */
-
-/* Module - Slideshow */
+/* 	BASICS
+   ========================================================================== */
+/* 	SLIDESHOW
+   ========================================================================== */
 .cmp-module--slideshow {
     position: relative;
 }
-
 .cmp-module--slideshow .uk-position-center {
     padding: 2rem;
 }
-
 /* Text overlay inside the slideshow */
 .cmp-module--slideshow .cmp-slideshow-overlay {
     color: var(--cmp-color-logo-light);
     text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
 }
-
 .cmp-module--slideshow .cmp-slideshow-overlay h2,
 .cmp-module--slideshow .cmp-slideshow-overlay p {
     margin: 0;
 }
-
 .cmp-module--slideshow .cmp-slideshow-overlay h2 {
     font-weight: 700;
     font-size: var(--cmp-font-size-heading-3xl);
@@ -189,13 +250,11 @@ body {
     text-transform: uppercase;
     margin-bottom: var(--cmp-spacing-sm);
 }
-
 .cmp-module--slideshow .cmp-slideshow-overlay p {
     font-weight: 400;
     font-size: var(--cmp-font-size-heading-lg);
     line-height: 1.4;
 }
-
 /* Slidenav arrows – circular buttons with inner running ring */
 .cmp-module--slideshow .uk-slidenav-previous,
 .cmp-module--slideshow .uk-slidenav-next {
@@ -210,14 +269,12 @@ body {
     position: relative;
     overflow: hidden;
 }
-
 /* Ensure the UIKit icon stays above the animated ring */
 .cmp-module--slideshow .uk-slidenav-previous span,
 .cmp-module--slideshow .uk-slidenav-next span {
     position: relative;
     z-index: 1;
 }
-
 /* Animated inner ring only on the border */
 .cmp-module--slideshow .uk-slidenav-previous::before,
 .cmp-module--slideshow .uk-slidenav-next::before {
@@ -253,7 +310,6 @@ body {
     z-index: 0;
     animation: cmp-slidenav-ring 4s linear infinite;
 }
-
 /* Keyframes for the running ring effect – short active phase, long pause */
 @keyframes cmp-slidenav-ring {
     0% {
@@ -281,7 +337,6 @@ body {
         transform: rotate(360deg);
     }
 }
-
 /* Dot navigation – small bullets inside the slideshow image */
 .cmp-module--slideshow .uk-slideshow-nav {
     position: absolute;
@@ -292,16 +347,13 @@ body {
     padding: 0;
     z-index: 1;
 }
-
 /* Override UIKit spacing inside slideshow */
 .cmp-module--slideshow .uk-dotnav {
     margin-left: 0;
 }
-
 .cmp-module--slideshow .uk-dotnav > * {
     padding-left: 0.35rem;
 }
-
 /* Base dot style: small, subtle, without border, with soft shadow */
 .cmp-module--slideshow .uk-dotnav > * > * {
     width: 0.5rem;
@@ -311,7 +363,6 @@ body {
     border: none;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
 }
-
 /* Active slide dot – almost white, slightly larger, stronger shadow */
 .cmp-module--slideshow .uk-dotnav > .uk-active > * {
     background-color: rgba(255, 255, 255, 0.95);
@@ -319,9 +370,3 @@ body {
     transform: scale(1.15);
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
 }
-
-/* ==========================================================================
-   UTILITIES - Helper classes (spacing, visibility, text helpers)
-   ========================================================================== */
-
-/* Placeholder for future utility classes */
