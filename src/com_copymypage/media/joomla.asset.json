@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "(C) 2025 Open Source Matters, Inc. <https://www.joomla.org>",
   "assets": [
@@ -11,6 +11,7 @@
       "dependencies": [
         "uikit#style",
         "uikit#script",
+        "uikit.icons#script",
         "bootstrap#style",
         "bootstrap#script",
         "joomla.fontawesome#style",
@@ -22,7 +23,7 @@
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.css",
-      "version": "0.0.3"
+      "version": "0.0.4"
     },
     {
       "name": "copymypage",
@@ -41,14 +42,26 @@
     {
       "name": "uikit",
       "type": "style",
-      "uri": "com_copymypage/uikit/uikit.css",
+      "uri": "com_copymypage/uikit/uikit.min.css",
       "version": "3.24.2"
     },
     {
       "name": "uikit",
       "type": "script",
-      "uri": "com_copymypage/uikit/uikit.js",
+      "uri": "com_copymypage/uikit/uikit.min.js",
       "version": "3.24.2",
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "uikit.icons",
+      "type": "script",
+      "uri": "com_copymypage/uikit/uikit-icons.min.js",
+      "version": "3.24.2",
+      "dependencies": [
+        "uikit"
+      ],
       "attributes": {
         "defer": true
       }
@@ -56,13 +69,13 @@
     {
       "name": "bootstrap",
       "type": "style",
-      "uri": "com_copymypage/bootstrap/bootstrap.css",
+      "uri": "com_copymypage/bootstrap/bootstrap.min.css",
       "version": "5.3.8"
     },
     {
       "name": "bootstrap",
       "type": "script",
-      "uri": "com_copymypage/bootstrap/bootstrap.js",
+      "uri": "com_copymypage/bootstrap/bootstrap.min.js",
       "version": "5.3.8",
       "attributes": {
         "defer": true

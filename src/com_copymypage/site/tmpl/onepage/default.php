@@ -9,4 +9,4 @@
 
 \defined('_JEXEC') or die;
 ?>
-<!-- The content is displayed via the modules. -->
+<!-- The current content is displayed via the modules. -->

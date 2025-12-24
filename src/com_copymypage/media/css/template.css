@@ -97,7 +97,7 @@ body {
 /* ==========================================================================
    LAYOUT - Structural containers (header, main, footer, grid, etc.)
    ========================================================================== */
-/* 	HEADER
+/* HEADER
    ========================================================================== */
 .cmp-header {
     position: absolute;
@@ -110,7 +110,7 @@ body {
 /* ==========================================================================
    COMPONENTS - System UI
    ========================================================================== */
-/* 	NAVBAR
+/* NAVBAR
    ========================================================================== */
 .cmp-navbar-container {
     background-color: transparent;
@@ -131,9 +131,10 @@ body {
 .cmp-navbar-nav,
 .cmp-navbar-icons {
     margin: 0;
+    color: red; /* TEMPORARY - to visualize the nav area */
 }
 
-/* 	LOGO
+/* LOGO
    ========================================================================== */
 .cmp-navbar-logo {
     display: block;
@@ -166,7 +167,7 @@ body {
     padding-bottom: 0;
 }
 
-/* 	MOBILE TOGGLE
+/* MOBILE TOGGLE
    ========================================================================== */
 .cmp-navbar-toggle {
     background: transparent;
@@ -175,7 +176,7 @@ body {
     cursor: pointer;
 }
 
-/* 	BACK TO TOP BUTTON
+/* BACK TO TOP BUTTON
    ========================================================================== */
 .cmp-back-to-top {
     position: fixed;
@@ -223,9 +224,9 @@ body {
 /* ==========================================================================
    COMPONENTS - Modules (hero, gallery, team, tickets, contact, footer)
    ========================================================================== */
-/* 	BASICS
+/* BASICS
    ========================================================================== */
-/* 	SLIDESHOW
+/* SLIDESHOW
    ========================================================================== */
 .cmp-module--slideshow {
     position: relative;
