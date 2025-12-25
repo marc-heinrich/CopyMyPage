@@ -9,6 +9,7 @@
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
 
 $moduleClass = 'cmp-module cmp-module--navbar';
@@ -106,7 +107,7 @@ $mobileMenuTarget = 'cmp-mobilemenu';
                         <div class="uk-navbar-item">   
                             <ul class="uk-iconnav uk-visible@m cmp-navbar-icons">
                                 <li><a class="uk-icon" href="#" aria-label="User" uk-icon="icon: user"></a></li>
-                                <li><a class="uk-icon" href="#" aria-label="Search" uk-icon="icon: search"></a></li>
+                                <li><a class="uk-icon" href="<?php echo Route::link('site', 'index.php?option=com_finder&view=search'); ?>" aria-label="Search" uk-icon="icon: search"></a></li>
                                 <li><a class="uk-icon" href="#" aria-label="Basket" uk-icon="icon: cart"></a></li>
                             </ul>
                         </div>

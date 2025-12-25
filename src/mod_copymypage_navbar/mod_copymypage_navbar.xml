@@ -12,6 +12,9 @@
   <!-- Short description via language constant -->
   <description>MOD_COPYMYPAGE_NAVBAR_XML_DESCRIPTION</description>
 
+  <!-- Installer script (Service Provider aware) -->
+  <scriptfile>script.php</scriptfile>
+
   <!-- Joomla 6 namespace mapping for the module -->
   <namespace path="src">Joomla\Module\CopyMyPage\Navbar</namespace>
 
