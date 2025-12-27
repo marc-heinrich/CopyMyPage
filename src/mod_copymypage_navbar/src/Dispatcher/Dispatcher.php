@@ -87,9 +87,16 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
              * @var \stdClass                 $module
              * @var \Joomla\Registry\Registry $params
              * @var \Joomla\CMS\Application\CMSApplicationInterface $app
-             * @var string                    $logo
-             * @var bool                      $sticky
-             * @var string                    $moduleclass_sfx
+             * @var string $logo
+             * @var bool   $sticky
+             * @var string $moduleclass_sfx
+             * @var array  $list
+             * @var array  $path
+             * @var object $base
+             * @var object $active
+             * @var object $default
+             * @var int    $active_id
+             * @var int    $default_id
              */
 
             // Prefer the variant layout if it exists; otherwise fall back.
@@ -117,6 +124,23 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data   = parent::getLayoutData();
         $helper = $this->getHelperFactory()->getHelper('NavbarHelper');
 
+        // Resolve menu context (core-like)
+        $base    = $helper->getBaseItem($data['params'], $data['app']);
+        $active  = $helper->getActiveItem($data['app']);
+        $default = $helper->getDefaultItem($data['app']);
+
+        $data['base']    = $base;
+        $data['active']  = $active;
+        $data['default'] = $default;
+
+        $data['active_id']  = isset($active->id) ? (int) $active->id : 0;
+        $data['default_id'] = isset($default->id) ? (int) $default->id : 0;
+        $data['path']       = isset($base->tree) && \is_array($base->tree) ? $base->tree : [];
+        $data['showAll']    = (int) $data['params']->get('showAllChildren', 1);
+
+        // Get menu items AFTER base/active/default (helper may use those internally)
+        $data['list'] = $helper->getItems($data['params'], $data['app']);
+
         // Use module params (stored in the DB) as the single source of truth.
         $logoImage = (string) $data['params']->get('logo_image', '');
 
@@ -126,11 +150,12 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             $logoImage = (string) ($defaults['logo'] ?? '');
         }
 
-        $data['logo']            = $logoImage;
-        $data['sticky']          = true;
-        $data['moduleclass_sfx'] = (string) $data['params']->get('moduleclass_sfx', '');
+        $data['logo']   = $logoImage;
+        $data['sticky'] = true;
 
-        // Always render; the default layout shows the warning/alert fallback anyway.
+        // Core-style escaping
+        $data['moduleclass_sfx'] = htmlspecialchars((string) $data['params']->get('moduleclass_sfx', ''), ENT_COMPAT, 'UTF-8');
+
         return $data;
     }
 }

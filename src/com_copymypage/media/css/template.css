@@ -83,6 +83,9 @@
     --cmp-z-index-modal-backdrop: 1040;
     --cmp-z-index-modal: 1050;
     --cmp-z-index-tooltip: 1060;
+
+    /* Header offset for anchor links */
+    --cmp-header-offset: 96px;
 }
 
 /* ==========================================================================
@@ -92,6 +95,9 @@ html,
 body {
     margin: 0;
     padding: 0;
+}
+html {
+  scroll-padding-top: var(--cmp-header-offset);
 }
 
 /* ==========================================================================
@@ -222,10 +228,13 @@ body {
     }
 }
 /* ==========================================================================
-   COMPONENTS - Modules (hero, gallery, team, tickets, contact, footer)
+   SECTIONS - Modules (hero, gallery, team, tickets, contact, footer)
    ========================================================================== */
 /* BASICS
    ========================================================================== */
+.cmp-section {
+  scroll-margin-top: var(--cmp-header-offset);
+}
 /* SLIDESHOW
    ========================================================================== */
 .cmp-module--slideshow {

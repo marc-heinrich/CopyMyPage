@@ -9,8 +9,11 @@
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Filter\OutputFilter;
+use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 $moduleClass = 'cmp-module cmp-module--navbar';
 
@@ -19,19 +22,23 @@ if (!empty($moduleclass_sfx)) {
 }
 
 $mobileMenuTarget = 'cmp-mobilemenu';
+
+$input     = $app->getInput();
+$option    = $input->getCmd('option', '');
+$view      = $input->getCmd('view', '');
+$isOnepage = CopyMyPageHelper::isOnepage($option, $view);
 ?>
 
 <div class="<?php echo $moduleClass; ?>">
 
     <div
-        uk-sticky="start: 1; end: false; sel-target: .uk-navbar-container; 
-        cls-active: cmp-navbar--scrolled; 
-        cls-inactive: cmp-navbar--top uk-navbar-transparent uk-light; 
-        animation: uk-animation-slide-top"
+        uk-sticky="start: 1; end: false; sel-target: .uk-navbar-container;
+        cls-active: cmp-navbar--scrolled;
+        cls-inactive: cmp-navbar--top uk-navbar-transparent uk-light"
     >
         <div class="uk-navbar-container cmp-navbar-container">
             <div class="uk-container">
-                <div class="uk-navbar" uk-navbar>
+                <div class="uk-navbar" uk-navbar="mode: hover; delay-show: 0; delay-hide: 200">
 
                     <!-- LEFT: Desktop = Logo, Mobile = Menu toggle -->
                     <div class="uk-navbar-left">
@@ -80,20 +87,172 @@ $mobileMenuTarget = 'cmp-mobilemenu';
                             >
                         </a>
 
-                        <!-- Desktop navigation (placeholder for now) -->
-                        <ul class="uk-navbar-nav uk-visible@m cmp-navbar-nav">
-                            <li><a href="#">Home</a></li>
-                            <li>
-                                <a href="#">Features</a>
-                                <div class="uk-navbar-dropdown">
-                                    <ul class="uk-nav uk-navbar-dropdown-nav">
-                                        <li><a href="#">Subitem 1</a></li>
-                                        <li><a href="#">Subitem 2</a></li>
-                                    </ul>
-                                </div>
-                            </li>
-                            <li><a href="#">Contact</a></li>
-                        </ul>
+                        <!-- Desktop navigation -->
+                        <?php if (!empty($list) && \is_array($list)) : ?>
+                            <ul class="uk-navbar-nav uk-visible@m cmp-navbar-nav">
+                                <?php
+                                $activeId = (int) ($active_id ?? 0);
+
+                                // Prefer the active item's tree for "trail"; fall back to $path if needed.
+                                $trailIds = [];
+
+                                if (isset($active) && isset($active->tree) && \is_array($active->tree)) {
+                                    $trailIds = array_map('intval', $active->tree);
+                                } elseif (\is_array($path)) {
+                                    $trailIds = array_map('intval', $path);
+                                }
+                                ?>
+
+                                <?php foreach ($list as $item) : ?>
+                                    <?php
+                                    $level = (int) $item->level;
+                                    $id    = (int) $item->id;
+
+                                    $isTrail  = \in_array($id, $trailIds, true);
+                                    $isActive = ($id === $activeId);
+
+                                    // "Has dropdown" means: next item is deeper (core flag semantics).
+                                    $hasDropdown = (bool) $item->deeper;
+
+                                    $liClasses = [];
+
+                                    // Mark trail AND active with uk-active so parent items get highlighted.
+                                    if ($isActive || $isTrail) {
+                                        $liClasses[] = 'uk-active';
+                                    }
+
+                                    // For nested menus inside dropdown: UIkit expects uk-parent on items that have children.
+                                    if ($hasDropdown && $level >= 2) {
+                                        $liClasses[] = 'uk-parent';
+                                    }
+
+                                    $attribs = [
+                                        'id'    => $id,
+                                        'class' => 'cmp-navbar-link',
+                                    ];
+
+                                    if ($isActive) {
+                                        $attribs['aria-current'] = 'page';
+                                    }
+
+                                    if (!empty($item->anchor_css)) {
+                                        $attribs['class'] .= ' ' . $item->anchor_css;
+                                    }
+
+                                    if (!empty($item->anchor_title)) {
+                                        $attribs['title'] = $item->anchor_title;
+                                    }
+
+                                    if (!empty($item->anchor_rel)) {
+                                        $attribs['rel'] = $item->anchor_rel;
+                                    }
+
+                                    // Build URL.
+                                    $url = $item->flink;
+
+                                    // If we are on the onepage view and the original menu link is a hash, keep it a pure hash.
+                                    // This is important for UIkit uk-scroll to apply correctly.
+                                    if (
+                                        $isOnepage 
+                                        && $item->type === 'url' 
+                                        && !empty($item->link) 
+                                        && str_starts_with($item->link, '#')
+                                    ) {
+                                        $url = $item->link;
+                                    }
+
+                                    // If we are NOT on the onepage view, route top-level hash items to the onepage view + anchor.
+                                    if (
+                                        !$isOnepage
+                                        && $level === 1
+                                        && $item->type === 'url'
+                                        && !empty($item->link)
+                                        && str_starts_with($item->link, '#')
+                                    ) {
+                                        $url = Route::link('site', 'index.php?option=com_copymypage&view=onepage') . $item->link;
+                                    }
+
+                                    $linkText = $item->title;
+
+                                    // Separators: only useful inside dropdowns.
+                                    if ($item->type === 'separator') {
+                                        echo ($level > 1) ? '<li class="uk-nav-divider"></li>' : '<li class="uk-hidden"></li>';
+                                        continue;
+                                    }
+
+                                    // Headings: behave like dropdown toggles (no jump).
+                                    if ($item->type === 'heading') {
+                                        $url = '#';
+
+                                        if ($hasDropdown && $level === 1) {
+                                            $linkText = '<span>' . $item->title . '</span><span class="uk-margin-small-left" uk-icon="icon: chevron-down"></span>';
+                                        }
+
+                                        $attribs['role']          = 'button';
+                                        $attribs['aria-haspopup'] = 'true';
+                                        $attribs['aria-expanded'] = 'false';
+                                        $attribs['onclick']       = 'return false;';
+                                    } elseif ($hasDropdown && $level === 1) {
+                                        // Optional indicator for normal parents as well.
+                                        $linkText = '<span>' . $item->title . '</span><span class="uk-margin-small-left" uk-icon="icon: chevron-down"></span>';
+
+                                        // Do NOT prevent navigation here; dropdown is hover-based on desktop.
+                                        $attribs['aria-haspopup'] = 'true';
+                                        $attribs['aria-expanded'] = 'false';
+                                    }
+
+                                    $liClassAttr = $liClasses ? ' class="' . implode(' ', $liClasses) . '"' : '';
+                                    echo '<li' . $liClassAttr . '>';
+
+                                    // Mark same-page anchors so JS can attach UIkit scroll with the correct offset.
+                                    $isScrollAnchor = $isOnepage
+                                        && $item->type === 'url'
+                                        && \is_string($url)
+                                        && $url !== '#'
+                                        && str_starts_with($url, '#');
+
+                                    if ($isScrollAnchor) {
+                                        $attribs['data-cmp-scroll'] = '1';
+                                    }
+
+                                    echo HTMLHelper::_(
+                                        'link',
+                                        OutputFilter::ampReplace(htmlspecialchars($url, ENT_COMPAT, 'UTF-8', false)),
+                                        $linkText,
+                                        $attribs
+                                    );
+
+                                    // Depth handling.
+                                    if ($item->deeper) {
+                                        if ($level === 1) {
+                                            // Dropdown container (level 1 -> level 2).
+                                            echo '<div class="uk-navbar-dropdown">';
+                                            echo '<ul class="uk-nav uk-navbar-dropdown-nav uk-nav-parent-icon">';
+                                        } else {
+                                            // Nested inside dropdown.
+                                            echo '<ul class="uk-nav-sub">';
+                                        }
+                                    } elseif ($item->shallower) {
+                                        echo '</li>';
+
+                                        for ($j = 0; $j < (int) $item->level_diff; $j++) {
+                                            $closingLevel = $level - $j;
+
+                                            // Closing from level 2 back to level 1 => close dropdown wrapper + parent <li>.
+                                            if ($closingLevel === 2) {
+                                                echo '</ul></div></li>';
+                                            } else {
+                                                // Closing nested sub levels.
+                                                echo '</ul></li>';
+                                            }
+                                        }
+                                    } else {
+                                        echo '</li>';
+                                    }
+                                    ?>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
                     </div>
 
                     <!-- RIGHT: Desktop = Icons, Mobile = User icon -->
@@ -104,10 +263,17 @@ $mobileMenuTarget = 'cmp-mobilemenu';
                         </a>
 
                         <!-- Desktop: icon group -->
-                        <div class="uk-navbar-item">   
+                        <div class="uk-navbar-item">
                             <ul class="uk-iconnav uk-visible@m cmp-navbar-icons">
                                 <li><a class="uk-icon" href="#" aria-label="User" uk-icon="icon: user"></a></li>
-                                <li><a class="uk-icon" href="<?php echo Route::link('site', 'index.php?option=com_finder&view=search'); ?>" aria-label="Search" uk-icon="icon: search"></a></li>
+                                <li>
+                                    <a
+                                        class="uk-icon"
+                                        href="<?php echo Route::link('site', 'index.php?option=com_finder&view=search'); ?>"
+                                        aria-label="Search"
+                                        uk-icon="icon: search"
+                                    ></a>
+                                </li>
                                 <li><a class="uk-icon" href="#" aria-label="Basket" uk-icon="icon: cart"></a></li>
                             </ul>
                         </div>

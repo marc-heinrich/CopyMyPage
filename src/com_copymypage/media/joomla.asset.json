@@ -33,7 +33,8 @@
       "class": "CopyMyPageAssetItem",
       "dependencies": [
         "core",
-        "messages"
+        "messages",
+        "uikit"
       ],
       "attributes": {
         "defer": true
