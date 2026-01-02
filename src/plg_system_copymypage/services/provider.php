@@ -2,7 +2,7 @@
 /**
  * @package     Joomla.Plugin
  * @subpackage  System.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc.
+ * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
  * @since       0.0.3
  */
@@ -14,13 +14,14 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\DI\Container;
 use Joomla\DI\ServiceProviderInterface;
+use Joomla\Event\DispatcherInterface;
 use Joomla\Plugin\System\CopyMyPage\Extension\CopyMyPage;
 
 /**
  * Service provider for the CopyMyPage system plugin.
  *
- * Wires the CopyMyPage plugin into Joomla's DI container so that it can be
- * instantiated and its subscribed events can be dispatched.
+ * Registers the plugin in Joomla's DI container so it can be instantiated
+ * and subscribed events can be dispatched.
  *
  * @since  0.0.3
  */
@@ -42,10 +43,13 @@ return new class () implements ServiceProviderInterface {
                 // Load the plugin configuration from the extensions table.
                 $config = (array) PluginHelper::getPlugin('system', 'copymypage');
 
-                // Instantiate the plugin class with its configuration.
-                $plugin = new CopyMyPage($config);
+                // The dispatcher is the "subject" passed to CMSPlugin-based plugins.
+                $subject = $container->get(DispatcherInterface::class);
 
-                // Inject the current application instance.
+                // Instantiate the plugin with dispatcher + config.
+                $plugin = new CopyMyPage($subject, $config);
+
+                // Inject the current application instance (standard Joomla pattern).
                 $plugin->setApplication(Factory::getApplication());
 
                 return $plugin;
