@@ -1,7 +1,7 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
@@ -120,24 +120,19 @@ html {
    ========================================================================== */
 .cmp-navbar-container {
     background-color: transparent;
+    box-shadow: none;
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
-
 .cmp-navbar-container.cmp-navbar--top {
     background-color: transparent;
     box-shadow: none;
 }
-
 .cmp-navbar-container.cmp-navbar--scrolled {
-    background-color: #fff;
-    box-shadow: var(--cmp-box-shadow-md);
-}
-
-/* Desktop nav items + icons */
-.cmp-navbar-nav,
-.cmp-navbar-icons {
-    margin: 0;
-    color: red; /* TEMPORARY - to visualize the nav area */
+    background-color: var(--cmp-color-background-default);
+    box-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.03),
+        0 12px 28px rgba(0, 0, 0, 0.08),
+        0 28px 70px rgba(0, 0, 0, 0.06);
 }
 
 /* LOGO

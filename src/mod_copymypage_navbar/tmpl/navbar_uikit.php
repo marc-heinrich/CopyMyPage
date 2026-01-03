@@ -2,7 +2,7 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc.
+ * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  */
@@ -153,9 +153,9 @@ $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
                                     // If we are on the onepage view and the original menu link is a hash, keep it a pure hash.
                                     // This is important for UIkit uk-scroll to apply correctly.
                                     if (
-                                        $isOnepage 
-                                        && $item->type === 'url' 
-                                        && !empty($item->link) 
+                                        $isOnepage
+                                        && $item->type === 'url'
+                                        && !empty($item->link)
                                         && str_starts_with($item->link, '#')
                                     ) {
                                         $url = $item->link;
@@ -185,7 +185,7 @@ $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
                                         $url = '#';
 
                                         if ($hasDropdown && $level === 1) {
-                                            $linkText = '<span>' . $item->title . '</span><span class="uk-margin-small-left" uk-icon="icon: chevron-down"></span>';
+                                            $linkText = '<span>' . $item->title . '</span>' . '<span uk-navbar-parent-icon></span>';
                                         }
 
                                         $attribs['role']          = 'button';
@@ -193,8 +193,8 @@ $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
                                         $attribs['aria-expanded'] = 'false';
                                         $attribs['onclick']       = 'return false;';
                                     } elseif ($hasDropdown && $level === 1) {
-                                        // Optional indicator for normal parents as well.
-                                        $linkText = '<span>' . $item->title . '</span><span class="uk-margin-small-left" uk-icon="icon: chevron-down"></span>';
+                                        // Parent item: use UIkit's navbar parent icon (rotates on open/hover).
+                                        $linkText = '<span>' . $item->title . '</span>' . '<span uk-navbar-parent-icon></span>';
 
                                         // Do NOT prevent navigation here; dropdown is hover-based on desktop.
                                         $attribs['aria-haspopup'] = 'true';
