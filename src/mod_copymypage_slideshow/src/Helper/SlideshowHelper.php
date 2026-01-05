@@ -2,7 +2,7 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  */
@@ -10,6 +10,9 @@
 namespace Joomla\Module\CopyMyPage\Slideshow\Site\Helper;
 
 \defined('_JEXEC') or die;
+
+use Joomla\CMS\Uri\Uri;
+use Joomla\Registry\Registry;
 
 /**
  * Helper class to prepare slideshow data for the CopyMyPage Slideshow module.
@@ -23,25 +26,21 @@ class SlideshowHelper
     /**
      * Get the slideshow items for the module output.
      *
-     * @param  object                     $module  The module object.
-     * @param  \Joomla\Registry\Registry  $params  The module parameters.
+     * @param  object    $module  The module object.
+     * @param  Registry  $params  The module parameters.
      *
      * @return array<int, array<string, mixed>>
      */
-    public static function getSlides($module, $params): array
+    public static function getSlides(object $module, Registry $params): array
     {
-        // Base path for the slideshow images (adjust as needed).
-        $basePath = 'images/copymypage/module/mod_copymypage_slideshow';
+        $basePath = rtrim(Uri::root(true), '/') . '/images/copymypage/module/mod_copymypage_slideshow';
 
-        // Static slide definitions for dev0.0.4.
-        // Later, this structure will be built from $params.
-        $slides = [
+        return [
             [
                 'src'      => $basePath . '/slide-1.webp',
                 'alt'      => 'CopyMyPage slideshow image 1',
                 'headline' => 'CopyMyPage Slideshow',
                 'subline'  => 'Hero slide (static definition in dev0.0.4).',
-                // First slide: visible on initial load, no lazy loading.
                 'is_lazy'  => false,
             ],
             [
@@ -66,26 +65,18 @@ class SlideshowHelper
                 'is_lazy'  => true,
             ],
         ];
-
-        return $slides;
     }
 
     /**
      * Get the slideshow options for the uk-slideshow attribute.
      *
-     * For dev0.0.4 this is a static string. Later it will be built from $params.
-     *
-     * @param  object                     $module  The module object.
-     * @param  \Joomla\Registry\Registry  $params  The module parameters.
+     * @param  object    $module  The module object.
+     * @param  Registry  $params  The module parameters.
      *
      * @return string
      */
-    public static function getOptions($module, $params): string
+    public static function getOptions(object $module, Registry $params): string
     {
-        // Static default options for UIKit slideshow.
-        // Example: full-width, 16:9 ratio, fade animation, autoplay enabled.
-        $options = 'ratio: false; animation: fade; autoplay: true; draggable: true';
-
-        return $options;
+        return 'ratio: false; animation: fade; autoplay: true; draggable: true';
     }
 }

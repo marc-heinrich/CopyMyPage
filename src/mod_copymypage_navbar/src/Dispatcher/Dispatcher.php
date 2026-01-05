@@ -2,7 +2,7 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc.
+ * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  */
@@ -124,7 +124,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data   = parent::getLayoutData();
         $helper = $this->getHelperFactory()->getHelper('NavbarHelper');
 
-        // Resolve menu context (core-like)
+        // Resolve menu context (core-like).
         $base    = $helper->getBaseItem($data['params'], $data['app']);
         $active  = $helper->getActiveItem($data['app']);
         $default = $helper->getDefaultItem($data['app']);
@@ -138,7 +138,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['path']       = isset($base->tree) && \is_array($base->tree) ? $base->tree : [];
         $data['showAll']    = (int) $data['params']->get('showAllChildren', 1);
 
-        // Get menu items AFTER base/active/default (helper may use those internally)
+        // Get menu items AFTER base/active/default (helper may use those internally).
         $data['list'] = $helper->getItems($data['params'], $data['app']);
 
         // Use module params (stored in the DB) as the single source of truth.
@@ -153,8 +153,12 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['logo']   = $logoImage;
         $data['sticky'] = true;
 
-        // Core-style escaping
-        $data['moduleclass_sfx'] = htmlspecialchars((string) $data['params']->get('moduleclass_sfx', ''), ENT_COMPAT, 'UTF-8');
+        // Core-style escaping.
+        $data['moduleclass_sfx'] = htmlspecialchars(
+            (string) $data['params']->get('moduleclass_sfx', ''), 
+            ENT_COMPAT, 
+            'UTF-8'
+        );
 
         return $data;
     }

@@ -2,7 +2,7 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  */
@@ -13,19 +13,19 @@
 /** @var \Joomla\Registry\Registry $params */
 /** @var object $module */
 /** @var string $options */
+/** @var string $moduleclass_sfx */
 
-$moduleClassSfx = $params->get('moduleclass_sfx', '');
-$moduleClass    = 'cmp-module cmp-module--slideshow';
+$moduleClass = 'cmp-module cmp-module--slideshow';
 
-if ($moduleClassSfx !== '') {
-    $moduleClass .= ' ' . htmlspecialchars($moduleClassSfx, ENT_QUOTES, 'UTF-8');
+if (!empty($moduleclass_sfx)) {
+    $moduleClass .= ' ' . $moduleclass_sfx;
 }
 ?>
 <div class="<?php echo $moduleClass; ?>">
     <div class="uk-position-relative uk-visible-toggle uk-light" tabindex="-1"
         uk-slideshow="<?php echo htmlspecialchars($options, ENT_QUOTES, 'UTF-8'); ?>">
         <ul class="uk-slideshow-items" uk-height-viewport="offset-top: true">
-            <?php foreach ($slides as $index => $slide) : ?>
+            <?php foreach ($slides as $slide) : ?>
                 <li>
                     <img
                         src="<?php echo htmlspecialchars($slide['src'], ENT_QUOTES, 'UTF-8'); ?>"
@@ -55,11 +55,11 @@ if ($moduleClassSfx !== '') {
             <?php endforeach; ?>
         </ul>
 
-        <a class="uk-position-center-left uk-position-small uk-hidden-hover" href="#"
+        <a class="uk-position-center-left uk-position-small" href="#"
             uk-slidenav-previous uk-slideshow-item="previous"></a>
-        <a class="uk-position-center-right uk-position-small uk-hidden-hover" href="#"
+        <a class="uk-position-center-right uk-position-small" href="#"
             uk-slidenav-next uk-slideshow-item="next"></a>
 
-        <ul class="uk-slideshow-nav uk-dotnav uk-flex-center uk-margin"></ul>
+        <ul class="uk-slideshow-nav uk-dotnav uk-flex-center"></ul>
     </div>
 </div>

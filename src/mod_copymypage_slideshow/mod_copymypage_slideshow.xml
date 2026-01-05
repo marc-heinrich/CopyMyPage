@@ -3,7 +3,7 @@
   <name>mod_copymypage_slideshow</name>
   <author>Marc Heinrich</author>
   <creationDate>2025-12</creationDate>
-  <copyright>(C) 2025 Open Source Matters, Inc.</copyright>
+  <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
@@ -17,15 +17,13 @@
 
   <!-- Module files -->
   <files>
-    <filename module="mod_copymypage_slideshow">mod_copymypage_slideshow.php</filename>
-    <filename>mod_copymypage_slideshow.xml</filename>
-    <folder>services</folder>
+    <folder module="mod_copymypage_slideshow">services</folder>
     <folder>src</folder>
     <folder>tmpl</folder>
     <folder>language</folder>
   </files>
 
-  <!-- Basic module params (alles weitere später) -->
+  <!-- Basic module params -->
   <config>
     <fields name="params">
       <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
