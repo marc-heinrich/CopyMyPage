@@ -84,19 +84,20 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             /**
              * Extracted variables
              * -----------------
-             * @var \stdClass                 $module
-             * @var \Joomla\Registry\Registry $params
-             * @var \Joomla\CMS\Application\CMSApplicationInterface $app
-             * @var string $logo
-             * @var bool   $sticky
-             * @var string $moduleclass_sfx
-             * @var array  $list
-             * @var array  $path
-             * @var object $base
-             * @var object $active
-             * @var object $default
-             * @var int    $active_id
-             * @var int    $default_id
+             * @var \stdClass                               $module
+             * @var \Joomla\Registry\Registry               $params
+             * @var \Joomla\CMS\Application\SiteApplication $app
+             * @var bool                                    $isOnepage
+             * @var string                                  $logo
+             * @var bool                                    $sticky
+             * @var string                                  $moduleclass_sfx
+             * @var array                                   $list
+             * @var array                                   $path
+             * @var object                                  $base
+             * @var object                                  $active
+             * @var object                                  $default
+             * @var int                                     $active_id
+             * @var int                                     $default_id
              */
 
             // Prefer the variant layout if it exists; otherwise fall back.
@@ -123,6 +124,12 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     {
         $data   = parent::getLayoutData();
         $helper = $this->getHelperFactory()->getHelper('NavbarHelper');
+
+        // Determine whether the current request targets the CopyMyPage onepage view.
+        $input     = $data['app']->getInput();
+        $option    = $input->getCmd('option', '');
+        $view      = $input->getCmd('view', '');
+        $data['isOnepage'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::isOnepage($option, $view);
 
         // Resolve menu context (core-like).
         $base    = $helper->getBaseItem($data['params'], $data['app']);
@@ -155,8 +162,8 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
 
         // Core-style escaping.
         $data['moduleclass_sfx'] = htmlspecialchars(
-            (string) $data['params']->get('moduleclass_sfx', ''), 
-            ENT_COMPAT, 
+            (string) $data['params']->get('moduleclass_sfx', ''),
+            ENT_COMPAT,
             'UTF-8'
         );
 

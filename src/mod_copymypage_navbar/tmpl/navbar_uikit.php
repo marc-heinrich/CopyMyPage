@@ -13,7 +13,6 @@ use Joomla\CMS\Filter\OutputFilter;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
-use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 $moduleClass = 'cmp-module cmp-module--navbar';
 
@@ -22,11 +21,6 @@ if (!empty($moduleclass_sfx)) {
 }
 
 $mobileMenuTarget = 'cmp-mobilemenu';
-
-$input     = $app->getInput();
-$option    = $input->getCmd('option', '');
-$view      = $input->getCmd('view', '');
-$isOnepage = CopyMyPageHelper::isOnepage($option, $view);
 ?>
 
 <div class="<?php echo $moduleClass; ?>">
@@ -278,10 +272,8 @@ $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
                             </ul>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
     </div>
-
 </div>
