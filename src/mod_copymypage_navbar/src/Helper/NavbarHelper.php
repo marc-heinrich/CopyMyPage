@@ -2,7 +2,7 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc.
+ * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  */
@@ -12,263 +12,95 @@ namespace Joomla\Module\CopyMyPage\Navbar\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Application\CMSApplicationInterface;
-use Joomla\CMS\Cache\CacheControllerFactoryInterface;
-use Joomla\CMS\Cache\Controller\OutputController;
-use Joomla\CMS\Factory;
-use Joomla\CMS\Language\Multilanguage;
-use Joomla\CMS\Router\Route;
 use Joomla\Registry\Registry;
 
 /**
- * Helper class to prepare data for the CopyMyPage Navbar module.
+ * Helper class for the CopyMyPage Navbar module.
+ *
+ * This helper is intentionally small and acts as the single source of truth
+ * for all runtime defaults while the module is in development.
+ *
+ * Menu rendering logic is delegated to Joomla core (mod_menu MenuHelper via bootModule()).
  */
 class NavbarHelper
 {
     /**
-     * Get default parameters as an associative array.
+     * Returns module defaults (development stage).
      *
-     * @return array
+     * These values are used as the single source of truth during development.
+     * Once the module is production-ready, selected values can be migrated into
+     * module parameters (DB) without changing the templates.
+     *
+     * @return array{
+     *   logo: string,
+     *   sticky: bool,
+     *   navOffcanvasId: string,
+     *   userOffcanvasId: string,
+     *   basketOffcanvasId: string,
+     *   mobilemenuTheme: string,
+     *   mobilemenuPanelMode: string,
+     *   mobilemenuCloseOnClick: bool
+     * }
      */
     public function getParams(): array
     {
         return [
-            'logo' => 'media/com_copymypage/images/logo/logo-cmp-1.png',
+            // Logo path and sticky behavior.
+            'logo'   => 'media/com_copymypage/images/logo/logo-cmp-1.png',
+            'sticky' => true,
+
+            // Offcanvas target IDs (used by navbar toggles and offcanvas markup).
+            'navOffcanvasId'    => 'cmp-mobilemenu-nav',
+            'userOffcanvasId'   => 'cmp-mobilemenu-user',
+            'basketOffcanvasId' => 'cmp-mobilemenu-basket',
+
+            // Mobile menu behavior flags (dev defaults).
+            'mobilemenuTheme'        => 'dark',
+            'mobilemenuPanelMode'    => 'panels',
+            'mobilemenuCloseOnClick' => true,
         ];
     }
 
     /**
-     * Get a list of the menu items (core-like).
+     * Builds a Registry object compatible with Joomla core mod_menu MenuHelper.
      *
-     * @param   Registry                 $params  The module options.
-     * @param   CMSApplicationInterface  $app     The application
+     * During development, all menu settings are defined here to avoid relying on DB params.
      *
-     * @return  array
+     * @return Registry  A Registry object for core MenuHelper consumption.
      */
-    public function getItems(Registry $params, CMSApplicationInterface $app): array
+    public function getMenuParams(): Registry
     {
-        $menu = $app->getMenu();
-        $base = $this->getBaseItem($params, $app);
+        $menuParams = new Registry();
 
-        $levels = $app->getIdentity()->getAuthorisedViewLevels();
-        asort($levels);
+        $menuParams->set('menutype', 'copymypage');
+        $menuParams->set('startLevel', 1);
+        $menuParams->set('endLevel', 0);
 
-        $menutype = (string) $params->get('menutype', 'copymypage');
+        // Keep behaviour core-like (same key name as mod_menu expects).
+        $menuParams->set('showAllChildren', 1);
 
-        // Core-like cache key, but include menutype explicitly for safety.
-        $cacheKey = 'navbar_items'
-            . $params
-            . '|' . $menutype
-            . '|' . implode(',', $levels)
-            . '.' . (int) ($base->id ?? 0);
+        // Dev defaults (can be wired later if needed).
+        $menuParams->set('base', 0);
+        $menuParams->set('secure', 0);
+        $menuParams->set('aliasoptions', []);
 
-        /** @var OutputController $cache */
-        $cache = Factory::getContainer()
-            ->get(CacheControllerFactoryInterface::class)
-            ->createCacheController('output', ['defaultgroup' => 'mod_copymypage_navbar']);
-
-        if ($cache->contains($cacheKey)) {
-            $cached = $cache->get($cacheKey);
-
-            return \is_array($cached) ? $cached : [];
-        }
-
-        $path    = (isset($base->tree) && \is_array($base->tree)) ? array_map('intval', $base->tree) : [];
-        $start   = (int) $params->get('startLevel', 1);
-        $end     = (int) $params->get('endLevel', 0);
-        $showAll = (int) $params->get('showAllChildren', 1);
-
-        $items         = $menu->getItems('menutype', $menutype);
-        $hiddenParents = [];
-        $lastIndex     = 0;
-
-        if (!$items) {
-            $cache->store([], $cacheKey);
-
-            return [];
-        }
-
-        $inputVars = $app->getInput()->getArray();
-
-        foreach ($items as $i => $item) {
-            $item->parent = false;
-            $itemParams   = $item->getParams();
-
-            // Flag previous item as parent when this item is its child and is visible.
-            if (
-                isset($items[$lastIndex])
-                && (int) $items[$lastIndex]->id === (int) $item->parent_id
-                && (int) $itemParams->get('menu_show', 1) === 1
-            ) {
-                $items[$lastIndex]->parent = true;
-            }
-
-            $itemLevel    = (int) $item->level;
-            $parentId     = (int) $item->parent_id;
-            $treeStartRef = ($start > 1) ? (int) ($item->tree[$start - 2] ?? 0) : 0;
-
-            // Level filtering (core-like).
-            if (
-                ($start && $start > $itemLevel)
-                || ($end && $itemLevel > $end)
-                || (!$showAll && $itemLevel > 1 && !\in_array($parentId, $path, true))
-                || ($start > 1 && ($treeStartRef === 0 || !\in_array($treeStartRef, $path, true)))
-            ) {
-                unset($items[$i]);
-                continue;
-            }
-
-            // Exclude item with "exclude from menu modules" or hidden parent.
-            if ((int) $itemParams->get('menu_show', 1) === 0 || \in_array($parentId, $hiddenParents, true)) {
-                $hiddenParents[] = (int) $item->id;
-                unset($items[$i]);
-                continue;
-            }
-
-            // "Current" state based on input vars vs item query.
-            $item->current = true;
-
-            foreach ($item->query as $key => $value) {
-                if (!isset($inputVars[$key]) || $inputVars[$key] !== $value) {
-                    $item->current = false;
-                    break;
-                }
-            }
-
-            // Tree flags for templating.
-            $item->deeper     = false;
-            $item->shallower  = false;
-            $item->level_diff = 0;
-
-            if (isset($items[$lastIndex])) {
-                $items[$lastIndex]->deeper     = ($itemLevel > (int) $items[$lastIndex]->level);
-                $items[$lastIndex]->shallower  = ($itemLevel < (int) $items[$lastIndex]->level);
-                $items[$lastIndex]->level_diff = ((int) $items[$lastIndex]->level - $itemLevel);
-            }
-
-            $lastIndex    = $i;
-            $item->active = false;
-            $item->flink  = (string) $item->link;
-
-            // Build link (core-like).
-            switch ($item->type) {
-                case 'separator':
-                case 'heading':
-                    // No link modification required here; templates may override href.
-                    break;
-
-                case 'url':
-                    if (
-                        str_starts_with((string) $item->link, 'index.php?')
-                        && !str_contains((string) $item->link, 'Itemid=')
-                    ) {
-                        $item->flink = $item->link . '&Itemid=' . (int) $item->id;
-                    }
-                    break;
-
-                case 'alias':
-                    $item->flink = 'index.php?Itemid=' . (int) $itemParams->get('aliasoptions');
-
-                    if (Multilanguage::isEnabled()) {
-                        $newItem = $app->getMenu()->getItem((int) $itemParams->get('aliasoptions'));
-
-                        if ($newItem !== null && $newItem->language && $newItem->language !== '*') {
-                            $item->flink .= '&lang=' . $newItem->language;
-                        }
-                    }
-                    break;
-
-                default:
-                    $item->flink = 'index.php?Itemid=' . (int) $item->id;
-                    break;
-            }
-
-            // Route (core-like) — BUT keep pure anchors untouched.
-            if (str_starts_with((string) $item->flink, '#')) {
-                // keep as-is
-            } elseif (str_contains((string) $item->flink, 'index.php?') && strcasecmp(substr((string) $item->flink, 0, 4), 'http')) {
-                $item->flink = Route::_($item->flink, true, $itemParams->get('secure'));
-            } else {
-                $item->flink = Route::_($item->flink);
-            }
-
-            // Prevent double encoding (core behavior).
-            $item->title          = htmlspecialchars((string) $item->title, ENT_COMPAT, 'UTF-8', false);
-            $item->menu_icon      = htmlspecialchars((string) $itemParams->get('menu_icon_css', ''), ENT_COMPAT, 'UTF-8', false);
-            $item->anchor_css     = htmlspecialchars((string) $itemParams->get('menu-anchor_css', ''), ENT_COMPAT, 'UTF-8', false);
-            $item->anchor_title   = htmlspecialchars((string) $itemParams->get('menu-anchor_title', ''), ENT_COMPAT, 'UTF-8', false);
-            $item->anchor_rel     = htmlspecialchars((string) $itemParams->get('menu-anchor_rel', ''), ENT_COMPAT, 'UTF-8', false);
-            $item->menu_image     = htmlspecialchars((string) $itemParams->get('menu_image', ''), ENT_COMPAT, 'UTF-8', false);
-            $item->menu_image_css = htmlspecialchars((string) $itemParams->get('menu_image_css', ''), ENT_COMPAT, 'UTF-8', false);
-        }
-
-        // Close flags for last item (core-like).
-        if (isset($items[$lastIndex])) {
-            $startLevel = ($start ?: 1);
-
-            $items[$lastIndex]->deeper     = ($startLevel > (int) $items[$lastIndex]->level);
-            $items[$lastIndex]->shallower  = ($startLevel < (int) $items[$lastIndex]->level);
-            $items[$lastIndex]->level_diff = ((int) $items[$lastIndex]->level - $startLevel);
-        }
-
-        $items = array_values($items);
-
-        $cache->store($items, $cacheKey);
-
-        return $items;
+        return $menuParams;
     }
 
     /**
-     * Get base menu item.
+     * Returns a user menu list for mobile layouts (placeholder for now).
      *
-     * @param   Registry                 $params  The module options.
-     * @param   CMSApplicationInterface  $app     The application
+     * If you later want real user items, you can either:
+     * - build them from com_users routes, or
+     * - use a second menutype and delegate to core MenuHelper again.
      *
-     * @return  object
+     * @param  Registry                $params  The module parameters object (kept for future use).
+     * @param  CMSApplicationInterface $app     The application instance.
+     *
+     * @return array<int, object>
      */
-    public function getBaseItem(Registry $params, CMSApplicationInterface $app): object
+    public function getUserItems(Registry $params, CMSApplicationInterface $app): array
     {
-        if ($params->get('base')) {
-            $base = $app->getMenu()->getItem((int) $params->get('base'));
-        } else {
-            $base = false;
-        }
-
-        if (!$base) {
-            $base = $this->getActiveItem($app);
-        }
-
-        return $base;
-    }
-
-    /**
-     * Get active menu item.
-     *
-     * @param   CMSApplicationInterface  $app  The application
-     *
-     * @return  object
-     */
-    public function getActiveItem(CMSApplicationInterface $app): object
-    {
-        $menu = $app->getMenu();
-
-        return $menu->getActive() ?: $this->getDefaultItem($app);
-    }
-
-    /**
-     * Get default menu item (home page) for current language.
-     *
-     * @param   CMSApplicationInterface  $app  The application
-     *
-     * @return  object
-     */
-    public function getDefaultItem(CMSApplicationInterface $app): object
-    {
-        $menu = $app->getMenu();
-
-        if (Multilanguage::isEnabled()) {
-            return $menu->getDefault($app->getLanguage()->getTag());
-        }
-
-        return $menu->getDefault();
+        return [];
     }
 }
