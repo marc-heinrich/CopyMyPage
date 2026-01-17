@@ -129,20 +129,53 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
-         * Private helper method: Selects an element based on a CSS selector.
-         * If `all` is true, returns all matching elements.
-         * 
-         * @param {string|HTMLElement} el - The CSS selector or HTMLElement to select.
+         * Selects a DOM element (or list of elements) by selector.
+         * Logs an error when the selector is invalid OR when no element is found.
+         *
+         * @param {string|HTMLElement} el - The CSS selector or HTMLElement.
          * @param {boolean} all - Whether to select one or all matching elements.
-         * @returns {NodeList|Element|null} - The selected DOM element(s), or null if no element is found.
+         * @returns {Element|Element[]|null} - The selected DOM element(s) or null if not found.
          */
         _select(el, all = false) {
-            if (el instanceof HTMLElement) return el;
+            // If el is already an HTMLElement, return it directly.
+            if (el instanceof HTMLElement) {
+                return el;
+            }
+
+            // Ensure the element is a string before proceeding.
+            if (typeof el !== 'string') {
+                return null;
+            }
+
+            const selector = el.trim(); // Trim whitespace from the selector string.
 
             try {
-                return all ? [...document.querySelectorAll(el.trim())] : document.querySelector(el.trim());
+                // Use querySelectorAll for all=true, otherwise querySelector for the first match.
+                const selected = all
+                    ? [...document.querySelectorAll(selector)] // Get all matching elements.
+                    : document.querySelector(selector); // Get the first matching element.
+
+                // If all is true, ensure at least one element is selected.
+                if (all) {
+                    if (selected.length === 0) {
+                        // If no elements are found, log the error and return null.
+                        this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', selector);
+                        return null;
+                    }
+
+                    return selected;
+                }
+
+                // If a single element is requested, log an error if not found.
+                if (!selected) {
+                    this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', selector);
+                    return null;
+                }
+
+                return selected; // Return the found element.
             } catch (e) {
-                this.logError('TPL_COPYMYPAGE_JS_ERROR_SELECTOR', el);
+                // If querySelector or querySelectorAll fails, log an error with the selector.
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_SELECTOR', selector);
                 return null;
             }
         }
@@ -167,6 +200,7 @@ window.CopyMyPage = window.CopyMyPage || {};
 
         /**
          * Private method: Keeps the user dropdown open on desktop when hovering.
+         * Adjusted to ensure that both dropdowns (main navbar and user menu) do not open simultaneously.
          */
         _desktopUserDropdownHoldOpen() {
             const opt = this.userDropdownHoldOpen;
@@ -176,12 +210,14 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             const { selectors, closeDelay, closeOnNavClick } = opt;
 
-            // Select the elements directly.
-            const root = document.querySelector(selectors.root);
-            const user = root?.querySelector(selectors.user);
-            const toggle = user?.querySelector(selectors.toggle);
-            const dropdown = user?.querySelector(selectors.dropdown);
-            const navbarDropdown = document.querySelector('.cmp-navbar .uk-navbar-dropdown');
+            // Use _select to retrieve the elements, this centralizes error handling.
+            const root      = this._select(selectors.root);
+            const user      = this._select(selectors.user);
+            const toggle    = this._select(selectors.toggle);
+            const dropdown  = this._select(selectors.dropdown);
+
+            // Specifically target the main navbar dropdown with a more precise selector.
+            const navbarDropdown = this._select('.cmp-navbar .uk-navbar-dropdown');
 
             if (!root || !user || !toggle || !dropdown) return;
 

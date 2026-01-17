@@ -94,7 +94,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
                     'root'     => '.cmp-module--navbar',
                     'user'     => '.cmp-navbar-user',
                     'toggle'   => 'a.cmp-navbar-icon',
-                    'dropdown' => '.uk-navbar-dropdown',
+                    'dropdown' => '.cmp-navbar-user .uk-navbar-dropdown',
                 ],
             ],
         ];
