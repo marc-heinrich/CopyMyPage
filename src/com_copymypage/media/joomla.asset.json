@@ -29,7 +29,7 @@
       "name": "copymypage",
       "type": "script",
       "uri": "com_copymypage/copymypage.js",
-      "version": "0.0.3",
+      "version": "0.0.4",
       "class": "CopyMyPageAssetItem",
       "dependencies": [
         "core",

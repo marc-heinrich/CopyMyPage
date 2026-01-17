@@ -30,7 +30,7 @@ use Joomla\CMS\Uri\Uri;
  * @var string $basketOffcanvasId
  */
 ?>
-
+<!-- Navbar Module Template: UIkit Framework -->
 <div class="cmp-module cmp-module--navbar">
     <div
         uk-sticky="start: 1; end: false; sel-target: .uk-navbar-container;
@@ -228,6 +228,7 @@ use Joomla\CMS\Uri\Uri;
 
                     <!-- RIGHT: Mobile = User/Basket toggles, Desktop = Icons -->
                     <div class="uk-navbar-right">
+                        <!-- Mobile: User offcanvas -->
                         <a
                             class="uk-navbar-item uk-hidden@m cmp-navbar-icon-link"
                             href="#"
@@ -240,6 +241,7 @@ use Joomla\CMS\Uri\Uri;
                             <span uk-icon="user"></span>
                         </a>
 
+                        <!-- Mobile: Basket offcanvas -->
                         <a
                             class="uk-navbar-item uk-hidden@m cmp-navbar-icon-link"
                             href="#"
@@ -252,36 +254,53 @@ use Joomla\CMS\Uri\Uri;
                             <span uk-icon="cart"></span>
                         </a>
 
+                        <!-- Desktop: icon nav (use uk-navbar-nav so dropdown uses navbar positioning) -->
                         <div class="uk-navbar-item uk-visible@m">
-                            <ul class="uk-iconnav cmp-navbar-icons">
-                                <li>
+                            <ul class="uk-navbar-nav cmp-navbar-icons-nav">
+
+                                <li class="uk-parent cmp-navbar-user">
                                     <a
-                                        class="uk-icon"
                                         href="#"
-                                        role="button"
+                                        class="cmp-navbar-icon"
                                         aria-label="User"
-                                        aria-controls="<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                                        uk-toggle="target: #<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-cmp-mobilemenu-toggle="#<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                                        uk-icon="icon: user"
-                                    ></a>
+                                        aria-haspopup="true"
+                                        aria-expanded="false"
+                                        onclick="return false;"
+                                    >
+                                        <span uk-icon="icon: user"></span>
+                                    </a>
+
+                                    <div class="uk-navbar-dropdown cmp-navbar-user-dropdown">
+                                        <ul class="uk-nav uk-navbar-dropdown-nav">
+                                            <li><a href="#">Settings (placeholder)</a></li>
+                                            <li><a href="#">My tickets (placeholder)</a></li>
+                                            <li><a href="#">Messages (placeholder)</a></li>
+                                            <li class="uk-nav-divider"></li>
+                                            <li><a href="#">Logout (placeholder)</a></li>
+                                        </ul>
+                                    </div>
                                 </li>
+
                                 <li>
                                     <a
-                                        class="uk-icon"
                                         href="<?php echo Route::link('site', 'index.php?option=com_finder&view=search'); ?>"
+                                        class="cmp-navbar-icon"
                                         aria-label="Search"
-                                        uk-icon="icon: search"
-                                    ></a>
+                                    >
+                                        <span uk-icon="icon: search"></span>
+                                    </a>
                                 </li>
+
                                 <li>
                                     <a
-                                        class="uk-icon"
                                         href="<?php echo Route::link('site', 'index.php?option=com_copymypage&view=basket'); ?>"
+                                        class="cmp-navbar-icon"
                                         aria-label="Basket"
-                                        uk-icon="icon: cart"
-                                    ></a>
+                                    >
+                                        <span uk-icon="icon: cart"></span>
+                                    </a>
                                 </li>
+
                             </ul>
                         </div>
                     </div>
