@@ -3,7 +3,7 @@
   "name": "com_copymypage",
   "version": "0.0.4",
   "description": "Asset definitions for CopyMyPage template and related components.",
-  "license": "(C) 2025 Open Source Matters, Inc. <https://www.joomla.org>",
+  "license": "(C) 2026 Open Source Matters, Inc. <https://www.joomla.org>",
   "assets": [
     {
       "name": "copymypage.site",
@@ -12,6 +12,8 @@
         "uikit#style",
         "uikit#script",
         "uikit.icons#script",
+        "mmenu-light#style",
+        "mmenu-light#script",
         "bootstrap#style",
         "bootstrap#script",
         "joomla.fontawesome#style",
@@ -86,6 +88,33 @@
       "name": "joomla.fontawesome",
       "type": "style",
       "uri": "system/joomla-fontawesome.min.css"
+    },
+    {
+      "name": "mmenu-light",
+      "type": "style",
+      "uri": "com_copymypage/mmenu-light/mmenu-light.min.css",
+      "version": "3.2.2"
+    },
+    {
+      "name": "mmenu-light",
+      "type": "script",
+      "uri": "com_copymypage/mmenu-light/mmenu-light.min.js",
+      "version": "3.2.2",
+      "dependencies": [
+        "mmenu-light.polyfills"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "mmenu-light.polyfills",
+      "type": "script",
+      "uri": "com_copymypage/mmenu-light/mmenu-light.polyfills.min.js",
+      "version": "3.2.2",
+      "attributes": {
+        "defer": true
+      }
     }
   ]
 }

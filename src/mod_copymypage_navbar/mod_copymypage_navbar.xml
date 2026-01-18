@@ -54,7 +54,7 @@
 
           <!-- Divider: Mobile menu -->
           <option value="" disabled="disabled">────── Mobile menu ──────</option>
-          <option value="mobilemenu_mmenu">mmenu.js</option>
+          <option value="mobilemenu_mmenulight">MmenuLight</option>
           <option value="mobilemenu_offcanvas">Offcanvas</option>
           <option value="mobilemenu_uikit">UIkit</option>
         </field>
