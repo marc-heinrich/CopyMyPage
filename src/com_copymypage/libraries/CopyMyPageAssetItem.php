@@ -23,7 +23,7 @@ use Joomla\CMS\WebAsset\WebAssetItem;
 final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBehaviorInterface
 {
     /**
-     * Prepare the parameters and initialize the CopyMyPage JS.
+     * Prepare the parameters and initialize the JS for CopyMyPage and third-party modules.
      *
      * @param  Document  $doc  The document object.
      */
@@ -35,15 +35,12 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         // Encode parameters as JSON for JavaScript consumption.
         $jsonParams = json_encode($this->getParams()) ?: '{}';
 
-        // Add script declaration to initialize CopyMyPage on DOMContentLoaded.
+        // Add the central event listener for DOMContentLoaded.
         $doc->addScriptDeclaration("
             document.addEventListener('DOMContentLoaded', function() {
-                if (typeof window.CopyMyPage !== 'undefined') {
-                    const copyMyPage = new window.CopyMyPage($jsonParams);
-                    copyMyPage.init();
-                } else {
-                    console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED'));
-                }
+                // Initialize CopyMyPage and other third-party modules
+                {$this->getCopyMyPageJS($jsonParams)}
+                {$this->getMmenuLightJS()}
             });
         ");
     }
@@ -53,13 +50,12 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
      */
     private function addLanguageStrings(): void
     {
-        // Load required language strings for CopyMyPage JS, alphabetically.
         Text::script('TPL_COPYMYPAGE_JS_ERROR_BACKTOTOP_NOT_FOUND');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_INIT_SKIPPED');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_INVALID_PARAMS');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED');
-        Text::script('TPL_COPYMYPAGE_JS_ERROR_SELECTOR');        
+        Text::script('TPL_COPYMYPAGE_JS_ERROR_SELECTOR');
     }
 
     /**
@@ -69,23 +65,13 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
      */
     private function getParams(): array
     {
-        // Hardcoded defaults for now; later sourced from com_copymypage (DB) to keep all selectors/IDs centralized.
         return [
-            // Page wrapper selector.
             'pageWrapperClass'  => '.cmp-page',
-
-            // Back to top button configuration.
             'backToTopID'       => '#back-top',
             'scrollTopPosition' => 100,
-
-            // Navbar and mobile menu selectors.
             'navbarClass'       => '.cmp-navbar',
             'mobileMenuClass'   => '.cmp-mobilemenu',
-            
-            // Form IDs.
-            'contactFormID'     => '#contact-form',            
-
-            // Desktop user dropdown: keep-open behavior (UIkit drop) configuration.
+            'contactFormID'     => '#contact-form',
             'userDropdownHoldOpen' => [
                 'desktopMin'      => 960,
                 'closeDelay'      => 180,
@@ -98,5 +84,60 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
                 ],
             ],
         ];
+    }
+
+    /**
+     * Get the JavaScript initialization code for CopyMyPage.
+     *
+     * @param string $jsonParams The JSON-encoded parameters for CopyMyPage.
+     * @return string The JavaScript code for initializing CopyMyPage.
+     */
+    private function getCopyMyPageJS(string $jsonParams): string
+    {
+        return "
+            if (typeof window.CopyMyPage !== 'undefined') {
+                const copyMyPage = new window.CopyMyPage($jsonParams);
+                copyMyPage.init();
+            } else {
+                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'CopyMyPage'));
+            }
+        ";
+    }
+
+    /**
+     * Get the JavaScript initialization code for MmenuLight (third-party).
+     *
+     * @return string The JavaScript code for initializing MmenuLight.
+     */
+    private function getMmenuLightJS(): string
+    {
+        return "
+            if (typeof window.MmenuLight !== 'undefined') {
+
+                const menu = new window.MmenuLight(document.querySelector('#menu'), 'all');
+
+                menu.navigation({
+                    // selected: 'Selected',
+                    // slidingSubmenus: true,
+                    // theme: 'dark',
+                    // title: 'Menu'
+                });
+
+                const drawer = menu.offcanvas({
+                    // position: 'left'
+                });
+
+                const opener = document.querySelector('a[href=\"#menu\"]');
+
+                if (opener) {
+                    opener.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        drawer.open();
+                    });
+                }
+            } else {
+                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'MmenuLight'));
+            }
+        ";
     }
 }
