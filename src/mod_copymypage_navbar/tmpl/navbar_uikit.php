@@ -17,20 +17,28 @@ use Joomla\CMS\Uri\Uri;
 /**
  * Extracted variables
  * -----------------
- * @var bool   $isOnepage
- * @var string $logo
+ * @var bool  $isOnepage
+ *
+ * @var array<string, mixed> $cfg  Normalized/typed module configuration (from helper).
+ *                                Document only the keys used in this layout:
+ *                                - logo: string
+ *                                - navOffcanvasId: string
+ *                                - userOffcanvasId: string
+ *                                - basketOffcanvasId: string
  *
  * @var array<int, object> $list
  * @var array<int, int>    $path
  * @var object             $active
  * @var int                $active_id
- *
- * @var string $navOffcanvasId
- * @var string $userOffcanvasId
- * @var string $basketOffcanvasId
  */
+
+// Read only the config keys used by this layout.
+$logo               = (string) ($cfg['logo'] ?? '');
+$navOffcanvasId     = (string) ($cfg['navOffcanvasId'] ?? '');
+$userOffcanvasId    = (string) ($cfg['userOffcanvasId'] ?? '');
+$basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
 ?>
-<!-- Navbar Module Template: UIkit Framework -->
+<!-- Navbar Module Template: Desktop UIkit Framework -->
 <div class="cmp-module cmp-module--navbar">
     <div
         uk-sticky="start: 1; end: false; sel-target: .uk-navbar-container;

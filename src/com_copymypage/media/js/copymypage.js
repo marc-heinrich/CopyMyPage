@@ -9,7 +9,7 @@
 window.CopyMyPage = window.CopyMyPage || {};
 
 (function (Joomla, UIkit, window, document) {
-    "use strict";
+    'use strict';
 
     /**
      * CopyMyPage Class
@@ -25,6 +25,12 @@ window.CopyMyPage = window.CopyMyPage || {};
         constructor(params) {
             this._disabled = false;
 
+            // Cached bound handlers (avoid creating a new function on every event).
+            this._onScroll = this._debouncedScroll.bind(this);
+
+            // Internal timers.
+            this._scrollTimeout = null;
+
             if (!params || typeof params !== 'object') {
                 this.logError('TPL_COPYMYPAGE_JS_ERROR_INVALID_PARAMS');
                 this._disabled = true;
@@ -38,7 +44,7 @@ window.CopyMyPage = window.CopyMyPage || {};
         /**
          * Initializes the template functionality.
          * Called after the constructor to set up features such as back-to-top and dropdown behavior.
-         * 
+         *
          * Will skip initialization if the instance is disabled (invalid parameters).
          */
         init() {
@@ -47,29 +53,31 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            // Initialize features.
             this._backToTop();
             this._desktopUserDropdownHoldOpen();
         }
 
         /**
          * Log an error message to the console with a given key.
-         * 
+         *
          * @param {string} messageKey - The key of the error message to be logged.
          * @param {string} [el] - Optional element reference for the error message.
          */
         logError(messageKey, el = '') {
+            const msg = Joomla?.Text?._(messageKey) ?? messageKey;
+
             if (el) {
-                console.error(Joomla.Text._(messageKey).replace('%s', el));
-            } else {
-                console.error(Joomla.Text._(messageKey));
+                console.error(msg.replace('%s', el));
+                return;
             }
+
+            console.error(msg);
         }
 
         /**
          * Apply the given parameters as instance properties (key -> this[key]).
-         * This method ensures that only valid parameters are applied, preventing prototype method overrides.
-         * 
+         * Ensures that only valid parameters are applied, preventing prototype method overrides.
+         *
          * @param {Object} params - The parameters to apply to the instance.
          */
         _applyParams(params) {
@@ -77,28 +85,34 @@ window.CopyMyPage = window.CopyMyPage || {};
             const protoKeys = new Set(Object.getOwnPropertyNames(Object.getPrototypeOf(this)));
 
             for (const [key, value] of Object.entries(params)) {
-                if (forbidden.has(key) || protoKeys.has(key) || key.startsWith('_')) continue;
+                if (forbidden.has(key) || protoKeys.has(key) || key.startsWith('_')) {
+                    continue;
+                }
+
                 this[key] = value;
             }
         }
 
         /**
          * Private method: Handles the back-to-top button functionality.
-         * This includes visibility based on scroll position and click-to-scroll behavior.
+         * Includes visibility based on scroll position and click-to-scroll behavior.
          */
         _backToTop() {
-            this.backToTopButton = this._select(this.backToTopID);
+            this.backToTopButton = this._select(this.backToTopSelector);
 
             if (!this.backToTopButton) {
-                this.logError('TPL_COPYMYPAGE_JS_ERROR_BACKTOTOP_NOT_FOUND', this.backToTopID);
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_BACKTOTOP_NOT_FOUND', this.backToTopSelector);
                 return;
             }
 
-            this.scrollTopPosition = Number(this.scrollTopPosition);
+            // Normalize numeric input (DB params often arrive as strings).
+            this.backToTopPosition = Number(this.backToTopPosition) || 0;
 
+            // Initial state.
             this._checkScrollPos();
 
-            window.addEventListener('scroll', this._debouncedScroll.bind(this));
+            // Use passive listeners for scroll performance.
+            window.addEventListener('scroll', this._onScroll, { passive: true });
 
             this._on('click', this.backToTopButton, (ev) => {
                 ev.preventDefault();
@@ -108,24 +122,30 @@ window.CopyMyPage = window.CopyMyPage || {};
 
         /**
          * Private method: Checks the current scroll position to show/hide the back-to-top button.
-         * The button will appear if the scroll position exceeds `scrollTopPosition`.
+         * The button will appear if the scroll position exceeds `backToTopPosition`.
          */
         _checkScrollPos() {
-            const scrollPosition = document.body.scrollTop || document.documentElement.scrollTop;
-            this.backToTopButton.classList.toggle('visible', scrollPosition > this.scrollTopPosition);
+            // More consistent across browsers than body.scrollTop.
+            const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || 0;
+            this.backToTopButton.classList.toggle('visible', scrollPosition > this.backToTopPosition);
         }
 
         /**
          * Private helper method: Adds an event listener to a specified element.
-         * 
+         *
          * @param {string} type - The event type (e.g., 'click', 'scroll').
          * @param {string|HTMLElement} el - The CSS selector or HTMLElement to attach the listener to.
          * @param {Function} listener - The event listener function to execute when the event occurs.
          */
         _on(type, el, listener) {
             const selectEl = this._select(el);
-            if (selectEl) selectEl.addEventListener(type, listener);
-            else this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', el);
+
+            if (!selectEl) {
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', typeof el === 'string' ? el : '[HTMLElement]');
+                return;
+            }
+
+            selectEl.addEventListener(type, listener);
         }
 
         /**
@@ -137,28 +157,27 @@ window.CopyMyPage = window.CopyMyPage || {};
          * @returns {Element|Element[]|null} - The selected DOM element(s) or null if not found.
          */
         _select(el, all = false) {
-            // If el is already an HTMLElement, return it directly.
             if (el instanceof HTMLElement) {
                 return el;
             }
 
-            // Ensure the element is a string before proceeding.
             if (typeof el !== 'string') {
                 return null;
             }
 
-            const selector = el.trim(); // Trim whitespace from the selector string.
+            const selector = el.trim();
+
+            if (!selector) {
+                return null;
+            }
 
             try {
-                // Use querySelectorAll for all=true, otherwise querySelector for the first match.
                 const selected = all
-                    ? [...document.querySelectorAll(selector)] // Get all matching elements.
-                    : document.querySelector(selector); // Get the first matching element.
+                    ? [...document.querySelectorAll(selector)]
+                    : document.querySelector(selector);
 
-                // If all is true, ensure at least one element is selected.
                 if (all) {
                     if (selected.length === 0) {
-                        // If no elements are found, log the error and return null.
                         this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', selector);
                         return null;
                     }
@@ -166,15 +185,13 @@ window.CopyMyPage = window.CopyMyPage || {};
                     return selected;
                 }
 
-                // If a single element is requested, log an error if not found.
                 if (!selected) {
                     this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', selector);
                     return null;
                 }
 
-                return selected; // Return the found element.
+                return selected;
             } catch (e) {
-                // If querySelector or querySelectorAll fails, log an error with the selector.
                 this.logError('TPL_COPYMYPAGE_JS_ERROR_SELECTOR', selector);
                 return null;
             }
@@ -189,76 +206,114 @@ window.CopyMyPage = window.CopyMyPage || {};
 
         /**
          * Private method: Debounced scroll event handler for better performance.
-         * This ensures the scroll position is checked at a controlled rate, improving performance.
+         * Uses a short timeout and then a requestAnimationFrame to avoid layout thrashing.
          */
         _debouncedScroll() {
-            clearTimeout(this.scrollTimeout);
-            this.scrollTimeout = setTimeout(() => {
+            window.clearTimeout(this._scrollTimeout);
+
+            this._scrollTimeout = window.setTimeout(() => {
                 window.requestAnimationFrame(() => this._checkScrollPos());
             }, 100);
         }
 
         /**
          * Private method: Keeps the user dropdown open on desktop when hovering.
-         * Adjusted to ensure that both dropdowns (main navbar and user menu) do not open simultaneously.
+         * Ensures that both dropdowns (main navbar and user menu) do not open simultaneously.
          */
         _desktopUserDropdownHoldOpen() {
-            const opt = this.userDropdownHoldOpen;
+            const opt = this.navParams;
 
-            // Feature is optional.
-            if (!opt || !UIkit?.util || !window.matchMedia(`(min-width: ${opt.desktopMin}px)`).matches) return;
+            if (!opt || !UIkit?.util) {
+                return;
+            }
 
-            const { selectors, closeDelay, closeOnNavClick } = opt;
+            const enabled = opt.userDropdownHoldOpenEnabled === true
+                || opt.userDropdownHoldOpenEnabled === 1
+                || opt.userDropdownHoldOpenEnabled === '1';
 
-            // Use _select to retrieve the elements, this centralizes error handling.
-            const root      = this._select(selectors.root);
-            const user      = this._select(selectors.user);
-            const toggle    = this._select(selectors.toggle);
-            const dropdown  = this._select(selectors.dropdown);
+            if (!enabled) {
+                return;
+            }
 
-            // Specifically target the main navbar dropdown with a more precise selector.
-            const navbarDropdown = this._select('.cmp-navbar .uk-navbar-dropdown');
+            const desktopMin = parseInt(opt.userDropdownDesktopMin, 10) || 960;
 
-            if (!root || !user || !toggle || !dropdown) return;
+            if (!window.matchMedia(`(min-width: ${desktopMin}px)`).matches) {
+                return;
+            }
+
+            const closeDelay = parseInt(opt.userDropdownCloseDelay, 10) || 180;
+
+            const closeOnNavClick = opt.userDropdownCloseOnNavClick === true
+                || opt.userDropdownCloseOnNavClick === 1
+                || opt.userDropdownCloseOnNavClick === '1';
+
+            // Selector hooks (DB-backed).
+            const selectors = {
+                root: opt.userDropdownSelectorRoot,
+                user: opt.userDropdownSelectorUser,
+                toggle: opt.userDropdownSelectorToggle,
+                dropdown: opt.userDropdownSelectorDropdown,
+                navbarDropdown: opt.userDropdownSelectorNavbarDropdown,
+            };
+
+            const root = this._select(selectors.root);
+            const user = this._select(selectors.user);
+            const toggle = this._select(selectors.toggle);
+            const dropdown = this._select(selectors.dropdown);
+
+            // navbarDropdown is optional (only needed to hide other open dropdowns).
+            const navbarDropdown = this._select(selectors.navbarDropdown);
+
+            if (!root || !user || !toggle || !dropdown) {
+                return;
+            }
 
             const drop = UIkit.getComponent(dropdown, 'drop') || UIkit.drop(dropdown);
-            if (!drop?.show || !drop?.hide) return;
 
-            // Ensure that the main navbar dropdown is hidden when the user menu is shown.
+            if (!drop?.show || !drop?.hide) {
+                return;
+            }
+
             const hideNavbarDropdown = () => {
-                if (navbarDropdown) {
-                    const navbarDrop = UIkit.getComponent(navbarDropdown, 'drop');
-                    navbarDrop?.hide(false);
+                if (!navbarDropdown) {
+                    return;
                 }
+
+                const navbarDrop = UIkit.getComponent(navbarDropdown, 'drop') || UIkit.drop(navbarDropdown);
+                navbarDrop?.hide?.(false);
             };
 
             let t;
+
             const inside = () =>
-                toggle.matches(':hover, :focus') || dropdown.matches(':hover, :focus') || dropdown.contains(document.activeElement);
+                toggle.matches(':hover, :focus')
+                || dropdown.matches(':hover, :focus')
+                || dropdown.contains(document.activeElement);
+
+            const keepOpen = () => window.clearTimeout(t);
 
             const closeLater = () => {
                 window.clearTimeout(t);
-                t = window.setTimeout(() => { 
+
+                t = window.setTimeout(() => {
                     if (!inside()) {
-                        drop.hide(false); 
+                        drop.hide(false);
                     }
                 }, closeDelay);
             };
 
-            const keepOpen = () => window.clearTimeout(t);
-
-            UIkit.util.on(dropdown, 'beforehide', (e) => { 
-                if (inside()) e.preventDefault(); 
+            UIkit.util.on(dropdown, 'beforehide', (e) => {
+                if (inside()) {
+                    e.preventDefault();
+                }
             });
 
-            // Hover to show and close main navbar dropdown when hovering over user menu.
-            toggle.addEventListener('mouseenter', () => { 
-                keepOpen(); 
-                drop.show(); 
-                hideNavbarDropdown();  // Close the main navbar dropdown when hovering the user menu.
+            toggle.addEventListener('mouseenter', () => {
+                keepOpen();
+                drop.show();
+                hideNavbarDropdown();
             });
 
-            // Hover to close the user menu dropdown after a delay.
             toggle.addEventListener('mouseleave', closeLater);
 
             dropdown.addEventListener('mouseenter', keepOpen);
@@ -267,6 +322,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             if (closeOnNavClick) {
                 dropdown.addEventListener('click', (ev) => {
                     const a = ev.target?.closest?.('a');
+
                     if (a && a.getAttribute('href') && a.getAttribute('href') !== '#') {
                         drop.hide(false);
                     }
@@ -276,7 +332,7 @@ window.CopyMyPage = window.CopyMyPage || {};
 
         /**
          * Static method for handling AJAX requests with Joomla API.
-         * 
+         *
          * @param {Object} options - The AJAX request options.
          * @returns {Promise} - The result of the AJAX request.
          */

@@ -3,11 +3,11 @@
   <name>copymypage</name>
   <author>Marc Heinrich</author>
   <creationDate>2025-11</creationDate>
-  <copyright>(C) 2025 Marc Heinrich</copyright>
+  <copyright>(C) 2026 Marc Heinrich</copyright>
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.3</version>
+  <version>0.0.4</version>
   <!-- Short description via language constant -->
   <description>TPL_COPYMYPAGE_XML_DESCRIPTION</description>
   <!-- Template files -->
@@ -46,4 +46,55 @@
     <language tag="it-IT">language/it-IT/tpl_copymypage.ini</language>
     <language tag="it-IT">language/it-IT/tpl_copymypage.sys.ini</language>
   </languages>
+  <config>
+    <fields name="params">
+      
+      <!-- Layout Settings -->
+      <fieldset name="layout" label="TPL_COPYMYPAGE_FIELDSET_LAYOUT">
+        <field
+            name="pageWrapperSelector"
+            type="text"
+            label="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_LABEL"
+            description="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_DESC"
+            default=".cmp-page"
+        />
+
+        <field
+            name="navbarSelector"
+            type="text"
+            label="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_LABEL"
+            description="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_DESC"
+            default=".cmp-navbar"
+        />
+
+        <field
+            name="mobilemenuSelector"
+            type="text"
+            label="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_LABEL"
+            description="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_DESC"
+            default=".cmp-mobilemenu"
+        />
+      </fieldset>
+
+      <!-- UI Settings -->
+      <fieldset name="ui" label="TPL_COPYMYPAGE_FIELDSET_UI">
+        <field
+            name="backToTopSelector"
+            type="text"
+            label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_LABEL"
+            description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_DESC"
+            default="#back-top"
+        />
+
+        <field
+            name="backToTopPosition"
+            type="number"
+            label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_LABEL"
+            description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_DESC"
+            default="100"
+            min="0"
+        />
+      </fieldset>
+    </fields>
+  </config>
 </extension>

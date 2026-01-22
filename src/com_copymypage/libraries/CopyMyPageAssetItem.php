@@ -13,9 +13,12 @@ namespace Joomla\CMS\WebAsset\AssetItem;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Document\Document;
+use Joomla\CMS\Factory;
+use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\WebAsset\WebAssetAttachBehaviorInterface;
 use Joomla\CMS\WebAsset\WebAssetItem;
+use Joomla\Registry\Registry;
 
 /**
  * Web Asset Item class for CopyMyPage.
@@ -32,13 +35,21 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         // Add necessary language strings for error handling.
         $this->addLanguageStrings();
 
+        // Fetch DB-backed configuration from template style + navbar module instances.
+        $templateParams = $this->getTemplateParams();
+        $navbarParams   = $this->getNavbarModuleParams();
+
+        // Provide navbar/module params for other JS consumers (e.g. MmenuLight) without polluting the root.
+        // Use a dedicated key to avoid accidental collisions with template param names.
+        $templateParams['navParams'] = $navbarParams;
+
         // Encode parameters as JSON for JavaScript consumption.
-        $jsonParams = json_encode($this->getParams()) ?: '{}';
+        $jsonParams = json_encode($templateParams) ?: '{}';
 
         // Add the central event listener for DOMContentLoaded.
         $doc->addScriptDeclaration("
             document.addEventListener('DOMContentLoaded', function() {
-                // Initialize CopyMyPage and other third-party modules
+                // Initialize CopyMyPage and other third-party modules.
                 {$this->getCopyMyPageJS($jsonParams)}
                 {$this->getMmenuLightJS()}
             });
@@ -59,31 +70,82 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     }
 
     /**
-     * Get the parameters for the CopyMyPage class.
+     * Fetch template style parameters (DB-backed).
      *
-     * @return array The parameters for CopyMyPage.
+     * This is the single source of truth for global layout/UI hooks.
+     * Returns a plain array so it can be merged into a JS runtime config.
+     *
+     * @return array<string, mixed>
      */
-    private function getParams(): array
+    private function getTemplateParams(): array
     {
-        return [
-            'pageWrapperClass'  => '.cmp-page',
-            'backToTopID'       => '#back-top',
-            'scrollTopPosition' => 100,
-            'navbarClass'       => '.cmp-navbar',
-            'mobileMenuClass'   => '.cmp-mobilemenu',
-            'contactFormID'     => '#contact-form',
-            'userDropdownHoldOpen' => [
-                'desktopMin'      => 960,
-                'closeDelay'      => 180,
-                'closeOnNavClick' => true,
-                'selectors'       => [
-                    'root'     => '.cmp-module--navbar',
-                    'user'     => '.cmp-navbar-user',
-                    'toggle'   => 'a.cmp-navbar-icon',
-                    'dropdown' => '.cmp-navbar-user .uk-navbar-dropdown',
-                ],
-            ],
-        ];
+        $app = Factory::getApplication();
+
+        // Check if we can access the template.
+        if (!method_exists($app, 'getTemplate')) {
+            return [];
+        }
+
+        // Get the active template style.
+        $template = $app->getTemplate(true);
+
+        // Ensure we have valid params.
+        if (!isset($template->params) || !$template->params instanceof Registry) {
+            return [];
+        }
+
+        return $template->params->toArray();
+    }
+
+    /**
+     * Fetch navbar module parameters (DB-backed).
+     *
+     * We try to resolve the active module instance via positions first because the module
+     * can be duplicated (e.g. "navbar" + "mobilemenu"). If both exist, we merge them and
+     * let "mobilemenu" override "navbar" (useful for mmenu-light options).
+     *
+     * @return array<string, mixed>
+     */
+    private function getNavbarModuleParams(): array
+    {
+        // Get params from both positions.
+        $navbar = $this->getNavbarModuleParamsByPosition('navbar');
+        $mobile = $this->getNavbarModuleParamsByPosition('mobilemenu');
+
+        if ($navbar === [] && $mobile === []) {
+            return [];
+        }
+
+        // Merge both, with "mobilemenu" taking precedence.
+        return array_replace_recursive($navbar, $mobile);
+    }
+
+    /**
+     * Resolve a mod_copymypage_navbar instance by module position and return its params.
+     *
+     * @param  string  $position  The module position name (e.g. "navbar", "mobilemenu").
+     *
+     * @return array<string, mixed>
+     */
+    private function getNavbarModuleParamsByPosition(string $position): array
+    {
+        $modules = ModuleHelper::getModules($position);
+
+        foreach ($modules as $module) {
+
+            // Ensure we are dealing with the correct module type.
+            if (($module->module ?? '') !== 'mod_copymypage_navbar') {
+                continue;
+            }
+
+            // Load module params from JSON.
+            $registry = new Registry();
+            $registry->loadString((string) ($module->params ?? ''), 'JSON');
+
+            return $registry->toArray();
+        }
+
+        return [];
     }
 
     /**

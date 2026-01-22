@@ -26,20 +26,14 @@
     <folder>language</folder>
   </files>
 
-  <!-- Basic module params -->
+  <!-- Module params -->
   <config>
     <fields name="params">
+    
+      <!-- Layout Settings -->
       <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
         <field
-          name="logo_image"
-          type="text"
-          label="MOD_COPYMYPAGE_NAVBAR_LOGO_LABEL"
-          description="MOD_COPYMYPAGE_NAVBAR_LOGO_DESC"
-          filter="STRING"
-        />
-
-        <field
-          name="layout_variant"
+          name="layoutVariant"
           type="list"
           label="MOD_COPYMYPAGE_NAVBAR_LAYOUT_VARIANT_LABEL"
           description="MOD_COPYMYPAGE_NAVBAR_LAYOUT_VARIANT_DESC"
@@ -55,16 +49,196 @@
           <!-- Divider: Mobile menu -->
           <option value="" disabled="disabled">────── Mobile menu ──────</option>
           <option value="mobilemenu_mmenulight">MmenuLight</option>
-          <option value="mobilemenu_offcanvas">Offcanvas</option>
           <option value="mobilemenu_uikit">UIkit</option>
+        </field>
+      </fieldset>
+
+      <!-- Navbar Settings -->
+      <fieldset name="nav" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_NAV">
+        <field
+            name="logo"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_DESC"
+            default="media/com_copymypage/images/logo/logo-cmp-1.png"
+        />
+
+        <field
+            name="sticky"
+            type="radio"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_STICKY_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_STICKY_DESC"
+            default="1"
+            class="btn-group btn-group-yesno"
+        >
+            <option value="1">JYES</option>
+            <option value="0">JNO</option>
         </field>
 
         <field
-          name="moduleclass_sfx"
-          type="text"
-          label="JFIELD_MODULECLASS_SFX_LABEL"
-          description="JFIELD_MODULECLASS_SFX_DESC"
-          filter="STRING"
+            name="navOffcanvasId"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_NAV_OFFCANVAS_ID_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_NAV_OFFCANVAS_ID_DESC"
+            default="cmp-mobilemenu-nav"
+            filter="cmd"
+        />
+
+        <field
+            name="userOffcanvasId"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_USER_OFFCANVAS_ID_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_USER_OFFCANVAS_ID_DESC"
+            default="cmp-mobilemenu-user"
+            filter="cmd"
+        />
+
+        <field
+            name="basketOffcanvasId"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_BASKET_OFFCANVAS_ID_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_BASKET_OFFCANVAS_ID_DESC"
+            default="cmp-mobilemenu-basket"
+            filter="cmd"
+        />
+      </fieldset>
+
+      <!-- Mmenu Light Settings -->
+      <fieldset name="mmenu_light" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT">
+        <field
+            name="mmenuLightMediaQuery"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_MEDIAQUERY_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_MEDIAQUERY_DESC"
+            default="all"
+        />
+
+        <field
+            name="mmenuLightTheme"
+            type="list"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_THEME_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_THEME_DESC"
+            default="dark"
+        >
+            <option value="dark">MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_THEME_DARK</option>
+            <option value="light">MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_THEME_LIGHT</option>
+        </field>
+
+        <field
+            name="mmenuLightSelectedClass"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_SELECTED_CLASS_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_SELECTED_CLASS_DESC"
+            default="current"
+            filter="cmd"
+        />
+
+        <field
+            name="mmenuLightCloseOnClick"
+            type="radio"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_CLOSE_ON_CLICK_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_CLOSE_ON_CLICK_DESC"
+            default="1"
+            class="btn-group btn-group-yesno"
+        >
+            <option value="1">JYES</option>
+            <option value="0">JNO</option>
+        </field>
+      </fieldset>
+
+      <!-- User Dropdown Settings -->
+      <fieldset name="user_dropdown" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_USER_DROPDOWN">
+        <field
+            name="userDropdownHoldOpenEnabled"
+            type="radio"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_ENABLED_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_ENABLED_DESC"
+            default="1"
+            class="btn-group btn-group-yesno"
+        >
+            <option value="1">JYES</option>
+            <option value="0">JNO</option>
+        </field>
+
+        <field
+            name="userDropdownDesktopMin"
+            type="number"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_DESKTOP_MIN_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_DESKTOP_MIN_DESC"
+            default="960"
+            min="0"
+        />
+
+        <field
+            name="userDropdownCloseDelay"
+            type="number"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_DELAY_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_DELAY_DESC"
+            default="180"
+            min="0"
+        />
+
+        <field
+            name="userDropdownCloseOnNavClick"
+            type="radio"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_ON_NAV_CLICK_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_ON_NAV_CLICK_DESC"
+            default="1"
+            class="btn-group btn-group-yesno"
+        >
+            <option value="1">JYES</option>
+            <option value="0">JNO</option>
+        </field>
+      </fieldset>
+
+      <!-- User Dropdown Selector Hooks -->
+      <fieldset name="user_dropdown_selectors"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_USER_DROPDOWN_SELECTORS"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELDSET_USER_DROPDOWN_SELECTORS_DESC">
+
+        <field
+            name="userDropdownSelectorRoot"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_ROOT_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_ROOT_DESC"
+            default=".cmp-module--navbar"
+            filter="raw"
+        />
+
+        <field
+            name="userDropdownSelectorUser"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_USER_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_USER_DESC"
+            default=".cmp-navbar-user"
+            filter="raw"
+        />
+
+        <field
+            name="userDropdownSelectorToggle"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_TOGGLE_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_TOGGLE_DESC"
+            default="a.cmp-navbar-icon"
+            filter="raw"
+        />
+
+        <field
+            name="userDropdownSelectorDropdown"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_DROPDOWN_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_DROPDOWN_DESC"
+            default=".cmp-navbar-user .uk-navbar-dropdown"
+            filter="raw"
+        />
+
+        <field
+            name="userDropdownSelectorNavbarDropdown"
+            type="text"
+            label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_NAVBAR_DROPDOWN_LABEL"
+            description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_NAVBAR_DROPDOWN_DESC"
+            default=".cmp-navbar .uk-navbar-dropdown"
+            filter="raw"
         />
       </fieldset>
     </fields>

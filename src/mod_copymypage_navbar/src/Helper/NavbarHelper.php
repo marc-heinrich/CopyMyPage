@@ -25,11 +25,10 @@ use Joomla\Registry\Registry;
 class NavbarHelper
 {
     /**
-     * Returns module defaults (development stage).
+     * Returns navbar/mobilemenu parameters from the module configuration (DB),
+     * with sensible fallbacks for development.
      *
-     * These values are used as the single source of truth during development.
-     * Once the module is production-ready, selected values can be migrated into
-     * module parameters (DB) without changing the templates.
+     * @param  Registry  $params  The module parameters.
      *
      * @return array{
      *   logo: string,
@@ -37,27 +36,42 @@ class NavbarHelper
      *   navOffcanvasId: string,
      *   userOffcanvasId: string,
      *   basketOffcanvasId: string,
-     *   mobilemenuTheme: string,
-     *   mobilemenuPanelMode: string,
-     *   mobilemenuCloseOnClick: bool
+     *   layoutVariant: string,
+     *   mmenuLightMediaQuery: string,
+     *   mmenuLightTheme: string,
+     *   mmenuLightSelectedClass: string,
+     *   mmenuLightCloseOnClick: bool,
+     *   userDropdownHoldOpen: array{
+     *     enabled: bool,
+     *     desktopMin: int,
+     *     closeDelay: int,
+     *     closeOnNavClick: bool
+     *   }
      * }
      */
-    public function getParams(): array
+    public function getParams(Registry $params): array
     {
         return [
-            // Logo path and sticky behavior.
-            'logo'   => 'media/com_copymypage/images/logo/logo-cmp-1.png',
-            'sticky' => true,
+            'logo'   => (string) $params->get('logo'),
+            'sticky' => (bool) $params->get('sticky'),
 
-            // Offcanvas target IDs (used by navbar toggles and offcanvas markup).
-            'navOffcanvasId'    => 'cmp-mobilemenu-nav',
-            'userOffcanvasId'   => 'cmp-mobilemenu-user',
-            'basketOffcanvasId' => 'cmp-mobilemenu-basket',
+            'layoutVariant' => (string) $params->get('layoutVariant', 'default'),
 
-            // Mobile menu behavior flags (dev defaults).
-            'mobilemenuTheme'        => 'dark',
-            'mobilemenuPanelMode'    => 'panels',
-            'mobilemenuCloseOnClick' => true,
+            'navOffcanvasId'    => (string) $params->get('navOffcanvasId'),
+            'userOffcanvasId'   => (string) $params->get('userOffcanvasId'),
+            'basketOffcanvasId' => (string) $params->get('basketOffcanvasId'),
+
+            'mmenuLightTheme'         => (string) $params->get('mmenuLightTheme'),
+            'mmenuLightCloseOnClick'  => (bool) $params->get('mmenuLightCloseOnClick'),         
+            'mmenuLightMediaQuery'    => (string) $params->get('mmenuLightMediaQuery'),
+            'mmenuLightSelectedClass' => (string) $params->get('mmenuLightSelectedClass'),
+
+            'userDropdownHoldOpen' => [
+                'enabled'        => (bool) $params->get('userDropdownHoldOpenEnabled'),
+                'desktopMin'     => (int) $params->get('userDropdownDesktopMin'),
+                'closeDelay'     => (int) $params->get('userDropdownCloseDelay'),
+                'closeOnNavClick'=> (bool) $params->get('userDropdownCloseOnNavClick'),
+            ],
         ];
     }
 

@@ -9,14 +9,14 @@
 
 namespace Joomla\Module\CopyMyPage\Navbar\Site\Dispatcher;
 
+// phpcs:disable PSR1.Files.SideEffects
+\defined('_JEXEC') or die;
+// phpcs:enable PSR1.Files.SideEffects
+
 use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
 use Joomla\CMS\Helper\HelperFactoryAwareInterface;
 use Joomla\CMS\Helper\HelperFactoryAwareTrait;
 use Joomla\CMS\Helper\ModuleHelper;
-
-// phpcs:disable PSR1.Files.SideEffects
-\defined('_JEXEC') or die;
-// phpcs:enable PSR1.Files.SideEffects
 
 /**
  * Dispatcher class for mod_copymypage_navbar.
@@ -37,7 +37,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
      *
      * @return void
      */
-    public function dispatch()
+    public function dispatch(): void
     {
         // Load the module language.
         $this->loadLanguage();
@@ -59,8 +59,8 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             default      => 'default',
         };
 
-        // Read a single variant value (e.g. "navbar_uikit", "mobilemenu_mmenu", "default").
-        $layoutVariant = strtolower(trim((string) $displayData['params']->get('layout_variant', 'default')));
+        // Read a single variant value (e.g. "navbar_uikit", "mobilemenu_mmenulight", "default").
+        $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? 'default')));
 
         // Build the final layout name.
         if ($baseLayout === 'default') {
@@ -88,39 +88,10 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
                 extract($displayData);
             }
 
-            /**
-             * Extracted variables
-             * -----------------
-             * @var \stdClass                               $module
-             * @var \Joomla\Registry\Registry               $params
-             * @var \Joomla\CMS\Application\SiteApplication $app
-             * @var \Joomla\CMS\Input\Input                 $input
-             *
-             * @var bool   $isOnepage
-             * @var string $logo
-             * @var bool   $sticky
-             *
-             * @var array<int, object> $navItems
-             * @var array<int, object> $userItems
-             * @var string             $navOffcanvasId
-             * @var string             $userOffcanvasId
-             * @var string             $basketOffcanvasId
-             * @var string             $mobilemenuTheme
-             * @var string             $mobilemenuPanelMode
-             * @var bool               $mobilemenuCloseOnClick
-             *
-             * @var array<int, object> $list
-             * @var array<int, int>    $path
-             * @var object             $base
-             * @var object             $active
-             * @var object             $default
-             * @var int                $active_id
-             * @var int                $default_id
-             * @var int                $showAll
-             */
-
+            // Resolve the layout path.
             $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_navbar', $layout);
 
+            // Fallback to base layout if the specific variant does not exist.
             if (!is_file($layoutPath)) {
                 $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_navbar', $fallbackLayout);
             }
@@ -128,22 +99,26 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             require $layoutPath;
         };
 
+        // Determine the fallback layout.
         $fallbackLayout = ($baseLayout === 'default') ? 'default' : $baseLayout;
 
+        // Run the loader.
         $loader($displayData, $layout, $fallbackLayout);
     }
 
     /**
      * Returns the layout data.
      *
-     * While the module is in development, all runtime defaults come from the helper.
-     * The only request-context logic here is the onepage detection and the core menu lookup.
-     *
-     * Note: Keep using $data['input'] as requested.
+     * Notes:
+     * - Keep using $data['input'] as requested (request context stays in the dispatcher).
+     * - We expose module params to the layout as a single config array (`cfg`) so the
+     *   dispatcher does not need to know individual parameter names.
+     * - The helper remains responsible for normalizing/typing values and providing
+     *   backwards-compatible defaults.
      *
      * @return array|false
      */
-    protected function getLayoutData()
+    protected function getLayoutData(): array|false
     {
         $data = parent::getLayoutData();
 
@@ -151,27 +126,14 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $helper     = $this->getHelperFactory()->getHelper('NavbarHelper');
         $menuHelper = $data['app']->bootModule('mod_menu', 'site')->getHelper('MenuHelper');
 
-        // Development defaults (single source of truth).
-        $defaults = $helper->getParams();
+        // Normalize and type module parameters (single source of truth).
+        // The layout consumes these values via $cfg (document keys where used).
+        $data['cfg'] = $helper->getParams($data['params']);
 
-        // Determine if we are in a CopyMyPage onepage view.
+        // Determine if we are in a CopyMyPage onepage view (used by layouts to adjust output).
         $option = $data['input']->getCmd('option', '');
         $view   = $data['input']->getCmd('view', '');
         $data['isOnepage'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::isOnepage($option, $view);
-
-        // Provide module-specific defaults (dev stage).
-        $data['logo']   = (string) $defaults['logo'];
-        $data['sticky'] = (bool) $defaults['sticky'];
-
-        // Offcanvas target IDs.
-        $data['navOffcanvasId']    = (string) $defaults['navOffcanvasId'];
-        $data['userOffcanvasId']   = (string) $defaults['userOffcanvasId'];
-        $data['basketOffcanvasId'] = (string) $defaults['basketOffcanvasId'];
-
-        // Mobile menu behaviour flags.
-        $data['mobilemenuTheme']        = (string) $defaults['mobilemenuTheme'];
-        $data['mobilemenuPanelMode']    = (string) $defaults['mobilemenuPanelMode'];
-        $data['mobilemenuCloseOnClick'] = (bool) $defaults['mobilemenuCloseOnClick'];
 
         // Prepare menu parameters for mod_menu MenuHelper (dev defaults from helper).
         $menuParams = $helper->getMenuParams();

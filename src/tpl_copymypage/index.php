@@ -107,14 +107,14 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
             <header id="top" class="cmp-header" role="banner">
                 <?php if ($this->countModules('navbar')) : ?>
                     <!-- Module Navbar -->
-                    <nav id="navbar" class="cmp-navbar" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_NAVBAR'); ?>">
+                    <nav id="navbar" class="cmp-navbar" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_NAVBAR'); ?>">
                         <jdoc:include type="modules" name="navbar" style="none" />
                     </nav>
                 <?php endif; ?>
 
                 <?php if ($this->countModules('mobilemenu')) : ?>
                     <!-- Module Mobile Menu -->
-                    <nav id="mobilemenu" class="cmp-mobilemenu" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MOBILEMENU'); ?>">
+                    <nav id="mobilemenu" class="cmp-mobilemenu" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_MOBILEMENU'); ?>">
                         <jdoc:include type="modules" name="mobilemenu" style="none" />
                     </nav>
                 <?php endif; ?>
@@ -127,42 +127,42 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
 
                     <?php if ($this->countModules('hero')) : ?>
                         <!-- Module Hero -->
-                        <section id="hero" class="cmp-section cmp-section--hero" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_HERO'); ?>">
+                        <section id="hero" class="cmp-section cmp-section--hero" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_HERO'); ?>">
                             <jdoc:include type="modules" name="hero" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('gallery')) : ?>
                         <!-- Module Gallery -->
-                        <section id="gallery" class="cmp-section cmp-section--gallery" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_GALLERY'); ?>">
+                        <section id="gallery" class="cmp-section cmp-section--gallery" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_GALLERY'); ?>">
                             <jdoc:include type="modules" name="gallery" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('team')) : ?>
                         <!-- Module Team -->
-                        <section id="team" class="cmp-section cmp-section--team" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_TEAM'); ?>">
+                        <section id="team" class="cmp-section cmp-section--team" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_TEAM'); ?>">
                             <jdoc:include type="modules" name="team" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('counts')) : ?>
                         <!-- Module Counts -->
-                        <section id="counts" class="cmp-section cmp-section--counts" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_COUNTS'); ?>">
+                        <section id="counts" class="cmp-section cmp-section--counts" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_COUNTS'); ?>">
                             <jdoc:include type="modules" name="counts" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('tickets')) : ?>
                         <!-- Module Tickets -->
-                        <section id="tickets" class="cmp-section cmp-section--tickets" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_TICKETS'); ?>">
+                        <section id="tickets" class="cmp-section cmp-section--tickets" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_TICKETS'); ?>">
                             <jdoc:include type="modules" name="tickets" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('contact')) : ?>
                         <!-- Module Contact -->
-                        <section id="contact" class="cmp-section cmp-section--contact" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_CONTACT'); ?>">
+                        <section id="contact" class="cmp-section cmp-section--contact" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_CONTACT'); ?>">
                             <jdoc:include type="modules" name="contact" style="none" />
                         </section>
                     <?php endif; ?>
@@ -187,7 +187,7 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
             </footer>
 
             <!-- Back to top button -->
-            <a href="#main-content" id="back-top" class="cmp-back-to-top" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_BACKTOTOP'); ?>">
+            <a href="#main-content" id="back-top" class="cmp-back-to-top" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_BUTTON_BACKTOTOP'); ?>">
                 <span class="icon-arrow-up icon-fw" aria-hidden="true"></span>
             </a>
             
