@@ -68,7 +68,7 @@
         />
 
         <field
-            name="mobilemenuSelector"
+            name="mobileMenuSelector"
             type="text"
             label="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_LABEL"
             description="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_DESC"
@@ -93,6 +93,15 @@
             description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_DESC"
             default="100"
             min="0"
+        />
+
+        <field
+            name="backToTopTargetSelector"
+            type="text"
+            label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_LABEL"
+            description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_DESC"
+            default="#main-content"
+            filter="raw"
         />
       </fieldset>
     </fields>

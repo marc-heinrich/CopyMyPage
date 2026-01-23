@@ -2,7 +2,7 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  */
@@ -30,7 +30,7 @@ if ($this->getTitle() === '') {
 
 // Global, non-changeable meta tags.
 $this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
-     ->setMetaData('robots', 'index, follow');
+    ->setMetaData('robots', 'index, follow');
 
 // Register and load web assets (aligned with offline.php).
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
@@ -64,14 +64,26 @@ $this->addHeadLink(
 );
 
 // Detect basic context (for body classes, CSS, JS hooks).
-$option    = $input->getCmd('option', '');
-$view      = $input->getCmd('view', '');
-$layout    = $input->getCmd('layout', '');
-$task      = $input->getCmd('task', '');
-$itemId    = $input->getCmd('Itemid', '');
+$option = $input->getCmd('option', '');
+$view   = $input->getCmd('view', '');
+$layout = $input->getCmd('layout', '');
+$task   = $input->getCmd('task', '');
+$itemId = (int) $input->getInt('Itemid', 0);
+
 $menu      = $app->getMenu()->getActive();
-$pageClass = $menu !== null ? (string) $menu->getParams()->get('pageclass_sfx', '') : '';
 $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
+
+// Menu page class suffix (sanitize as it is user-editable).
+$pageClass = $menu !== null ? (string) $menu->getParams()->get('pageclass_sfx', '') : '';
+$pageClass = trim(preg_replace('/[^A-Za-z0-9 _-]/', '', $pageClass) ?? '');
+
+// Template params (DB) -> convert simple selector (".class"/"#id") to token ("class"/"id").
+// Provide safe defaults to avoid TypeErrors when params are missing.
+$pageWrapperClass = CopyMyPageHelper::selectorToToken((string) $this->params->get('pageWrapperSelector', '.cmp-page'));
+$navbarClass      = CopyMyPageHelper::selectorToToken((string) $this->params->get('navbarSelector', '.cmp-navbar'));
+$mobileMenuClass  = CopyMyPageHelper::selectorToToken((string) $this->params->get('mobileMenuSelector', '.cmp-mobilemenu'));
+$backToTopID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopSelector', '#back-top'));
+$mainContentID    = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopTargetSelector', '#main-content'));
 
 // Build body classes (Cassiopeia-like).
 $bodyClasses = [
@@ -92,77 +104,85 @@ if ($this->direction === 'rtl') {
 $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
 ?>
 <!DOCTYPE html>
-<html lang="<?php echo $this->language; ?>" dir="<?php echo $this->direction; ?>">
+<html lang="<?php echo htmlspecialchars($this->language, ENT_QUOTES, 'UTF-8'); ?>" dir="<?php echo htmlspecialchars($this->direction, ENT_QUOTES, 'UTF-8'); ?>">
     <head>
         <jdoc:include type="metas" />
         <jdoc:include type="styles" />
         <jdoc:include type="scripts" />
     </head>
-    <body class="<?php echo $bodyClass; ?>">
+    <body class="<?php echo htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8'); ?>">
 
         <!-- Page Wrapper -->
-        <div id="page" class="cmp-page">
+        <div id="page" class="<?php echo htmlspecialchars($pageWrapperClass, ENT_QUOTES, 'UTF-8'); ?>">
 
             <!-- Header -->
             <header id="top" class="cmp-header" role="banner">
                 <?php if ($this->countModules('navbar')) : ?>
                     <!-- Module Navbar -->
-                    <nav id="navbar" class="cmp-navbar" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_NAVBAR'); ?>">
+                    <nav
+                        id="navbar"
+                        class="<?php echo htmlspecialchars($navbarClass, ENT_QUOTES, 'UTF-8'); ?>"
+                        aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_NAVBAR'), ENT_QUOTES, 'UTF-8'); ?>"
+                    >
                         <jdoc:include type="modules" name="navbar" style="none" />
                     </nav>
                 <?php endif; ?>
 
                 <?php if ($this->countModules('mobilemenu')) : ?>
                     <!-- Module Mobile Menu -->
-                    <nav id="mobilemenu" class="cmp-mobilemenu" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_MOBILEMENU'); ?>">
+                    <nav
+                        id="mobilemenu"
+                        class="<?php echo htmlspecialchars($mobileMenuClass, ENT_QUOTES, 'UTF-8'); ?>"
+                        aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_MOBILEMENU'), ENT_QUOTES, 'UTF-8'); ?>"
+                    >
                         <jdoc:include type="modules" name="mobilemenu" style="none" />
                     </nav>
                 <?php endif; ?>
             </header>
 
             <!-- Main Content -->
-            <main id="main-content" class="cmp-main" role="main">
-                
+            <main id="<?php echo htmlspecialchars($mainContentID, ENT_QUOTES, 'UTF-8'); ?>" class="cmp-main" role="main">
+
                 <?php if ($isOnepage) : ?>
 
                     <?php if ($this->countModules('hero')) : ?>
                         <!-- Module Hero -->
-                        <section id="hero" class="cmp-section cmp-section--hero" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_HERO'); ?>">
+                        <section id="hero" class="cmp-section cmp-section--hero" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_HERO'), ENT_QUOTES, 'UTF-8'); ?>">
                             <jdoc:include type="modules" name="hero" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('gallery')) : ?>
                         <!-- Module Gallery -->
-                        <section id="gallery" class="cmp-section cmp-section--gallery" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_GALLERY'); ?>">
+                        <section id="gallery" class="cmp-section cmp-section--gallery" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_GALLERY'), ENT_QUOTES, 'UTF-8'); ?>">
                             <jdoc:include type="modules" name="gallery" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('team')) : ?>
                         <!-- Module Team -->
-                        <section id="team" class="cmp-section cmp-section--team" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_TEAM'); ?>">
+                        <section id="team" class="cmp-section cmp-section--team" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_TEAM'), ENT_QUOTES, 'UTF-8'); ?>">
                             <jdoc:include type="modules" name="team" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('counts')) : ?>
                         <!-- Module Counts -->
-                        <section id="counts" class="cmp-section cmp-section--counts" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_COUNTS'); ?>">
+                        <section id="counts" class="cmp-section cmp-section--counts" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_COUNTS'), ENT_QUOTES, 'UTF-8'); ?>">
                             <jdoc:include type="modules" name="counts" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('tickets')) : ?>
                         <!-- Module Tickets -->
-                        <section id="tickets" class="cmp-section cmp-section--tickets" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_TICKETS'); ?>">
+                        <section id="tickets" class="cmp-section cmp-section--tickets" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_TICKETS'), ENT_QUOTES, 'UTF-8'); ?>">
                             <jdoc:include type="modules" name="tickets" style="none" />
                         </section>
                     <?php endif; ?>
 
                     <?php if ($this->countModules('contact')) : ?>
                         <!-- Module Contact -->
-                        <section id="contact" class="cmp-section cmp-section--contact" role="region" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_MODULE_CONTACT'); ?>">
+                        <section id="contact" class="cmp-section cmp-section--contact" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_CONTACT'), ENT_QUOTES, 'UTF-8'); ?>">
                             <jdoc:include type="modules" name="contact" style="none" />
                         </section>
                     <?php endif; ?>
@@ -171,7 +191,7 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
 
                 <!-- System Messages -->
                 <jdoc:include type="message" />
-                
+
                 <!-- Component Output -->
                 <jdoc:include type="component" />
             </main>
@@ -187,13 +207,18 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
             </footer>
 
             <!-- Back to top button -->
-            <a href="#main-content" id="back-top" class="cmp-back-to-top" aria-label="<?php echo Text::_('TPL_COPYMYPAGE_BUTTON_BACKTOTOP'); ?>">
+            <a
+                href="#<?php echo htmlspecialchars($mainContentID, ENT_QUOTES, 'UTF-8'); ?>"
+                id="<?php echo htmlspecialchars($backToTopID, ENT_QUOTES, 'UTF-8'); ?>"
+                class="cmp-back-to-top"
+                aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_BUTTON_BACKTOTOP'), ENT_QUOTES, 'UTF-8'); ?>"
+            >
                 <span class="icon-arrow-up icon-fw" aria-hidden="true"></span>
             </a>
-            
+
             <!-- Debug area if active -->
             <jdoc:include type="modules" name="debug" style="none" />
-            
+
         </div>
     </body>
 </html>

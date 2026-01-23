@@ -41,7 +41,10 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
 
         // Provide navbar/module params for other JS consumers (e.g. MmenuLight) without polluting the root.
         // Use a dedicated key to avoid accidental collisions with template param names.
-        $templateParams['navParams'] = $navbarParams;
+        $templateParams['navParams'] = $navbarParams;        
+
+        // Prepare options for joomla-script-options.
+        $doc->addScriptOptions('copymypage.params', $templateParams);
 
         // Encode parameters as JSON for JavaScript consumption.
         $jsonParams = json_encode($templateParams) ?: '{}';
@@ -54,6 +57,57 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
                 {$this->getMmenuLightJS()}
             });
         ");
+    }
+
+    /**
+     * Get the JavaScript initialization code for CopyMyPage.
+     *
+     * @param   string  $jsonParams The JSON-encoded parameters for CopyMyPage.
+     * @return  string  The JavaScript code for initializing CopyMyPage.
+     */
+    private function getCopyMyPageJS(string $jsonParams): string
+    {
+        return "
+            if (typeof window.CopyMyPage !== 'undefined') {
+                const copyMyPage = new window.CopyMyPage($jsonParams);
+                copyMyPage.init();
+            } else {
+                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'CopyMyPage'));
+            }
+        ";
+    }
+
+    /**
+     * Get the JavaScript initialization code for MmenuLight (third-party).
+     *
+     * @return string The JavaScript code for initializing MmenuLight.
+     */
+    private function getMmenuLightJS(): string
+    {
+        return "
+            if (typeof window.MmenuLight !== 'undefined') {
+                const menu = new window.MmenuLight(document.querySelector('#menu'), 'all');
+                menu.navigation({
+                    // selected: 'Selected',
+                    // slidingSubmenus: true,
+                    // theme: 'dark',
+                    // title: 'Menu'
+                });
+                const drawer = menu.offcanvas({
+                    // position: 'left'
+                });
+                const opener = document.querySelector('a[href=\"#menu\"]');
+
+                if (opener) {
+                    opener.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        drawer.open();
+                    });
+                }
+            } else {
+                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'MmenuLight'));
+            }
+        ";
     }
 
     /**
@@ -146,60 +200,5 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         }
 
         return [];
-    }
-
-    /**
-     * Get the JavaScript initialization code for CopyMyPage.
-     *
-     * @param string $jsonParams The JSON-encoded parameters for CopyMyPage.
-     * @return string The JavaScript code for initializing CopyMyPage.
-     */
-    private function getCopyMyPageJS(string $jsonParams): string
-    {
-        return "
-            if (typeof window.CopyMyPage !== 'undefined') {
-                const copyMyPage = new window.CopyMyPage($jsonParams);
-                copyMyPage.init();
-            } else {
-                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'CopyMyPage'));
-            }
-        ";
-    }
-
-    /**
-     * Get the JavaScript initialization code for MmenuLight (third-party).
-     *
-     * @return string The JavaScript code for initializing MmenuLight.
-     */
-    private function getMmenuLightJS(): string
-    {
-        return "
-            if (typeof window.MmenuLight !== 'undefined') {
-
-                const menu = new window.MmenuLight(document.querySelector('#menu'), 'all');
-
-                menu.navigation({
-                    // selected: 'Selected',
-                    // slidingSubmenus: true,
-                    // theme: 'dark',
-                    // title: 'Menu'
-                });
-
-                const drawer = menu.offcanvas({
-                    // position: 'left'
-                });
-
-                const opener = document.querySelector('a[href=\"#menu\"]');
-
-                if (opener) {
-                    opener.addEventListener('click', function (event) {
-                        event.preventDefault();
-                        drawer.open();
-                    });
-                }
-            } else {
-                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'MmenuLight'));
-            }
-        ";
     }
 }
