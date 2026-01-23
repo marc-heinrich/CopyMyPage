@@ -39,15 +39,20 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         $templateParams = $this->getTemplateParams();
         $navbarParams   = $this->getNavbarModuleParams();
 
-        // Provide navbar/module params for other JS consumers (e.g. MmenuLight) without polluting the root.
-        // Use a dedicated key to avoid accidental collisions with template param names.
-        $templateParams['navParams'] = $navbarParams;        
+        // Merge all options into a single object.
+        $options = [
+            'tmpl'  => $templateParams,
+            'mod'   => [
+                'navbar' => $navbarParams,
+            ],
+        ];      
 
-        // Prepare options for joomla-script-options.
-        $doc->addScriptOptions('copymypage.params', $templateParams);
+        // Expose for JS (Joomla.getOptions('copymypage.params')).
+        // Note: whether merge with existing (true) or replace (false).
+        $doc->addScriptOptions('copymypage.params', $options, false);
 
-        // Encode parameters as JSON for JavaScript consumption.
-        $jsonParams = json_encode($templateParams) ?: '{}';
+        // Same object goes into CopyMyPage init.
+        $jsonParams = json_encode($options) ?: '{}';
 
         // Add the central event listener for DOMContentLoaded.
         $doc->addScriptDeclaration("

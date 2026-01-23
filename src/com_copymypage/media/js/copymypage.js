@@ -98,26 +98,44 @@ window.CopyMyPage = window.CopyMyPage || {};
          * Includes visibility based on scroll position and click-to-scroll behavior.
          */
         _backToTop() {
-            this.backToTopButton = this._select(this.backToTopSelector);
+            const tmpl = this.tmpl || {};
 
+            this.backToTopButton = this._select(tmpl.backToTopSelector);
             if (!this.backToTopButton) {
-                this.logError('TPL_COPYMYPAGE_JS_ERROR_BACKTOTOP_NOT_FOUND', this.backToTopSelector);
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_BACKTOTOP_NOT_FOUND');
                 return;
             }
 
-            // Normalize numeric input (DB params often arrive as strings).
-            this.backToTopPosition = Number(this.backToTopPosition) || 0;
+            this.backToTopPosition = Number(tmpl.backToTopPosition ?? 100);
 
-            // Initial state.
+            // Prefer DB param, fallback to the anchor href (single source of truth stays the markup/db).
+            const hrefTarget = this.backToTopButton.getAttribute('href') || '';
+            this.backToTopTargetSelector = tmpl.backToTopTargetSelector || hrefTarget || 'body';
+
             this._checkScrollPos();
-
-            // Use passive listeners for scroll performance.
             window.addEventListener('scroll', this._onScroll, { passive: true });
 
             this._on('click', this.backToTopButton, (ev) => {
                 ev.preventDefault();
-                this._scrollToTop();
+                this._scrollToTarget(this.backToTopTargetSelector);
             });
+        }
+
+        /**
+         * Private method: Smooth scroll to a target element (fallback to top).
+         *
+         * @param {string} selector - CSS selector of the target (e.g. "#main-content").
+         */
+        _scrollToTarget(selector) {
+            const target = this._select(selector);
+
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                return;
+            }
+
+            // Fallback: scroll to absolute top.
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         /**
@@ -128,80 +146,6 @@ window.CopyMyPage = window.CopyMyPage || {};
             // More consistent across browsers than body.scrollTop.
             const scrollPosition = window.pageYOffset || document.documentElement.scrollTop || 0;
             this.backToTopButton.classList.toggle('visible', scrollPosition > this.backToTopPosition);
-        }
-
-        /**
-         * Private helper method: Adds an event listener to a specified element.
-         *
-         * @param {string} type - The event type (e.g., 'click', 'scroll').
-         * @param {string|HTMLElement} el - The CSS selector or HTMLElement to attach the listener to.
-         * @param {Function} listener - The event listener function to execute when the event occurs.
-         */
-        _on(type, el, listener) {
-            const selectEl = this._select(el);
-
-            if (!selectEl) {
-                this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', typeof el === 'string' ? el : '[HTMLElement]');
-                return;
-            }
-
-            selectEl.addEventListener(type, listener);
-        }
-
-        /**
-         * Selects a DOM element (or list of elements) by selector.
-         * Logs an error when the selector is invalid OR when no element is found.
-         *
-         * @param {string|HTMLElement} el - The CSS selector or HTMLElement.
-         * @param {boolean} all - Whether to select one or all matching elements.
-         * @returns {Element|Element[]|null} - The selected DOM element(s) or null if not found.
-         */
-        _select(el, all = false) {
-            if (el instanceof HTMLElement) {
-                return el;
-            }
-
-            if (typeof el !== 'string') {
-                return null;
-            }
-
-            const selector = el.trim();
-
-            if (!selector) {
-                return null;
-            }
-
-            try {
-                const selected = all
-                    ? [...document.querySelectorAll(selector)]
-                    : document.querySelector(selector);
-
-                if (all) {
-                    if (selected.length === 0) {
-                        this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', selector);
-                        return null;
-                    }
-
-                    return selected;
-                }
-
-                if (!selected) {
-                    this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', selector);
-                    return null;
-                }
-
-                return selected;
-            } catch (e) {
-                this.logError('TPL_COPYMYPAGE_JS_ERROR_SELECTOR', selector);
-                return null;
-            }
-        }
-
-        /**
-         * Private method: Smooth scroll to the top of the page.
-         */
-        _scrollToTop() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         /**
@@ -221,7 +165,7 @@ window.CopyMyPage = window.CopyMyPage || {};
          * Ensures that both dropdowns (main navbar and user menu) do not open simultaneously.
          */
         _desktopUserDropdownHoldOpen() {
-            const opt = this.navParams;
+            const opt = this.mod.navbar || {};
 
             if (!opt || !UIkit?.util) {
                 return;
@@ -327,6 +271,73 @@ window.CopyMyPage = window.CopyMyPage || {};
                         drop.hide(false);
                     }
                 });
+            }
+        }
+
+        /**
+         * Private helper method: Adds an event listener to a specified element.
+         *
+         * @param {string} type - The event type (e.g., 'click', 'scroll').
+         * @param {string|HTMLElement} el - The CSS selector or HTMLElement to attach the listener to.
+         * @param {Function} listener - The event listener function to execute when the event occurs.
+         */
+        _on(type, el, listener) {
+            const selectEl = this._select(el);
+
+            if (!selectEl) {
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', typeof el === 'string' ? el : '[HTMLElement]');
+                return;
+            }
+
+            selectEl.addEventListener(type, listener);
+        }
+
+        /**
+         * Selects a DOM element (or list of elements) by selector.
+         * Logs an error when the selector is invalid OR when no element is found.
+         *
+         * @param {string|HTMLElement} el - The CSS selector or HTMLElement.
+         * @param {boolean} all - Whether to select one or all matching elements.
+         * @returns {Element|Element[]|null} - The selected DOM element(s) or null if not found.
+         */
+        _select(el, all = false) {
+            if (el instanceof HTMLElement) {
+                return el;
+            }
+
+            if (typeof el !== 'string') {
+                return null;
+            }
+
+            const selector = el.trim();
+
+            if (!selector) {
+                return null;
+            }
+
+            try {
+                const selected = all
+                    ? [...document.querySelectorAll(selector)]
+                    : document.querySelector(selector);
+
+                if (all) {
+                    if (selected.length === 0) {
+                        this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', selector);
+                        return null;
+                    }
+
+                    return selected;
+                }
+
+                if (!selected) {
+                    this.logError('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND', selector);
+                    return null;
+                }
+
+                return selected;
+            } catch (e) {
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_SELECTOR', selector);
+                return null;
             }
         }
 
