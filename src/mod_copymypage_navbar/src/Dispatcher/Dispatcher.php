@@ -17,6 +17,7 @@ use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
 use Joomla\CMS\Helper\HelperFactoryAwareInterface;
 use Joomla\CMS\Helper\HelperFactoryAwareTrait;
 use Joomla\CMS\Helper\ModuleHelper;
+use Joomla\Registry\Registry;
 
 /**
  * Dispatcher class for mod_copymypage_navbar.
@@ -107,16 +108,14 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     }
 
     /**
-     * Returns the layout data.
+     * Build the layout payload for this module instance.
      *
-     * Notes:
-     * - Keep using $data['input'] as requested (request context stays in the dispatcher).
-     * - We expose module params to the layout as a single config array (`cfg`) so the
-     *   dispatcher does not need to know individual parameter names.
-     * - The helper remains responsible for normalizing/typing values and providing
-     *   backwards-compatible defaults.
+     * Exposes raw, DB-backed module params as `$cfg` (layouts cast what they need) and
+     * computes `$isOnepage` from the current request to adjust anchor/link output.
+     * Reuses Joomla core `mod_menu` MenuHelper to populate active/base/default items,
+     * path/showAll, and the final `$list` (with `$navItems` alias) plus `$userItems`.
      *
-     * @return array|false
+     * @return array|false  Layout data array, or false to skip rendering.
      */
     protected function getLayoutData(): array|false
     {
@@ -126,9 +125,10 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $helper     = $this->getHelperFactory()->getHelper('NavbarHelper');
         $menuHelper = $data['app']->bootModule('mod_menu', 'site')->getHelper('MenuHelper');
 
-        // Normalize and type module parameters (single source of truth).
-        // The layout consumes these values via $cfg (document keys where used).
-        $data['cfg'] = $helper->getParams($data['params']);
+        // Expose raw, DB-backed module params to the layout (no helper bridge).
+        $data['cfg'] = ($data['params'] instanceof \Joomla\Registry\Registry)
+            ? $data['params']->toArray()
+            : [];
 
         // Determine if we are in a CopyMyPage onepage view (used by layouts to adjust output).
         $option = $data['input']->getCmd('option', '');

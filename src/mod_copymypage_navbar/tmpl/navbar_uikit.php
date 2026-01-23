@@ -33,6 +33,7 @@ use Joomla\CMS\Uri\Uri;
  */
 
 // Read only the config keys used by this layout.
+// For type normalization (boolean or integer), use the component helper class CopyMyPage.
 $logo               = (string) ($cfg['logo'] ?? '');
 $navOffcanvasId     = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId    = (string) ($cfg['userOffcanvasId'] ?? '');

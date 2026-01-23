@@ -25,57 +25,6 @@ use Joomla\Registry\Registry;
 class NavbarHelper
 {
     /**
-     * Returns navbar/mobilemenu parameters from the module configuration (DB),
-     * with sensible fallbacks for development.
-     *
-     * @param  Registry  $params  The module parameters.
-     *
-     * @return array{
-     *   logo: string,
-     *   sticky: bool,
-     *   navOffcanvasId: string,
-     *   userOffcanvasId: string,
-     *   basketOffcanvasId: string,
-     *   layoutVariant: string,
-     *   mmenuLightMediaQuery: string,
-     *   mmenuLightTheme: string,
-     *   mmenuLightSelectedClass: string,
-     *   mmenuLightCloseOnClick: bool,
-     *   userDropdownHoldOpen: array{
-     *     enabled: bool,
-     *     desktopMin: int,
-     *     closeDelay: int,
-     *     closeOnNavClick: bool
-     *   }
-     * }
-     */
-    public function getParams(Registry $params): array
-    {
-        return [
-            'logo'   => (string) $params->get('logo'),
-            'sticky' => (bool) $params->get('sticky'),
-
-            'layoutVariant' => (string) $params->get('layoutVariant', 'default'),
-
-            'navOffcanvasId'    => (string) $params->get('navOffcanvasId'),
-            'userOffcanvasId'   => (string) $params->get('userOffcanvasId'),
-            'basketOffcanvasId' => (string) $params->get('basketOffcanvasId'),
-
-            'mmenuLightTheme'         => (string) $params->get('mmenuLightTheme'),
-            'mmenuLightCloseOnClick'  => (bool) $params->get('mmenuLightCloseOnClick'),         
-            'mmenuLightMediaQuery'    => (string) $params->get('mmenuLightMediaQuery'),
-            'mmenuLightSelectedClass' => (string) $params->get('mmenuLightSelectedClass'),
-
-            'userDropdownHoldOpen' => [
-                'enabled'        => (bool) $params->get('userDropdownHoldOpenEnabled'),
-                'desktopMin'     => (int) $params->get('userDropdownDesktopMin'),
-                'closeDelay'     => (int) $params->get('userDropdownCloseDelay'),
-                'closeOnNavClick'=> (bool) $params->get('userDropdownCloseOnNavClick'),
-            ],
-        ];
-    }
-
-    /**
      * Builds a Registry object compatible with Joomla core mod_menu MenuHelper.
      *
      * During development, all menu settings are defined here to avoid relying on DB params.
