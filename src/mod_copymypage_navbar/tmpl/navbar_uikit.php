@@ -39,7 +39,7 @@ $navOffcanvasId     = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId    = (string) ($cfg['userOffcanvasId'] ?? '');
 $basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
 ?>
-<!-- Navbar Module Template: Desktop UIkit Framework -->
+<!-- Navbar Module Template: Desktop UIkit Framework (https://getuikit.com/docs/navbar) -->
 <div class="cmp-module cmp-module--navbar">
     <div
         uk-sticky="start: 1; end: false; sel-target: .uk-navbar-container;
@@ -56,9 +56,7 @@ $basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
                             class="uk-navbar-toggle uk-hidden@m cmp-navbar-toggle"
                             type="button"
                             aria-label="Open menu"
-                            aria-controls="<?php echo htmlspecialchars($navOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                            uk-toggle="target: #<?php echo htmlspecialchars($navOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                            data-cmp-mobilemenu-toggle="#<?php echo htmlspecialchars($navOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
+                            data-cmp-mmenulight-open="#<?php echo htmlspecialchars($navOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
                         >
                             <span uk-navbar-toggle-icon></span>
                         </button>
@@ -243,9 +241,7 @@ $basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
                             href="#"
                             role="button"
                             aria-label="Open user menu"
-                            aria-controls="<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                            uk-toggle="target: #<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                            data-cmp-mobilemenu-toggle="#<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
+                            data-cmp-mmenulight-open="#<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
                         >
                             <span uk-icon="user"></span>
                         </a>
@@ -256,9 +252,7 @@ $basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
                             href="#"
                             role="button"
                             aria-label="Open basket"
-                            aria-controls="<?php echo htmlspecialchars($basketOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                            uk-toggle="target: #<?php echo htmlspecialchars($basketOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                            data-cmp-mobilemenu-toggle="#<?php echo htmlspecialchars($basketOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
+                            data-cmp-mmenulight-open="#<?php echo htmlspecialchars($basketOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
                         >
                             <span uk-icon="cart"></span>
                         </a>

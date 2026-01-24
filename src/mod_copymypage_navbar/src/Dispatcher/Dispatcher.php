@@ -153,9 +153,10 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['showAll']    = (int) $menuParams->get('showAllChildren', 1);
         $data['list']       = $menuHelper->getItems($menuParams, $data['app']);
 
-        // Provide explicit names for the two mobile menus.
-        $data['navItems']  = $data['list'];
-        $data['userItems'] = $helper->getUserItems($data['params'], $data['app']);
+        // Provide explicit names for the three mobile menus.
+        $data['navItems']    = $data['list'];
+        $data['userItems']   = $helper->getUserItems($data['params'], $data['app']);
+        $data['basketItems'] = $helper->getBasketItems($data['params'], $data['app']);
 
         return $data;
     }

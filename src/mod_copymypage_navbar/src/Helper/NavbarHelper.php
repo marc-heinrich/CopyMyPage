@@ -12,6 +12,10 @@ namespace Joomla\Module\CopyMyPage\Navbar\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Application\CMSApplicationInterface;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Uri\Uri;
 use Joomla\Registry\Registry;
 
 /**
@@ -51,11 +55,7 @@ class NavbarHelper
     }
 
     /**
-     * Returns a user menu list for mobile layouts (placeholder for now).
-     *
-     * If you later want real user items, you can either:
-     * - build them from com_users routes, or
-     * - use a second menutype and delegate to core MenuHelper again.
+     * Returns a user menu list for mobile layouts (dummy for now).
      *
      * @param  Registry                $params  The module parameters object (kept for future use).
      * @param  CMSApplicationInterface $app     The application instance.
@@ -64,6 +64,49 @@ class NavbarHelper
      */
     public function getUserItems(Registry $params, CMSApplicationInterface $app): array
     {
-        return [];
+        $user   = $app->getIdentity();
+        $return = rawurlencode(base64_encode(Uri::base()));
+
+        if ($user->guest) {
+            return [
+                (object) [
+                    'title' => Text::_('JLOGIN'),
+                    'link'  => Route::link('site', 'index.php?option=com_users&view=login', false),
+                ],
+            ];
+        }
+
+        return [
+            (object) [
+                'title' => Text::_('COM_USERS_PROFILE'),
+                'link'  => Route::link('site', 'index.php?option=com_users&view=profile', false),
+            ],
+            (object) [
+                'title' => Text::_('JLOGOUT'),
+                'link'  => Route::link(
+                    'site',
+                    'index.php?option=com_users&task=user.logout&' . Session::getFormToken() . '=1&return=' . $return,
+                    false
+                ),
+            ],
+        ];
+    }
+
+    /**
+     * Returns a basket menu list for mobile layouts (dummy for now).
+     *
+     * @param  Registry                $params  The module parameters object (kept for future use).
+     * @param  CMSApplicationInterface $app     The application instance.
+     *
+     * @return array<int, object>
+     */
+    public function getBasketItems(Registry $params, CMSApplicationInterface $app): array
+    {
+        return [
+            (object) [
+                'title' => Text::_('JGLOBAL_CLOSE'),
+                'link'  => '#',
+            ],
+        ];
     }
 }

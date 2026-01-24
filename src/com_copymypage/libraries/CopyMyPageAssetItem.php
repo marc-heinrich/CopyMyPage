@@ -54,12 +54,15 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         // Same object goes into CopyMyPage init.
         $jsonParams = json_encode($options) ?: '{}';
 
+        // Pass only navbar params into mmenu-light init (single source of truth for ids + options).
+        $jsonNavbarParams = json_encode($navbarParams) ?: '{}';
+
         // Add the central event listener for DOMContentLoaded.
         $doc->addScriptDeclaration("
             document.addEventListener('DOMContentLoaded', function() {
                 // Initialize CopyMyPage and other third-party modules.
                 {$this->getCopyMyPageJS($jsonParams)}
-                {$this->getMmenuLightJS()}
+                {$this->getMmenuLightJS($jsonNavbarParams)}
             });
         ");
     }
@@ -85,33 +88,118 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     /**
      * Get the JavaScript initialization code for MmenuLight (third-party).
      *
-     * @return string The JavaScript code for initializing MmenuLight.
+     * @param   string  $jsonNavbarParams  JSON encoded navbar module params (DB-backed).
+     *
+     * @return  string  The JavaScript code for initializing MmenuLight.
      */
-    private function getMmenuLightJS(): string
+    private function getMmenuLightJS(string $jsonNavbarParams): string
     {
         return "
-            if (typeof window.MmenuLight !== 'undefined') {
-                const menu = new window.MmenuLight(document.querySelector('#menu'), 'all');
-                menu.navigation({
-                    // selected: 'Selected',
-                    // slidingSubmenus: true,
-                    // theme: 'dark',
-                    // title: 'Menu'
-                });
-                const drawer = menu.offcanvas({
-                    // position: 'left'
-                });
-                const opener = document.querySelector('a[href=\"#menu\"]');
-
-                if (opener) {
-                    opener.addEventListener('click', function (event) {
-                        event.preventDefault();
-                        drawer.open();
-                    });
+            (function () {
+                if (typeof window.MmenuLight === 'undefined') {
+                    console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'MmenuLight'));
+                    return;
                 }
-            } else {
-                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'MmenuLight'));
-            }
+
+                const cfg = $jsonNavbarParams || {};
+
+                const mediaQuery        = cfg.mmenuLightMediaQuery || 'all';
+                const theme             = cfg.mmenuLightTheme || 'light';
+                const selected          = cfg.mmenuLightSelectedClass || '';
+                const closeOnClick      = !!cfg.mmenuLightCloseOnClick;
+                const slidingSubmenus   = (cfg.mmenuLightSlidingSubmenus !== undefined)
+                    ? !!cfg.mmenuLightSlidingSubmenus
+                    : true;
+
+                const menus = [
+                    {
+                        id: cfg.navOffcanvasId,
+                        title: cfg.mmenuLightNavTitle,
+                        position: cfg.mmenuLightNavPosition || 'left'
+                    },
+                    {
+                        id: cfg.userOffcanvasId,
+                        title: cfg.mmenuLightUserTitle,
+                        position: cfg.mmenuLightUserPosition || 'right'
+                    },
+                    {
+                        id: cfg.basketOffcanvasId,
+                        title: cfg.mmenuLightBasketTitle,
+                        position: cfg.mmenuLightBasketPosition || 'right'
+                    }
+                ].filter((m) => !!(m && m.id));
+
+                const drawers = [];
+
+                const closeAllExcept = (keep) => {
+                    drawers.forEach((d) => {
+                        if (d !== keep && d && typeof d.close === 'function') {
+                            d.close();
+                        }
+                    });
+                };
+
+                menus.forEach((m) => {
+                    const nav = document.getElementById(m.id);
+
+                    // Skip if the source node is missing or already initialized.
+                    if (!nav || nav.dataset.cmpMmenulightInit === '1') {
+                        return;
+                    }
+
+                    nav.dataset.cmpMmenulightInit = '1';
+
+                    const menu = new window.MmenuLight(nav, mediaQuery);
+
+                    menu.navigation({
+                        theme: theme,
+                        selected: selected || undefined,
+                        slidingSubmenus: slidingSubmenus,
+                        title: (m.title && String(m.title).trim()) ? String(m.title).trim() : undefined
+                    });
+
+                    const drawer = menu.offcanvas({
+                        position: (m.position === 'right') ? 'right' : 'left'
+                    });
+
+                    drawers.push(drawer);
+
+                    const open = () => {
+                        closeAllExcept(drawer);
+
+                        if (drawer && typeof drawer.open === 'function') {
+                            drawer.open();
+                        }
+                    };
+
+                    // Bind all openers pointing to this menu id.
+                    document.querySelectorAll('[data-cmp-mmenulight-open=\"#' + m.id + '\"]').forEach((opener) => {
+                        opener.addEventListener('click', (ev) => {
+                            ev.preventDefault();
+                            open();
+                        });
+                    });
+
+                    // Optional: close drawer when a real link inside the menu is clicked.
+                    if (closeOnClick) {
+                        nav.addEventListener('click', (ev) => {
+                            const a = ev.target.closest('a');
+                            if (!a) {
+                                return;
+                            }
+
+                            const href = a.getAttribute('href') || '';
+                            if (!href || href === '#') {
+                                return;
+                            }
+
+                            if (drawer && typeof drawer.close === 'function') {
+                                drawer.close();
+                            }
+                        });
+                    }
+                });
+            })();
         ";
     }
 
