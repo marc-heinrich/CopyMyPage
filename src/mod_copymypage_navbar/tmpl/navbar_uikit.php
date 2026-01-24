@@ -27,6 +27,7 @@ use Joomla\CMS\Uri\Uri;
  *                                - basketOffcanvasId: string
  *
  * @var array<int, object> $list
+ * @var array<int, object> $userItems
  * @var array<int, int>    $path
  * @var object             $active
  * @var int                $active_id
@@ -275,11 +276,36 @@ $basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
 
                                     <div class="uk-navbar-dropdown cmp-navbar-user-dropdown">
                                         <ul class="uk-nav uk-navbar-dropdown-nav">
-                                            <li><a href="#">Settings (placeholder)</a></li>
-                                            <li><a href="#">My tickets (placeholder)</a></li>
-                                            <li><a href="#">Messages (placeholder)</a></li>
-                                            <li class="uk-nav-divider"></li>
-                                            <li><a href="#">Logout (placeholder)</a></li>
+                                            <?php if (empty($userItems)) : ?>
+                                                <li class="uk-disabled"><a href="#" onclick="return false;">—</a></li>
+                                            <?php else : ?>
+                                                <?php foreach ($userItems as $item) : ?>
+                                                    <?php
+                                                    $type      = (string) ($item->type ?? 'link');
+                                                    $isDivider = (bool) ($item->divider ?? false);
+
+                                                    if ($type === 'divider' || $isDivider) :
+                                                        ?>
+                                                        <li class="uk-nav-divider" role="separator"></li>
+                                                        <?php
+                                                        continue;
+                                                    endif;
+
+                                                    $title   = (string) ($item->title ?? '');
+                                                    $href    = (string) ($item->link ?? '#');
+                                                    $liClass = trim((string) ($item->class ?? ''));
+
+                                                    if ($title === '') {
+                                                        continue;
+                                                    }
+                                                    ?>
+                                                    <li<?php echo $liClass !== '' ? ' class="' . htmlspecialchars($liClass, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
+                                                        <a href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>">
+                                                            <?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?>
+                                                        </a>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
                                         </ul>
                                     </div>
                                 </li>
@@ -303,7 +329,6 @@ $basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
                                         <span uk-icon="icon: cart"></span>
                                     </a>
                                 </li>
-
                             </ul>
                         </div>
                     </div>
