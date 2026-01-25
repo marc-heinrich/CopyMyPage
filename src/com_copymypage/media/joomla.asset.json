@@ -52,7 +52,7 @@
       "name": "uikit",
       "type": "script",
       "uri": "com_copymypage/uikit/uikit.min.js",
-      "version": "3.24.2",
+      "version": "3.25.6",
       "attributes": {
         "defer": true
       }
@@ -61,7 +61,7 @@
       "name": "uikit.icons",
       "type": "script",
       "uri": "com_copymypage/uikit/uikit-icons.min.js",
-      "version": "3.24.2",
+      "version": "3.25.6",
       "dependencies": [
         "uikit"
       ],
