@@ -48,61 +48,17 @@
   </languages>
   <config>
     <fields name="params">
-      
       <!-- Layout Settings -->
       <fieldset name="layout" label="TPL_COPYMYPAGE_FIELDSET_LAYOUT">
-        <field
-            name="pageWrapperSelector"
-            type="text"
-            label="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_LABEL"
-            description="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_DESC"
-            default=".cmp-page"
-        />
-
-        <field
-            name="navbarSelector"
-            type="text"
-            label="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_LABEL"
-            description="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_DESC"
-            default=".cmp-navbar"
-        />
-
-        <field
-            name="mobileMenuSelector"
-            type="text"
-            label="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_LABEL"
-            description="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_DESC"
-            default=".cmp-mobilemenu"
-        />
+        <field name="pageWrapperSelector" type="text" label="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_DESC" default=".cmp-page"/>
+        <field name="navbarSelector" type="text" label="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_DESC" default=".cmp-navbar"/>
+        <field name="mobileMenuSelector" type="text" label="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_DESC" default=".cmp-mobilemenu"/>
       </fieldset>
-
       <!-- UI Settings -->
       <fieldset name="ui" label="TPL_COPYMYPAGE_FIELDSET_UI">
-        <field
-            name="backToTopSelector"
-            type="text"
-            label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_LABEL"
-            description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_DESC"
-            default="#back-top"
-        />
-
-        <field
-            name="backToTopPosition"
-            type="number"
-            label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_LABEL"
-            description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_DESC"
-            default="100"
-            min="0"
-        />
-
-        <field
-            name="backToTopTargetSelector"
-            type="text"
-            label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_LABEL"
-            description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_DESC"
-            default="#main-content"
-            filter="raw"
-        />
+        <field name="backToTopSelector" type="text" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_DESC" default="#back-top"/>
+        <field name="backToTopPosition" type="number" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_DESC" default="100" min="0"/>
+        <field name="backToTopTargetSelector" type="text" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_DESC" default="#main-content" filter="raw"/>
       </fieldset>
     </fields>
   </config>

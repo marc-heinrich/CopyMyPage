@@ -9,7 +9,7 @@
   <license>https://www.gnu.org/licenses/gpl-3.0.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.3</version>
+  <version>0.0.4</version>
   <!-- Short description via language constant -->
   <description>PKG_COPYMYPAGE_XML_DESCRIPTION</description>
   <!-- Installer script (Service Provider aware) -->
@@ -19,7 +19,9 @@
     <file id="com_copymypage" type="component">com_copymypage.zip</file>
     <file id="copymypage" type="template" client="site">tpl_copymypage.zip</file>
     <file id="mod_copymypage_dev" type="module" client="site">mod_copymypage_dev.zip</file>
-    <file id="copymypage" type="plugin" group="system">plg_system_copymypage.zip</file>    
+    <file id="mod_copymypage_slideshow" type="module" client="site">mod_copymypage_slideshow.zip</file>
+    <file id="mod_copymypage_navbar" type="module" client="site">mod_copymypage_navbar.zip</file>
+    <file id="copymypage" type="plugin" group="system">plg_system_copymypage.zip</file>
   </files>
   <!-- Language files for package description and system strings -->
   <languages>

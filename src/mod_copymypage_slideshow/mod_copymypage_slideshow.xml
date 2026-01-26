@@ -8,13 +8,10 @@
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
   <version>0.0.4</version>
-
   <!-- Short description via language constant -->
   <description>MOD_COPYMYPAGE_SLIDESHOW_XML_DESCRIPTION</description>
-
   <!-- Joomla 6 namespace mapping for the module -->
   <namespace path="src">Joomla\Module\CopyMyPage\Slideshow</namespace>
-
   <!-- Module files -->
   <files>
     <folder module="mod_copymypage_slideshow">services</folder>
@@ -22,18 +19,11 @@
     <folder>tmpl</folder>
     <folder>language</folder>
   </files>
-
   <!-- Basic module params -->
   <config>
     <fields name="params">
       <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
-        <field
-          name="moduleclass_sfx"
-          type="text"
-          label="JFIELD_MODULECLASS_SFX_LABEL"
-          description="JFIELD_MODULECLASS_SFX_DESC"
-          filter="STRING"
-        />
+        <field name="moduleclass_sfx" type="text" label="JFIELD_MODULECLASS_SFX_LABEL" description="JFIELD_MODULECLASS_SFX_DESC" filter="STRING"/>
       </fieldset>
     </fields>
   </config>

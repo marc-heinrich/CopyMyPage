@@ -2,7 +2,7 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
  * @since       0.0.4
  */
@@ -129,6 +129,9 @@ return new class () implements ServiceProviderInterface
                     return true;
                 }
 
+                /**
+                 * Runs after install or update has finished.
+                 */
                 public function postflight(string $type, InstallerAdapter $adapter): bool
                 {
                     // Only run our setup after install/update-like operations.

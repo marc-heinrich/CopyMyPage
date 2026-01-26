@@ -3,8 +3,10 @@
   <name>plg_system_copymypage</name>
   <author>Marc Heinrich</author>
   <creationDate>2025-12-03</creationDate>
-  <version>0.0.3</version>
+  <version>0.0.4</version>
   <description>PLG_SYSTEM_COPYMYPAGE_XML_DESCRIPTION</description>
+  <!-- Installer script (Service Provider aware) -->
+  <scriptfile>script.php</scriptfile>
   <!-- Namespace for the plugin classes (src/Extension/Copymypage.php, etc.) -->
   <namespace path="src">Joomla\Plugin\System\CopyMyPage</namespace>
   <!-- Files and folders belonging to this plugin -->
