@@ -73,17 +73,12 @@ $itemId = (int) $input->getInt('Itemid', 0);
 $menu      = $app->getMenu()->getActive();
 $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
 
-// Menu page class suffix (sanitize as it is user-editable).
-$pageClass = $menu !== null ? (string) $menu->getParams()->get('pageclass_sfx', '') : '';
-$pageClass = trim(preg_replace('/[^A-Za-z0-9 _-]/', '', $pageClass) ?? '');
-
 // Template params (DB) -> convert simple selector (".class"/"#id") to token ("class"/"id").
-// Provide safe defaults to avoid TypeErrors when params are missing.
-$pageWrapperClass = CopyMyPageHelper::selectorToToken((string) $this->params->get('pageWrapperSelector', '.cmp-page'));
-$navbarClass      = CopyMyPageHelper::selectorToToken((string) $this->params->get('navbarSelector', '.cmp-navbar'));
-$mobileMenuClass  = CopyMyPageHelper::selectorToToken((string) $this->params->get('mobileMenuSelector', '.cmp-mobilemenu'));
-$backToTopID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopSelector', '#back-top'));
-$mainContentID    = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopTargetSelector', '#main-content'));
+$pageWrapperClass = CopyMyPageHelper::selectorToToken((string) $this->params->get('pageWrapperSelector'));
+$navbarClass      = CopyMyPageHelper::selectorToToken((string) $this->params->get('navbarSelector'));
+$mobileMenuClass  = CopyMyPageHelper::selectorToToken((string) $this->params->get('mobileMenuSelector'));
+$backToTopID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopSelector'));
+$mainContentID    = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopTargetSelector'));
 
 // Build body classes (Cassiopeia-like).
 $bodyClasses = [
@@ -94,7 +89,6 @@ $bodyClasses = [
     $task ? 'task-' . $task : 'no-task',
     $itemId ? 'itemid-' . $itemId : '',
     $isOnepage ? 'is-onepage' : 'no-onepage',
-    $pageClass,
 ];
 
 if ($this->direction === 'rtl') {
