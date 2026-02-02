@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.5
  */
 
 \defined('_JEXEC') or die;
@@ -12,33 +12,29 @@
 use Joomla\CMS\Factory;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /** @var \Joomla\CMS\Document\HtmlDocument $this */
 
-$app    = Factory::getApplication();
-$input  = $app->getInput();
-$wa     = $this->getWebAssetManager();
+$app     = Factory::getApplication();
+$input   = $app->getInput();
+$wa      = $this->getWebAssetManager();
+$preload = $this->getPreloadManager();
+$root    = Uri::root(true);
 
-// Ensure HTML5 output mode for the document.
-$this->setHtml5(true);
-
-// Title fallback: only if no view/menu has set a title.
-if ($this->getTitle() === '') {
-    $this->setTitle($app->get('sitename'));
-}
-
-// Global, non-changeable meta tags.
-$this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
-    ->setMetaData('robots', 'index, follow');
-
-// Register and load web assets (aligned with offline.php).
-$wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
-$wa->usePreset($this->template . '.site');
-
-// Favicon handling & PWA assets (aligned with offline.php).
+// Build path variables.
+$fontPath = $root . '/media/com_' . $this->template . '/fonts/';
 $logoPath = 'com_' . $this->template . '/logo/';
 
+// Preload custom font.
+$preload->preload($fontPath . 'mona-sans/mona-sans-v4-latin-regular.woff2', [
+    'as'          => 'font',
+    'type'        => 'font/woff2',
+    'crossorigin' => 'anonymous',
+]);
+
+// Add favicons and app manifest.
 $this->addHeadLink(
     HTMLHelper::_('image', $logoPath . 'favicon.svg', '', [], true, 1),
     'icon',
@@ -62,6 +58,22 @@ $this->addHeadLink(
     'manifest',
     'rel'
 );
+
+// Ensure HTML5 output mode for the document.
+$this->setHtml5(true);
+
+// Title fallback: only if no view/menu has set a title.
+if ($this->getTitle() === '') {
+    $this->setTitle($app->get('sitename'));
+}
+
+// Global, non-changeable meta tags.
+$this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
+    ->setMetaData('robots', 'index, follow');
+
+// Register and load web assets (aligned with offline.php).
+$wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
+$wa->usePreset($this->template . '.site');
 
 // Detect basic context (for body classes, CSS, JS hooks).
 $option = $input->getCmd('option', '');

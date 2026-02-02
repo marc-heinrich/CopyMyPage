@@ -1,22 +1,16 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Asset definitions for CopyMyPage template and related components.",
-  "license": "(C) 2026 Open Source Matters, Inc. <https://www.joomla.org>",
+  "license": "GPL-3.0-or-later",
   "assets": [
     {
       "name": "copymypage.site",
       "type": "preset",
       "dependencies": [
-        "uikit#style",
-        "uikit#script",
-        "uikit.icons#script",
-        "mmenu-light#style",
-        "mmenu-light#script",
         "bootstrap#style",
         "bootstrap#script",
-        "joomla.fontawesome#style",
         "template#style",
         "copymypage#script"
       ]
@@ -25,7 +19,19 @@
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.css",
-      "version": "0.0.4"
+      "version": "0.0.5",
+      "dependencies": [
+        "uikit",
+        "joomla.fontawesome",
+        "mmenu.light",
+        "template.fonts"
+      ]
+    },
+    {
+      "name": "template.fonts",
+      "type": "style",
+      "uri": "com_copymypage/fonts-local.min.css",
+      "version": "0.0.5"
     },
     {
       "name": "copymypage",
@@ -36,7 +42,9 @@
       "dependencies": [
         "core",
         "messages",
-        "uikit"
+        "uikit",
+        "uikit.icons",
+        "mmenu.light"
       ],
       "attributes": {
         "defer": true
@@ -90,25 +98,25 @@
       "uri": "system/joomla-fontawesome.min.css"
     },
     {
-      "name": "mmenu-light",
+      "name": "mmenu.light",
       "type": "style",
       "uri": "com_copymypage/mmenu-light/mmenu-light.min.css",
       "version": "3.2.2"
     },
     {
-      "name": "mmenu-light",
+      "name": "mmenu.light",
       "type": "script",
       "uri": "com_copymypage/mmenu-light/mmenu-light.min.js",
       "version": "3.2.2",
       "dependencies": [
-        "mmenu-light.polyfills"
+        "mmenu.light.polyfills"
       ],
       "attributes": {
         "defer": true
       }
     },
     {
-      "name": "mmenu-light.polyfills",
+      "name": "mmenu.light.polyfills",
       "type": "script",
       "uri": "com_copymypage/mmenu-light/mmenu-light.polyfills.min.js",
       "version": "3.2.2",
