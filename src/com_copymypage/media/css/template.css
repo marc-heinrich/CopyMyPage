@@ -3,21 +3,31 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.5
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
 
 /* ==========================================================================
    FOUNDATIONS - Design tokens (CSS custom properties)
+   override via webassetmanager in index.php
    ========================================================================== */
 
 :root {
 
     /* Font families */
-    --cmp-font-family-base: "Open Sans", system-ui, -apple-system, "Segoe UI", Roboto,
-        "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif,
-        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --cmp-font-family-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji";
+
+    /* Canonical: only Mona Sans */
+    --cmp-font-family-body: "Mona Sans", var(--cmp-font-family-system);
+    --cmp-font-family-ui: var(--cmp-font-family-body);
+    --cmp-font-family-display: var(--cmp-font-family-body);
+    --cmp-font-family-code: var(--cmp-font-family-body);
+
+    /* Backwards-compatible aliases (phase out later) */
+    --cmp-font-family-sans-serif: var(--cmp-font-family-body);
+    --cmp-font-family-sans-serif-alt: var(--cmp-font-family-body);
 
     /* Colors */
     --cmp-color: #04cbd0;
@@ -34,24 +44,35 @@
     /* Borders */
     --cmp-border-radius-sm: 0.125rem;
     --cmp-border-radius: 0.25rem;
-    --cmp-border-radius-lg: 0.5rem;    
+    --cmp-border-radius-lg: 0.5rem;
     --cmp-border-width-sm: 0.5px;
     --cmp-border-width: 1px;
-    --cmp-border-width-lg: 2px;    
+    --cmp-border-width-lg: 2px;
     --cmp-border-color: var(--cmp-color);
     --cmp-border-muted: var(--cmp-color-muted);
 
-    /* Shadows */
+    /* Box shadows */
     --cmp-box-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --cmp-box-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
     --cmp-box-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
+
+    /* Text shadows */
+    --cmp-text-shadow-xs: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.25));
+    --cmp-text-shadow-sm: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+    --cmp-text-shadow-md: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.45));
+    --cmp-text-shadow-lg: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
 
     /* Font sizes */
     --cmp-font-size-xs: 0.75rem;
     --cmp-font-size-sm: 0.875rem;
     --cmp-font-size: 1rem;
-    --cmp-font-size-lg: 1.25rem;
-    --cmp-font-size-xl: 1.5rem;
+    --cmp-font-size-lg: 1.15rem;
+    --cmp-font-size-xl: 1.25rem;
+    --cmp-font-size-2xl: 1.5rem;
+    --cmp-font-size-3xl: 1.875rem;
+
+    /* Navbar sizing (single source of truth) */
+    --cmp-navbar-item-size: var(--cmp-font-size-lg);
 
     /* Headings */
     --cmp-font-size-heading-sm: clamp(1.25rem, 2.2vw, 1.75rem);
@@ -72,14 +93,14 @@
     /* Letter spacing */
     --cmp-letter-spacing-xs: -0.1rem;
     --cmp-letter-spacing-sm: -0.05rem;
-    --cmp-letter-spacing: 0; 
+    --cmp-letter-spacing: 0;
     --cmp-letter-spacing-lg: 0.05rem;
     --cmp-letter-spacing-xl: 0.1rem;
 
     /* Z-index */
     --cmp-z-index-backto-top: 1010;
     --cmp-z-index-sticky: 1020;
-    --cmp-z-index-dropdown: 1030;    
+    --cmp-z-index-dropdown: 1030;
     --cmp-z-index-modal-backdrop: 1040;
     --cmp-z-index-modal: 1050;
     --cmp-z-index-tooltip: 1060;
@@ -91,20 +112,35 @@
 /* ==========================================================================
    BASE - Global element defaults (body, headings, links, etc.)
    ========================================================================== */
+
 html,
 body {
     margin: 0;
     padding: 0;
+    font-family: var(--cmp-font-family-body);
 }
+
 html {
-  scroll-padding-top: var(--cmp-header-offset);
+    scroll-padding-top: var(--cmp-header-offset);
+}
+
+/* Global headings: override UIkit family everywhere (keep UIkit spacing/weights/colors) */
+:is(
+    .uk-h1, .uk-h2, .uk-h3, .uk-h4, .uk-h5, .uk-h6,
+    .uk-heading-2xlarge, .uk-heading-3xlarge, .uk-heading-large,
+    .uk-heading-medium, .uk-heading-small, .uk-heading-xlarge,
+    h1, h2, h3, h4, h5, h6
+) {
+    font-family: var(--cmp-font-family-display);
 }
 
 /* ==========================================================================
    LAYOUT - Structural containers (header, main, footer, grid, etc.)
    ========================================================================== */
+
 /* HEADER
    ========================================================================== */
+
 .cmp-header {
     position: absolute;
     top: 0;
@@ -116,17 +152,32 @@ html {
 /* ==========================================================================
    COMPONENTS - System UI
    ========================================================================== */
+
 /* NAVBAR
    ========================================================================== */
+
 .cmp-navbar-container {
+    font-family: var(--cmp-font-family-ui);
     background-color: transparent;
     box-shadow: none;
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
-.cmp-navbar-container.cmp-navbar--top {
-    background-color: transparent;
-    box-shadow: none;
+
+.cmp-navbar-container .uk-navbar-item,
+.cmp-navbar-container .uk-navbar-nav > li > a,
+.cmp-navbar-container .uk-navbar-toggle {
+    font-family: var(--cmp-font-family-ui);
 }
+
+.cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
+    text-transform: none;
+}
+
+.cmp-navbar-nav > li > a.cmp-navbar-link {
+    font-size: var(--cmp-navbar-item-size);
+}
+
+/* Scrolled state overrides */
 .cmp-navbar-container.cmp-navbar--scrolled {
     background-color: var(--cmp-color-background-default);
     box-shadow:
@@ -134,21 +185,61 @@ html {
         0 12px 28px rgba(0, 0, 0, 0.08),
         0 28px 70px rgba(0, 0, 0, 0.06);
 }
+
+/* Onepage hero/top: improve contrast for top-level items only */
+body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-nav > li > a.cmp-navbar-link {
+    filter: var(--cmp-text-shadow-md);
+    color: var(--cmp-color-logo-light);
+}
+
+body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-parent-icon svg polyline {
+    stroke: currentColor;
+}
+
 /* NAVBAR ICONS (right side)
    ========================================================================== */
+
+/* Desktop icon nav spacing */
 .cmp-navbar-icons-nav {
     gap: 0;
 }
+
 .cmp-navbar-icons-nav > li > a.cmp-navbar-icon {
-    padding: 0 6px; 
+    padding: 0 6px;
     line-height: 1;
 }
-/* USER MENU
-   ========================================================================== */
 
+/* Icons follow the link font-size (single source of truth) */
+.uk-navbar-right a.cmp-navbar-icon,
+.uk-navbar-right a.cmp-navbar-icon-link {
+    font-size: var(--cmp-navbar-item-size);
+    line-height: 1;
+}
+
+.uk-navbar-right .uk-icon > svg {
+    width: var(--cmp-font-size-2xl);
+    height: var(--cmp-font-size-2xl);
+}
+
+/* Onepage hero/top: improve contrast for icons */
+body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-navbar-icon,
+body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-navbar-icon-link {
+    color: var(--cmp-color-logo-light);
+    filter: var(--cmp-text-shadow-lg);
+}
+
+/* Onepage hero/top: make UIkit SVG use currentColor (fixes stroke="#000") */
+body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right .uk-icon svg [stroke] {
+    stroke: currentColor;
+}
+
+body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right .uk-icon svg circle:not([fill="none"]) {
+    fill: currentColor;
+}
 
 /* LOGO
    ========================================================================== */
+
 .cmp-navbar-logo {
     display: block;
     width: auto;
@@ -182,6 +273,7 @@ html {
 
 /* MOBILE TOGGLE
    ========================================================================== */
+
 .cmp-navbar-toggle {
     background: transparent;
     border: 0;
@@ -191,6 +283,7 @@ html {
 
 /* BACK TO TOP BUTTON
    ========================================================================== */
+
 .cmp-back-to-top {
     position: fixed;
     inset-inline-end: 1rem;
@@ -210,22 +303,27 @@ html {
     opacity: 0;
     transition: opacity 0.2s ease-in;
 }
+
 .cmp-back-to-top.visible {
     opacity: 1;
     pointer-events: auto;
 }
+
 .cmp-back-to-top:hover {
     background-color: var(--cmp-color);
     color: var(--cmp-color-logo-light);
     border-color: var(--cmp-border-color);
 }
+
 .cmp-back-to-top:focus {
     outline: none;
 }
+
 .cmp-back-to-top:focus-visible {
     outline: 0.125rem solid var(--cmp-color);
     outline-offset: 0.125rem;
 }
+
 @media (max-width: 767px) {
     .cmp-back-to-top {
         min-width: 2.25rem;
@@ -234,31 +332,40 @@ html {
         bottom: 0.75rem;
     }
 }
+
 /* ==========================================================================
    SECTIONS - Modules (hero, gallery, team, tickets, contact, footer)
    ========================================================================== */
+
 /* BASICS
    ========================================================================== */
+
 .cmp-section {
-  scroll-margin-top: var(--cmp-header-offset);
+    scroll-margin-top: var(--cmp-header-offset);
 }
+
 /* SLIDESHOW
    ========================================================================== */
+
 .cmp-module--slideshow {
     position: relative;
 }
+
 .cmp-module--slideshow .uk-position-center {
     padding: 2rem;
 }
+
 /* Text overlay inside the slideshow */
 .cmp-module--slideshow .cmp-slideshow-overlay {
     color: var(--cmp-color-logo-light);
     text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
 }
+
 .cmp-module--slideshow .cmp-slideshow-overlay h2,
 .cmp-module--slideshow .cmp-slideshow-overlay p {
     margin: 0;
 }
+
 .cmp-module--slideshow .cmp-slideshow-overlay h2 {
     font-weight: 700;
     font-size: var(--cmp-font-size-heading-3xl);
@@ -267,11 +374,13 @@ html {
     text-transform: uppercase;
     margin-bottom: var(--cmp-spacing-sm);
 }
+
 .cmp-module--slideshow .cmp-slideshow-overlay p {
     font-weight: 400;
     font-size: var(--cmp-font-size-heading-lg);
     line-height: 1.4;
 }
+
 /* Slidenav arrows – circular buttons with inner running ring */
 .cmp-module--slideshow .uk-slidenav-previous,
 .cmp-module--slideshow .uk-slidenav-next {
@@ -286,12 +395,14 @@ html {
     position: relative;
     overflow: hidden;
 }
+
 /* Ensure the UIKit icon stays above the animated ring */
 .cmp-module--slideshow .uk-slidenav-previous span,
 .cmp-module--slideshow .uk-slidenav-next span {
     position: relative;
     z-index: 1;
 }
+
 /* Animated inner ring only on the border */
 .cmp-module--slideshow .uk-slidenav-previous::before,
 .cmp-module--slideshow .uk-slidenav-next::before {
@@ -327,6 +438,7 @@ html {
     z-index: 0;
     animation: cmp-slidenav-ring 4s linear infinite;
 }
+
 /* Keyframes for the running ring effect – short active phase, long pause */
 @keyframes cmp-slidenav-ring {
     0% {
@@ -354,6 +466,7 @@ html {
         transform: rotate(360deg);
     }
 }
+
 /* Dot navigation – small bullets inside the slideshow image */
 .cmp-module--slideshow .uk-slideshow-nav {
     position: absolute;
@@ -364,13 +477,16 @@ html {
     padding: 0;
     z-index: 1;
 }
+
 /* Override UIKit spacing inside slideshow */
 .cmp-module--slideshow .uk-dotnav {
     margin-left: 0;
 }
+
 .cmp-module--slideshow .uk-dotnav > * {
     padding-left: 0.35rem;
 }
+
 /* Base dot style: small, subtle, without border, with soft shadow */
 .cmp-module--slideshow .uk-dotnav > * > * {
     width: 0.5rem;
@@ -380,10 +496,24 @@ html {
     border: none;
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
 }
+
 /* Active slide dot – almost white, slightly larger, stronger shadow */
 .cmp-module--slideshow .uk-dotnav > .uk-active > * {
     background-color: rgba(255, 255, 255, 0.95);
     border: none;
     transform: scale(1.15);
     box-shadow: 0 0 6px rgba(0, 0, 0, 0.55);
+}
+
+/* ==========================================================================
+   ACCESSIBILITY - Reduced motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

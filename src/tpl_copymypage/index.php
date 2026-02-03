@@ -24,7 +24,7 @@ $preload = $this->getPreloadManager();
 $root    = Uri::root(true);
 
 // Build path variables.
-$fontPath = $root . '/media/com_' . $this->template . '/fonts/';
+$fontPath = $root . '/media/com_' . $this->template . '/css/fonts-local/';
 $logoPath = 'com_' . $this->template . '/logo/';
 
 // Preload custom font.

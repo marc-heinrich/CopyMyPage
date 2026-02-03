@@ -30,8 +30,7 @@
     {
       "name": "template.fonts",
       "type": "style",
-      "uri": "com_copymypage/fonts-local.min.css",
-      "version": "0.0.5"
+      "uri": "com_copymypage/fonts-local/fonts-local.min.css"
     },
     {
       "name": "copymypage",
