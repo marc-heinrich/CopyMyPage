@@ -2,9 +2,9 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.2
+ * @since       0.0.5
  */
 
 \defined('_JEXEC') or die;
@@ -26,65 +26,79 @@ $hasModuleMeta = $showModuleInfo && !empty($debugData['module']);
 $hasMenuInfo   = $showMenuInfo && !empty($debugData['menu']);
 $hasContext    = !empty($debugData['context']);
 $hasParams     = !empty($paramsArray);
+
+/**
+ * Render a simple key/value list (UIkit).
+ *
+ * @param iterable<string, mixed> $items
+ */
+$renderKvList = static function (iterable $items, bool $encodeComplex = false): void {
+    ?>
+    <ul class="uk-list uk-list-divider uk-text-small uk-margin-remove">
+        <?php foreach ($items as $key => $value) : ?>
+            <?php
+                if ($value === null) {
+                    $valueString = 'null';
+                } elseif (\is_bool($value)) {
+                    $valueString = $value ? 'true' : 'false';
+                } elseif (\is_scalar($value)) {
+                    $valueString = (string) $value;
+                } else {
+                    if ($encodeComplex) {
+                        $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                        $valueString = ($encoded !== false) ? $encoded : trim((string) print_r($value, true));
+                    } else {
+                        $valueString = trim((string) print_r($value, true));
+                    }
+                }
+            ?>
+            <li class="uk-flex uk-flex-between uk-flex-top">
+                <span class="uk-text-bold">
+                    <?php echo htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8'); ?>
+                </span>
+                <span class="uk-text-muted uk-text-right uk-text-break uk-margin-small-left">
+                    <?php echo htmlspecialchars($valueString, ENT_QUOTES, 'UTF-8'); ?>
+                </span>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+    <?php
+};
+
+$rootSfx = $moduleclassSfx !== ''
+    ? ' ' . htmlspecialchars($moduleclassSfx, ENT_QUOTES, 'UTF-8')
+    : '';
 ?>
-<div class="mod-copymypage-dev container my-4<?php echo $moduleclassSfx ? ' ' . $moduleclassSfx : ''; ?>">
-    <div class="row g-3">
+<div class="cmp-module cmp-module--dev uk-container uk-margin-medium-top uk-margin-medium-bottom<?php echo $rootSfx; ?>">
+    <div
+        class="uk-grid-small uk-grid-match uk-child-width-1-1 uk-child-width-1-2@m uk-child-width-1-3@xl"
+        uk-grid
+    >
         <?php if ($hasModuleMeta || $hasParams) : ?>
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 shadow-sm mod-copymypage-dev__card">
-                    <div class="card-header">
-                        <span class="fw-semibold">
+            <div>
+                <div class="uk-card uk-card-default uk-card-small">
+                    <div class="uk-card-header">
+                        <h3 class="uk-card-title uk-margin-remove">
                             <?php echo Text::_('MOD_COPYMYPAGE_DEV_HEADING_MODULE'); ?>
-                        </span>
+                        </h3>
                     </div>
-                    <div class="card-body">
+
+                    <div class="uk-card-body">
                         <?php if ($hasModuleMeta) : ?>
-                            <h6 class="card-subtitle text-muted small text-uppercase mb-2">
-                                <?php echo Text::_('MOD_COPYMYPAGE_DEV_HEADING_MODULE'); ?>
-                            </h6>
-                            <ul class="list-unstyled small mb-3">
-                                <?php foreach ($debugData['module'] as $key => $value) : ?>
-                                    <li class="d-flex justify-content-between">
-                                        <span class="fw-semibold">
-                                            <?php echo htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8'); ?>
-                                        </span>
-                                        <span class="text-muted ms-2 text-end">
-                                            <?php echo htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); ?>
-                                        </span>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
+                            <?php $renderKvList($debugData['module']); ?>                            
                         <?php endif; ?>
 
                         <?php if ($hasParams) : ?>
                             <?php if ($hasModuleMeta) : ?>
-                                <hr class="my-2">
+                                <hr class="uk-margin-small">
                             <?php endif; ?>
-                            <h6 class="card-subtitle text-muted small text-uppercase mb-2">
-                                <?php echo Text::_('JGLOBAL_FIELDSET_OPTIONS'); ?>
-                            </h6>
-                            <ul class="list-unstyled small mb-0">
-                                <?php foreach ($paramsArray as $key => $value) : ?>
-                                    <?php
-                                        if (is_scalar($value) || $value === null) {
-                                            $valueString = (string) $value;
-                                        } else {
-                                            $valueString = json_encode(
-                                                $value,
-                                                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-                                            );
-                                        }
-                                    ?>
-                                    <li class="d-flex justify-content-between">
-                                        <span class="fw-semibold">
-                                            <?php echo htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8'); ?>
-                                        </span>
-                                        <span class="text-muted ms-2 text-end text-break">
-                                            <?php echo htmlspecialchars((string) $valueString, ENT_QUOTES, 'UTF-8'); ?>
-                                        </span>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
+
+                            <h4 class="uk-text-small uk-text-uppercase uk-text-muted uk-margin-remove-bottom">
+                                <?php echo Text::_('JOPTIONS'); ?>
+                            </h4>
+                            <div class="uk-margin-small-top">
+                                <?php $renderKvList($paramsArray, true); ?>
+                            </div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -92,52 +106,32 @@ $hasParams     = !empty($paramsArray);
         <?php endif; ?>
 
         <?php if ($hasMenuInfo) : ?>
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 shadow-sm mod-copymypage-dev__card">
-                    <div class="card-header">
-                        <span class="fw-semibold">
+            <div>
+                <div class="uk-card uk-card-default uk-card-small">
+                    <div class="uk-card-header">
+                        <h3 class="uk-card-title uk-margin-remove">
                             <?php echo Text::_('MOD_COPYMYPAGE_DEV_HEADING_MENU'); ?>
-                        </span>
+                        </h3>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled small mb-0">
-                            <?php foreach ($debugData['menu'] as $key => $value) : ?>
-                                <li class="d-flex justify-content-between">
-                                    <span class="fw-semibold">
-                                        <?php echo htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8'); ?>
-                                    </span>
-                                    <span class="text-muted ms-2 text-end text-break">
-                                        <?php echo htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); ?>
-                                    </span>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
+
+                    <div class="uk-card-body">
+                        <?php $renderKvList($debugData['menu']); ?>
                     </div>
                 </div>
             </div>
         <?php endif; ?>
 
         <?php if ($hasContext) : ?>
-            <div class="col-12 col-md-6 col-xl-4">
-                <div class="card h-100 shadow-sm mod-copymypage-dev__card">
-                    <div class="card-header">
-                        <span class="fw-semibold">
+            <div>
+                <div class="uk-card uk-card-default uk-card-small">
+                    <div class="uk-card-header">
+                        <h3 class="uk-card-title uk-margin-remove">
                             <?php echo Text::_('MOD_COPYMYPAGE_DEV_HEADING_CONTEXT'); ?>
-                        </span>
+                        </h3>
                     </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled small mb-0">
-                            <?php foreach ($debugData['context'] as $key => $value) : ?>
-                                <li class="d-flex justify-content-between">
-                                    <span class="fw-semibold">
-                                        <?php echo htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8'); ?>
-                                    </span>
-                                    <span class="text-muted ms-2 text-end text-break">
-                                        <?php echo htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); ?>
-                                    </span>
-                                </li>
-                            <?php endforeach; ?>
-                        </ul>
+
+                    <div class="uk-card-body">
+                        <?php $renderKvList($debugData['context']); ?>
                     </div>
                 </div>
             </div>

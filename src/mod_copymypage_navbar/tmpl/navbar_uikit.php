@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.5
  */
 
 \defined('_JEXEC') or die;
@@ -277,7 +277,7 @@ $basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
                                     <div class="uk-navbar-dropdown cmp-navbar-user-dropdown">
                                         <ul class="uk-nav uk-navbar-dropdown-nav">
                                             <?php if (empty($userItems)) : ?>
-                                                <li class="uk-disabled"><a href="#" onclick="return false;">—</a></li>
+                                                <li class="uk-disabled"><a class="cmp-navbar-link" href="#" onclick="return false;">—</a></li>
                                             <?php else : ?>
                                                 <?php foreach ($userItems as $item) : ?>
                                                     <?php
@@ -300,7 +300,7 @@ $basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
                                                     }
                                                     ?>
                                                     <li<?php echo $liClass !== '' ? ' class="' . htmlspecialchars($liClass, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
-                                                        <a href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>">
+                                                        <a class="cmp-navbar-link" href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>">
                                                             <?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?>
                                                         </a>
                                                     </li>

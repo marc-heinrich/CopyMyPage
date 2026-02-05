@@ -2,9 +2,9 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.2
+ * @since       0.0.5
  */
 
 \defined('_JEXEC') or die;
@@ -18,15 +18,6 @@ use Joomla\Module\CopyMyPage\Dev\Site\Helper\DevHelper;
 
 // Prepare module class suffix.
 $moduleclassSfx = htmlspecialchars((string) $params->get('moduleclass_sfx'), ENT_QUOTES, 'UTF-8');
-
-/** @var Joomla\CMS\WebAsset\WebAssetManager $wa */
-$wa = Factory::getApplication()->getDocument()->getWebAssetManager();
-$wa->registerAndUseStyle(
-    'mod_copymypage_dev',
-    'com_copymypage/mod_copymypage_dev.css',
-    [],
-    ['template']
-);
 
 // Get debug data from helper (will be used inside the layout).
 $debugData = DevHelper::getDebugData($module, $params);

@@ -38,7 +38,7 @@
     --cmp-color-surface: #f5f7fb;
     --cmp-color-muted: #d5dde8;
     --cmp-color-background-default: #ffffff;
-    --cmp-color-text-default: #061225;
+    --cmp-color-text-default: #333;
     --cmp-color-text-muted: #6c757d;
 
     /* Borders */
@@ -171,6 +171,12 @@ html {
 
 .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
     text-transform: none;
+    color: var(--cmp-color-text-default);
+}
+
+/* NEW: ensure parent-icon arrow follows currentColor */
+.cmp-navbar-container .uk-navbar-parent-icon svg polyline {
+    stroke: currentColor;
 }
 
 .cmp-navbar-nav > li > a.cmp-navbar-link {
@@ -186,14 +192,44 @@ html {
         0 28px 70px rgba(0, 0, 0, 0.06);
 }
 
+/* NEW: scrolled -> force dark text + remove hero shadows */
+.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li > a.cmp-navbar-link {
+    color: var(--cmp-color-text-default);
+    filter: none;
+}
+
+/* NEW: non-onepage should look like scrolled even at top */
+body.no-onepage .cmp-navbar-container {
+    background-color: var(--cmp-color-background-default);
+    box-shadow:
+        0 1px 0 rgba(0, 0, 0, 0.03),
+        0 12px 28px rgba(0, 0, 0, 0.08),
+        0 28px 70px rgba(0, 0, 0, 0.06);
+}
+
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
+    color: var(--cmp-color-text-default);
+    filter: none;
+}
+
 /* Onepage hero/top: improve contrast for top-level items only */
 body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-nav > li > a.cmp-navbar-link {
     filter: var(--cmp-text-shadow-md);
     color: var(--cmp-color-logo-light);
 }
 
-body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-parent-icon svg polyline {
-    stroke: currentColor;
+/* Dropdown links: override UIkit default (#999) */
+.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link,
+.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link {
+    color: var(--cmp-color-text-default);
+}
+
+/* Keep it consistent on interaction states */
+.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:hover,
+.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:focus,
+.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:hover,
+.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:focus {
+    color: var(--cmp-color-text-default);
 }
 
 /* NAVBAR ICONS (right side)
@@ -214,7 +250,21 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-parent-icon svg
 .uk-navbar-right a.cmp-navbar-icon-link {
     font-size: var(--cmp-navbar-item-size);
     line-height: 1;
+
+    /* NEW: default icon color = token */
+    color: var(--cmp-color-text-default);
 }
+
+/* NEW: scrolled + non-onepage icon color */
+.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-right a.cmp-navbar-icon,
+.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-right a.cmp-navbar-icon-link,
+body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon,
+body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon-link {
+    color: var(--cmp-color-text-default);
+    filter: none;
+}
+
+
 
 .uk-navbar-right .uk-icon > svg {
     width: var(--cmp-font-size-2xl);
@@ -228,12 +278,12 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     filter: var(--cmp-text-shadow-lg);
 }
 
-/* Onepage hero/top: make UIkit SVG use currentColor (fixes stroke="#000") */
-body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right .uk-icon svg [stroke] {
+/* NEW: make UIkit SVG icons obey currentColor everywhere (not only hero/top) */
+.cmp-navbar-container .uk-icon svg [stroke] {
     stroke: currentColor;
 }
 
-body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right .uk-icon svg circle:not([fill="none"]) {
+.cmp-navbar-container .uk-icon svg circle:not([fill="none"]) {
     fill: currentColor;
 }
 
@@ -342,6 +392,21 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right .uk-icon 
 
 .cmp-section {
     scroll-margin-top: var(--cmp-header-offset);
+}
+
+/* DEV / DEBUG MODULE
+   ========================================================================== */
+
+.cmp-module--dev .uk-card {
+    border-radius: var(--cmp-border-radius-lg);
+}
+
+.cmp-module--dev .uk-card-header {
+    font-size: var(--cmp-font-size-sm);
+}
+
+.cmp-module--dev .uk-card-body {
+    font-size: var(--cmp-font-size-sm);
 }
 
 /* SLIDESHOW
