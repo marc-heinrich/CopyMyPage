@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.4</version>
+  <version>0.0.5</version>
   <!-- Short description via language constant -->
   <description>TPL_COPYMYPAGE_XML_DESCRIPTION</description>
   <!-- Template files -->
@@ -53,6 +53,10 @@
         <field name="pageWrapperSelector" type="text" label="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_DESC" default=".cmp-page"/>
         <field name="navbarSelector" type="text" label="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_DESC" default=".cmp-navbar"/>
         <field name="mobileMenuSelector" type="text" label="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_DESC" default=".cmp-mobilemenu"/>
+        <field name="headerOffset" type="number"
+          label="TPL_COPYMYPAGE_FIELD_HEADER_OFFSET_LABEL"
+         description="TPL_COPYMYPAGE_FIELD_HEADER_OFFSET_DESC"
+         default="80" min="0" max="300" step="1"/>
       </fieldset>
       <!-- UI Settings -->
       <fieldset name="ui" label="TPL_COPYMYPAGE_FIELDSET_UI">

@@ -71,10 +71,6 @@ if ($this->getTitle() === '') {
 $this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
     ->setMetaData('robots', 'index, follow');
 
-// Register and load web assets (aligned with offline.php).
-$wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
-$wa->usePreset($this->template . '.site');
-
 // Detect basic context (for body classes, CSS, JS hooks).
 $option = $input->getCmd('option', '');
 $view   = $input->getCmd('view', '');
@@ -91,8 +87,16 @@ $navbarClass      = CopyMyPageHelper::selectorToToken((string) $this->params->ge
 $mobileMenuClass  = CopyMyPageHelper::selectorToToken((string) $this->params->get('mobileMenuSelector'));
 $backToTopID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopSelector'));
 $mainContentID    = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopTargetSelector'));
+$headerOffset     = (int) $this->params->get('headerOffset', 80);
 
-// Build body classes (Cassiopeia-like).
+// Register and load web assets (aligned with offline.php).
+$wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
+$wa->usePreset($this->template . '.site')
+   ->addInlineStyle(":root {
+        --cmp-header-offset: {$headerOffset}px;
+}");
+
+// Build body classes and navbar attributes.
 $bodyClasses = [
     'cmp-site',
     $option ?: 'no-option',
@@ -103,11 +107,14 @@ $bodyClasses = [
     $isOnepage ? 'is-onepage' : 'no-onepage',
 ];
 
-if ($this->direction === 'rtl') {
-    $bodyClasses[] = 'rtl';
-}
+$navbarAttrs = [
+    $isOnepage
+        ? 'uk-scrollspy-nav="closest: li; target: a[data-cmp-scroll=\'1\']; scroll: false; offset: ' . (int) $headerOffset . '"'
+        : '',
+];
 
-$bodyClass = trim(implode(' ', array_filter($bodyClasses)));
+$bodyClass  = trim(implode(' ', array_filter($bodyClasses)));
+$navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo htmlspecialchars($this->language, ENT_QUOTES, 'UTF-8'); ?>" dir="<?php echo htmlspecialchars($this->direction, ENT_QUOTES, 'UTF-8'); ?>">
@@ -129,6 +136,7 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
                         id="navbar"
                         class="<?php echo htmlspecialchars($navbarClass, ENT_QUOTES, 'UTF-8'); ?>"
                         aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_NAVBAR'), ENT_QUOTES, 'UTF-8'); ?>"
+                        <?php echo $navbarAttr; ?>
                     >
                         <jdoc:include type="modules" name="navbar" style="none" />
                     </nav>
@@ -196,10 +204,13 @@ $bodyClass = trim(implode(' ', array_filter($bodyClasses)));
                 <?php endif; ?>
 
                 <!-- System Messages -->
-                <jdoc:include type="message" />
-
+                <jdoc:include type="message" />                
+                
                 <!-- Component Output -->
-                <jdoc:include type="component" />
+                <section id="component" class="cmp-section cmp-section--component">
+                    <jdoc:include type="component" />
+                </section>              
+
             </main>
 
             <!-- Footer -->

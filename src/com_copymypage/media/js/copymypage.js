@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.5
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -53,8 +53,10 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
+            // Fire up the features.
             this._backToTop();
             this._desktopUserDropdownHoldOpen();
+            this._addMmenuLinksHandler();
         }
 
         /**
@@ -272,6 +274,54 @@ window.CopyMyPage = window.CopyMyPage || {};
                     }
                 });
             }
+        }
+
+        /**
+         * Activates the scroll logic for each menu item in the mmenu.
+         * Removes the scroll-blocking class and allows UIkit to do its job.
+         */
+        _addMmenuLinksHandler() {
+            // All links in the mmenu that point to a section.
+            const mmenuLinks = this._select(`#${this.mod.navbar.navOffcanvasId} a[href^="#"]`, true);
+
+            if (!mmenuLinks || mmenuLinks.length === 0) {
+                return;
+            }
+
+            let isMenuClick = false;  // Flag to track if the user clicked a mmenu link.
+
+            mmenuLinks.forEach(link => {
+                link.addEventListener('click', (ev) => {
+                    ev.preventDefault();
+
+                    isMenuClick = true;  // Set the flag to true since the user clicked a menu item.
+
+                    // Temporarily remove the scroll-blocking class.
+                    document.body.classList.remove('mm-ocd-opened');
+
+                    // Scroll to the target section.
+                    const target = this._select(link.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+
+                    // Observe the target to check when it becomes visible.
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach((entry) => {
+                            if (entry.isIntersecting && isMenuClick) {
+                                // Add the scroll-blocking class back after a short delay.
+                                setTimeout(() => {
+                                    document.body.classList.add('mm-ocd-opened');
+                                }, 750); // Delay to allow UIkit to do its job.
+                                isMenuClick = false;  // Reset the flag.
+                            }
+                        });
+                    }, { threshold: 0.1 });
+
+                    // Observe the target element.
+                    observer.observe(target);
+                });
+            });
         }
 
         /**
