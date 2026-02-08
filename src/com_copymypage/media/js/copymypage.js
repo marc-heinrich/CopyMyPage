@@ -28,8 +28,10 @@ window.CopyMyPage = window.CopyMyPage || {};
             // Cached bound handlers (avoid creating a new function on every event).
             this._onScroll = this._debouncedScroll.bind(this);
 
-            // Internal timers.
+            // Internal timers/state.
             this._scrollTimeout = null;
+            this._mmenuRestoreTimeout = null;
+            this._initialized = false;
 
             if (!params || typeof params !== 'object') {
                 this.logError('TPL_COPYMYPAGE_JS_ERROR_INVALID_PARAMS');
@@ -52,6 +54,12 @@ window.CopyMyPage = window.CopyMyPage || {};
                 this.logError('TPL_COPYMYPAGE_JS_ERROR_INIT_SKIPPED');
                 return;
             }
+
+            if (this._initialized) {
+                return;
+            }
+
+            this._initialized = true;
 
             // Fire up the features.
             this._backToTop();
@@ -281,8 +289,16 @@ window.CopyMyPage = window.CopyMyPage || {};
          * Removes the scroll-blocking class and allows UIkit to do its job.
          */
         _addMmenuLinksHandler() {
+            const navOffcanvasId = this.mod?.navbar?.navOffcanvasId;
+
+            if (!navOffcanvasId) {
+                return;
+            }
+
+            const escapedOffcanvasId = window.CSS?.escape ? window.CSS.escape(navOffcanvasId) : navOffcanvasId;
+
             // All links in the mmenu that point to a section.
-            const mmenuLinks = this._select(`#${this.mod.navbar.navOffcanvasId} a[href^="#"]`, true);
+            const mmenuLinks = this._select(`#${escapedOffcanvasId} a[href^="#"]`, true);
 
             if (!mmenuLinks || mmenuLinks.length === 0) {
                 return;
@@ -292,34 +308,64 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             mmenuLinks.forEach(link => {
                 link.addEventListener('click', (ev) => {
+                    const targetSelector = link.getAttribute('href');
+
+                    if (!targetSelector || targetSelector === '#') {
+                        return;
+                    }
+
+                    const target = this._select(targetSelector);
+
+                    if (!target) {
+                        return;
+                    }
+
                     ev.preventDefault();
 
+                    window.clearTimeout(this._mmenuRestoreTimeout);
                     isMenuClick = true;  // Set the flag to true since the user clicked a menu item.
 
                     // Temporarily remove the scroll-blocking class.
                     document.body.classList.remove('mm-ocd-opened');
 
                     // Scroll to the target section.
-                    const target = this._select(link.getAttribute('href'));
-                    if (target) {
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                     // Observe the target to check when it becomes visible.
-                    const observer = new IntersectionObserver((entries) => {
+                    let observer = null;
+                    let observerCleanupTimeout = null;
+
+                    const cleanupObserver = () => {
+                        if (observerCleanupTimeout) {
+                            window.clearTimeout(observerCleanupTimeout);
+                            observerCleanupTimeout = null;
+                        }
+
+                        observer?.disconnect?.();
+                        observer = null;
+                    };
+
+                    observer = new IntersectionObserver((entries) => {
                         entries.forEach((entry) => {
                             if (entry.isIntersecting && isMenuClick) {
                                 // Add the scroll-blocking class back after a short delay.
-                                setTimeout(() => {
+                                window.clearTimeout(this._mmenuRestoreTimeout);
+                                this._mmenuRestoreTimeout = window.setTimeout(() => {
                                     document.body.classList.add('mm-ocd-opened');
                                 }, 750); // Delay to allow UIkit to do its job.
                                 isMenuClick = false;  // Reset the flag.
+                                cleanupObserver();
                             }
                         });
                     }, { threshold: 0.1 });
 
                     // Observe the target element.
                     observer.observe(target);
+
+                    // Safety cleanup in case the target never intersects.
+                    observerCleanupTimeout = window.setTimeout(() => {
+                        cleanupObserver();
+                    }, 3000);
                 });
             });
         }
