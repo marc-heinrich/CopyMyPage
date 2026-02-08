@@ -9,8 +9,6 @@
       "name": "copymypage.site",
       "type": "preset",
       "dependencies": [
-        "bootstrap#style",
-        "bootstrap#script",
         "template#style",
         "copymypage#script"
       ]
@@ -72,21 +70,6 @@
       "dependencies": [
         "uikit"
       ],
-      "attributes": {
-        "defer": true
-      }
-    },
-    {
-      "name": "bootstrap",
-      "type": "style",
-      "uri": "com_copymypage/bootstrap/bootstrap.min.css",
-      "version": "5.3.8"
-    },
-    {
-      "name": "bootstrap",
-      "type": "script",
-      "uri": "com_copymypage/bootstrap/bootstrap.min.js",
-      "version": "5.3.8",
       "attributes": {
         "defer": true
       }

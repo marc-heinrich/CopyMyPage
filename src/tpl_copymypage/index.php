@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
@@ -93,7 +93,13 @@ $headerOffset     = (int) $this->params->get('headerOffset', 80);
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
 $wa->usePreset($this->template . '.site')
    ->addInlineStyle(":root {
+        /* copymypage tokens */
         --cmp-header-offset: {$headerOffset}px;
+
+        /* mmenu off-canvas width tokens */
+        --mm-ocd-width: 65%;
+        --mm-ocd-min-width: 200px;
+        --mm-ocd-max-width: 440px;
 }");
 
 // Build body classes and navbar attributes.
@@ -230,7 +236,7 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                 class="cmp-back-to-top"
                 aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_BUTTON_BACKTOTOP'), ENT_QUOTES, 'UTF-8'); ?>"
             >
-                <span class="icon-arrow-up icon-fw" aria-hidden="true"></span>
+                <span class="uk-icon" uk-icon="chevron-up" aria-hidden="true"></span>
             </a>
 
             <!-- Debug area if active -->
@@ -239,3 +245,5 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
         </div>
     </body>
 </html>
+
+

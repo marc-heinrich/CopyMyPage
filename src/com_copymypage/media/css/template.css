@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
@@ -106,7 +106,7 @@
     --cmp-z-index-tooltip: 1060;
 
     /* Header offset for anchor links */
-    --cmp-header-offset: 96px;
+    --cmp-header-offset: 80px;
 }
 
 /* ==========================================================================
@@ -122,6 +122,7 @@ body {
 
 html {
     scroll-padding-top: var(--cmp-header-offset);
+    scroll-behavior: smooth;
 }
 
 /* Global headings: override UIkit family everywhere (keep UIkit spacing/weights/colors) */
@@ -183,42 +184,98 @@ html {
     font-size: var(--cmp-navbar-item-size);
 }
 
-/* Scrolled state overrides */
-.cmp-navbar-container.cmp-navbar--scrolled {
-    background-color: var(--cmp-color-background-default);
-    box-shadow:
-        0 1px 0 rgba(0, 0, 0, 0.03),
-        0 12px 28px rgba(0, 0, 0, 0.08),
-        0 28px 70px rgba(0, 0, 0, 0.06);
-}
-
-/* NEW: scrolled -> force dark text + remove hero shadows */
-.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li > a.cmp-navbar-link {
-    color: var(--cmp-color-text-default);
-    filter: none;
-}
-
-/* NEW: non-onepage should look like scrolled even at top */
+/* Scrolled / non-onepage shared navbar surface */
+.cmp-navbar-container.cmp-navbar--scrolled,
 body.no-onepage .cmp-navbar-container {
-    background-color: var(--cmp-color-background-default);
+    background-color: rgba(255, 255, 255, 0.94);
     box-shadow:
         0 1px 0 rgba(0, 0, 0, 0.03),
         0 12px 28px rgba(0, 0, 0, 0.08),
         0 28px 70px rgba(0, 0, 0, 0.06);
 }
 
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
+/* Scrolled / non-onepage shared navbar text + icon state */
+.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li > a.cmp-navbar-link,
+.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-right a.cmp-navbar-icon,
+.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-right a.cmp-navbar-icon-link,
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link,
+body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon,
+body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon-link {
     color: var(--cmp-color-text-default);
     filter: none;
 }
-
 /* Onepage hero/top: improve contrast for top-level items only */
 body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-nav > li > a.cmp-navbar-link {
     filter: var(--cmp-text-shadow-md);
     color: var(--cmp-color-logo-light);
 }
 
-/* Dropdown links: override UIkit default (#999) */
+/* ACTIVE NAVBAR LINKS (scrollspy)
+   ========================================================================== */
+
+/* Gemeinsame Eigenschaften fÃ¼r beide ZustÃ¤nde */
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
+    position: relative; /* FÃ¼r die absolute Position der Unterstreichung */
+    padding-bottom: 0; /* Abstand fÃ¼r die Linie */
+}
+
+/* Gescrollter Zustand: Navbar ist gescrollt */
+body.is-onepage .cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li > a.cmp-navbar-link {
+    color: var(--cmp-color-text-default); /* Textfarbe im gescrollten Zustand */
+}
+
+/* Animierte Unterstreichung: Basiszustand (unsichtbar, von der Mitte aus) */
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after {
+    content: "";
+    position: absolute;
+    bottom: 20px; /* Linie bleibt mit 20px Abstand unter dem Text */
+    left: 50%;
+    width: 100%; /* Linie über die gesamte Breite */
+    height: 2px; /* Dicke der Linie */
+    background-color: currentColor; /* Unterstreichung bekommt die gleiche Farbe wie der Text */
+    transform: translateX(-50%) scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease;
+    border-radius: 20px;
+}
+
+/* Linie entfaltet sich bei Hover, Fokus und bei aktivem Scrollspy-Link */
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after {
+    transform: translateX(-50%) scaleX(1);
+}
+/* NO-ONEPAGE NAVBAR LINK HOVER
+   ========================================================================== */
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
+    position: relative;
+    padding-bottom: 0;
+}
+
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after {
+    content: "";
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background-color: currentColor;
+    transform: translateX(-50%) scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease;
+    border-radius: 20px;
+}
+
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after {
+    transform: translateX(-50%) scaleX(1);
+}
+/* DROPDOWN NAV LINKS
+   ========================================================================== */
+/* Rounded dropdown corners */
+.cmp-navbar-container .uk-navbar-dropdown {
+    border-radius: var(--cmp-border-radius-lg);
+}
 .cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link,
 .cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link {
     color: var(--cmp-color-text-default);
@@ -254,17 +311,6 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-nav > li > a.cm
     /* NEW: default icon color = token */
     color: var(--cmp-color-text-default);
 }
-
-/* NEW: scrolled + non-onepage icon color */
-.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-right a.cmp-navbar-icon,
-.cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-right a.cmp-navbar-icon-link,
-body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon,
-body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon-link {
-    color: var(--cmp-color-text-default);
-    filter: none;
-}
-
-
 
 .uk-navbar-right .uk-icon > svg {
     width: var(--cmp-font-size-2xl);
@@ -331,6 +377,42 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     cursor: pointer;
 }
 
+/* MOBILE MENU (mmenu-light)
+   ========================================================================== */
+
+/* Keep mobile-menu links free of generic hover decoration */
+#cmp-mobilemenu-nav.mm-spn a:hover,
+#cmp-mobilemenu-nav.mm-spn a:focus-visible {
+    color: inherit;
+    background: inherit;
+    text-decoration: none;
+}
+/* Fallback for right off-canvas instances without stable nav id */
+.mm-ocd.mm-ocd--right .mm-spn a:hover,
+.mm-ocd.mm-ocd--right .mm-spn a:focus-visible {
+    color: inherit !important;
+    text-decoration: none !important;
+}
+/* Keep split trigger area (right side) neutral without touching chevrons */
+#cmp-mobilemenu-nav.mm-spn li:hover,
+#cmp-mobilemenu-nav.mm-spn li:focus-within {
+    background: inherit;
+}
+
+/* mmenu-light draws chevrons via li::before; show them only for items with submenus */
+#cmp-mobilemenu-nav.mm-spn li:not(:has(> ul))::before {
+    content: none;
+    display: none;
+}
+
+/* Subtle side-dependent edge shadow for the open panel (paper-roll effect) */
+.mm-ocd.mm-ocd--open.mm-ocd--left .mm-ocd__content {
+    box-shadow: 10px 0 14px -10px rgba(0, 0, 0, 0.50), inset -7px 0 10px -10px rgba(0, 0, 0, 0.42);
+}
+
+.mm-ocd.mm-ocd--open.mm-ocd--right .mm-ocd__content {
+    box-shadow: -10px 0 14px -10px rgba(0, 0, 0, 0.50), inset 7px 0 10px -10px rgba(0, 0, 0, 0.42);
+}
 /* BACK TO TOP BUTTON
    ========================================================================== */
 
@@ -345,10 +427,11 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     min-width: 2.5rem;
     min-height: 2.5rem;
     padding: 0.5rem;
-    border-radius: var(--cmp-border-radius-lg);
-    border: var(--cmp-border-width) solid var(--cmp-border-color);
-    background-color: var(--cmp-color-background-default);
+    border-radius: 50%;
+    border: var(--cmp-border-width) solid var(--cmp-color-surface);
+    background-color: #fff;
     color: var(--cmp-color-text-default);
+    box-shadow: 0 0.375rem 1rem rgba(0, 0, 0, 0.2);
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.2s ease-in;
@@ -357,21 +440,31 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
 .cmp-back-to-top.visible {
     opacity: 1;
     pointer-events: auto;
+    color: var(--cmp-color-text-default);
 }
 
-.cmp-back-to-top:hover {
-    background-color: var(--cmp-color);
-    color: var(--cmp-color-logo-light);
-    border-color: var(--cmp-border-color);
+.cmp-back-to-top:focus {    
+    outline: none;    
 }
 
-.cmp-back-to-top:focus {
-    outline: none;
-}
-
+.cmp-back-to-top:hover,
 .cmp-back-to-top:focus-visible {
-    outline: 0.125rem solid var(--cmp-color);
+    color: var(--cmp-color-text-default);
+    outline: 0.125rem solid var(--cmp-color-text-default);
     outline-offset: 0.125rem;
+}
+
+.cmp-back-to-top .uk-icon {
+    display: inline-flex;
+    line-height: 0;
+}
+
+.cmp-back-to-top .uk-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke-width: 3;      
+    stroke-linecap: round;  
+    stroke-linejoin: round;
 }
 
 @media (max-width: 767px) {
@@ -384,7 +477,7 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
 }
 
 /* ==========================================================================
-   SECTIONS - Modules (hero, gallery, team, tickets, contact, footer)
+   SECTIONS - Components / Modules (e.g. hero, gallery, team, contact, footer)
    ========================================================================== */
 
 /* BASICS
@@ -394,7 +487,11 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     scroll-margin-top: var(--cmp-header-offset);
 }
 
-/* DEV / DEBUG MODULE
+body.no-onepage .cmp-section--component {
+    padding-top: calc(var(--cmp-header-offset) + clamp(8px, 1vw, 20px));
+}
+
+/* DEBUG MODULE
    ========================================================================== */
 
 .cmp-module--dev .uk-card {
@@ -446,7 +543,7 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     line-height: 1.4;
 }
 
-/* Slidenav arrows – circular buttons with inner running ring */
+/* Slidenav arrows â€“ circular buttons with inner running ring */
 .cmp-module--slideshow .uk-slidenav-previous,
 .cmp-module--slideshow .uk-slidenav-next {
     display: inline-flex;
@@ -504,7 +601,7 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     animation: cmp-slidenav-ring 4s linear infinite;
 }
 
-/* Keyframes for the running ring effect – short active phase, long pause */
+/* Keyframes for the running ring effect â€“ short active phase, long pause */
 @keyframes cmp-slidenav-ring {
     0% {
         opacity: 0;
@@ -532,7 +629,7 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     }
 }
 
-/* Dot navigation – small bullets inside the slideshow image */
+/* Dot navigation â€“ small bullets inside the slideshow image */
 .cmp-module--slideshow .uk-slideshow-nav {
     position: absolute;
     left: 50%;
@@ -562,7 +659,7 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
 }
 
-/* Active slide dot – almost white, slightly larger, stronger shadow */
+/* Active slide dot â€“ almost white, slightly larger, stronger shadow */
 .cmp-module--slideshow .uk-dotnav > .uk-active > * {
     background-color: rgba(255, 255, 255, 0.95);
     border: none;
@@ -582,3 +679,11 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
         animation-iteration-count: 1 !important;
     }
 }
+
+
+
+
+
+
+
+
