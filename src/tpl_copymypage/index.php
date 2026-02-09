@@ -92,15 +92,10 @@ $headerOffset     = (int) $this->params->get('headerOffset', 80);
 // Register and load web assets (aligned with offline.php).
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
 $wa->usePreset($this->template . '.site')
-   ->addInlineStyle(":root {
-        /* copymypage tokens */
-        --cmp-header-offset: {$headerOffset}px;
-
-        /* mmenu off-canvas width tokens */
-        --mm-ocd-width: 65%;
-        --mm-ocd-min-width: 200px;
-        --mm-ocd-max-width: 440px;
-}");
+   ->addInlineStyle(":root {\n"
+        . "    /* copymypage tokens */\n"
+        . "    --cmp-header-offset: {$headerOffset}px;\n"
+        . "}");
 
 // Build body classes and navbar attributes.
 $bodyClasses = [
@@ -245,5 +240,3 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
         </div>
     </body>
 </html>
-
-

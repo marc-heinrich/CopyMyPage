@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.5
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper;
@@ -180,5 +180,55 @@ abstract class CopyMyPageHelper
     public static function cfgInt(array $cfg, string $key, int $default = 0, ?int $min = null, ?int $max = null): int
     {
         return self::toInt($cfg[$key] ?? null, $default, $min, $max);
+    }
+
+    /**
+     * Normalize a value into a CSS length token.
+     *
+     * Allowed units are px, rem, em, vw, vh, vmin, vmax and optionally %.
+     * If a pure number is provided, it is interpreted as "%" (when allowed) or "px".
+     *
+     * @param   mixed   $value
+     * @param   string  $default
+     * @param   bool    $allowPercent
+     *
+     * @return  string
+     */
+    public static function toCssLength(mixed $value, string $default = '0px', bool $allowPercent = false): string
+    {
+        $raw = strtolower(trim(self::toString($value, '')));
+
+        if ($raw === '') {
+            return $default;
+        }
+
+        if (preg_match('/^\d+(?:\.\d+)?$/', $raw) === 1) {
+            return $allowPercent ? ($raw . '%') : ($raw . 'px');
+        }
+
+        $pattern = $allowPercent
+            ? '/^\d+(?:\.\d+)?(?:%|px|rem|em|vw|vh|vmin|vmax)$/'
+            : '/^\d+(?:\.\d+)?(?:px|rem|em|vw|vh|vmin|vmax)$/';
+
+        if (preg_match($pattern, $raw) !== 1) {
+            return $default;
+        }
+
+        return $raw;
+    }
+
+    /**
+     * Typed array getter (CSS length).
+     *
+     * @param   array<string, mixed> $cfg
+     * @param   string               $key
+     * @param   string               $default
+     * @param   bool                 $allowPercent
+     *
+     * @return  string
+     */
+    public static function cfgCssLength(array $cfg, string $key, string $default = '0px', bool $allowPercent = false): string
+    {
+        return self::toCssLength($cfg[$key] ?? null, $default, $allowPercent);
     }
 }

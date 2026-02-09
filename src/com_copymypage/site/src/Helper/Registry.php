@@ -2,9 +2,9 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Components.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.3
+ * @since       0.0.5
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper;
@@ -24,7 +24,7 @@ final class Registry
      * @var  array<string, string|object>
      */
     private array $serviceMap = [
-        'navbar'    => Helpers\NavbarHelper::class,
+        'navbar'    => Helpers\NavbarParamsHelper::class,
         'user'      => Helpers\UserHelper::class,
     ];
 

@@ -4,7 +4,7 @@
  * @subpackage  WebAssetItem
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.5
  * @see         https://docs.joomla.org/J4.x:Web_Assets and CoreAssetItem.php
  */
 
@@ -14,10 +14,12 @@ namespace Joomla\CMS\WebAsset\AssetItem;
 
 use Joomla\CMS\Document\Document;
 use Joomla\CMS\Factory;
-use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\WebAsset\WebAssetAttachBehaviorInterface;
 use Joomla\CMS\WebAsset\WebAssetItem;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\NavbarParamsHelper as CopyMyPageNavbarParamsHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\Registry\Registry;
 
 /**
@@ -38,6 +40,9 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         // Fetch DB-backed configuration from template style + navbar module instances.
         $templateParams = $this->getTemplateParams();
         $navbarParams   = $this->getNavbarModuleParams();
+
+        // Publish mmenu-light width CSS variables from navbar module params.
+        $doc->addStyleDeclaration($this->getMmenuLightStyle($navbarParams));
 
         // Merge all options into a single object.
         $options = [
@@ -204,6 +209,27 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     }
 
     /**
+     * Build :root style declaration for mmenu-light width CSS variables.
+     *
+     * @param   array<string, mixed>  $navbarParams  Navbar module params.
+     *
+     * @return  string
+     */
+    private function getMmenuLightStyle(array $navbarParams): string
+    {
+        $ocdWidth    = CopyMyPageHelper::cfgCssLength($navbarParams, 'mmenuLightOcdWidth', '80%', true);
+        $ocdMinWidth = CopyMyPageHelper::cfgCssLength($navbarParams, 'mmenuLightOcdMinWidth', '200px');
+        $ocdMaxWidth = CopyMyPageHelper::cfgCssLength($navbarParams, 'mmenuLightOcdMaxWidth', '440px');
+
+        return ":root {\n"
+            . "    /* mmenu-light tokens */\n"
+            . "    --mm-ocd-width: {$ocdWidth};\n"
+            . "    --mm-ocd-min-width: {$ocdMinWidth};\n"
+            . "    --mm-ocd-max-width: {$ocdMaxWidth};\n"
+            . "}";
+    }
+
+    /**
      * Adds necessary language strings for error handling.
      */
     private function addLanguageStrings(): void
@@ -247,51 +273,52 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     /**
      * Fetch navbar module parameters (DB-backed).
      *
-     * We try to resolve the active module instance via positions first because the module
-     * can be duplicated (e.g. "navbar" + "mobilemenu"). If both exist, we merge them and
-     * let "mobilemenu" override "navbar" (useful for mmenu-light options).
-     *
      * @return array<string, mixed>
      */
     private function getNavbarModuleParams(): array
     {
-        // Get params from both positions.
-        $navbar = $this->getNavbarModuleParamsByPosition('navbar');
-        $mobile = $this->getNavbarModuleParamsByPosition('mobilemenu');
+        $helper = $this->getNavbarParamsHelper();
 
-        if ($navbar === [] && $mobile === []) {
+        if ($helper === null || !method_exists($helper, 'getModuleParams')) {
             return [];
         }
 
-        // Merge both, with "mobilemenu" taking precedence.
-        return array_replace_recursive($navbar, $mobile);
+        $params = $helper->getModuleParams();
+
+        return is_array($params) ? $params : [];
     }
 
     /**
-     * Resolve a mod_copymypage_navbar instance by module position and return its params.
+     * Resolve navbar params helper from the global CopyMyPage registry.
      *
-     * @param  string  $position  The module position name (e.g. "navbar", "mobilemenu").
-     *
-     * @return array<string, mixed>
+     * Falls back to direct helper instantiation if the registry service is unavailable.
+     * This keeps the runtime resilient when plugin boot order differs.
      */
-    private function getNavbarModuleParamsByPosition(string $position): array
+    private function getNavbarParamsHelper(): ?object
     {
-        $modules = ModuleHelper::getModules($position);
+        $container = Factory::getContainer();
 
-        foreach ($modules as $module) {
+        if ($container->has(CopyMyPageRegistry::class)) {
+            /** @var CopyMyPageRegistry $registry */
+            $registry = $container->get(CopyMyPageRegistry::class);
 
-            // Ensure we are dealing with the correct module type.
-            if (($module->module ?? '') !== 'mod_copymypage_navbar') {
-                continue;
+            if ($registry->hasService('navbar')) {
+                $handler = $registry->getService('navbar');
+
+                if (is_string($handler) && class_exists($handler)) {
+                    $handler = new $handler();
+                }
+
+                if (is_object($handler)) {
+                    return $handler;
+                }
             }
-
-            // Load module params from JSON.
-            $registry = new Registry();
-            $registry->loadString((string) ($module->params ?? ''), 'JSON');
-
-            return $registry->toArray();
         }
 
-        return [];
+        if (class_exists(CopyMyPageNavbarParamsHelper::class)) {
+            return new CopyMyPageNavbarParamsHelper();
+        }
+
+        return null;
     }
 }

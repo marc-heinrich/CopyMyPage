@@ -33,6 +33,19 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._mmenuRestoreTimeout = null;
             this._initialized = false;
 
+            // Runtime dependency checks.
+            if (!Joomla) {
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED', 'Joomla');
+                this._disabled = true;
+                return;
+            }
+
+            if (!UIkit) {
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED', 'UIkit');
+                this._disabled = true;
+                return;
+            }
+
             if (!params || typeof params !== 'object') {
                 this.logError('TPL_COPYMYPAGE_JS_ERROR_INVALID_PARAMS');
                 this._disabled = true;
@@ -295,6 +308,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
+            // Escape the ID for use in querySelector (in case it contains special characters).
             const escapedOffcanvasId = window.CSS?.escape ? window.CSS.escape(navOffcanvasId) : navOffcanvasId;
 
             // All links in the mmenu that point to a section.

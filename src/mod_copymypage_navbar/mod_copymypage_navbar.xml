@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.4</version>
+  <version>0.0.5</version>
   <!-- Short description via language constant -->
   <description>MOD_COPYMYPAGE_NAVBAR_XML_DESCRIPTION</description>
   <!-- Installer script (Service Provider aware) -->
@@ -70,8 +70,9 @@
         </field>
         <!-- Optional: CSS variables from docs (advanced styling) -->
         <field name="mmenuLightItemHeight" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_ITEM_HEIGHT_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_ITEM_HEIGHT_DESC" default="50px" filter="string"/>
-        <field name="mmenuLightOcdWidth" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_WIDTH_DESC" default="80%" filter="string"/>
-        <field name="mmenuLightOcdMaxWidth" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_DESC" default="440px" filter="string"/>
+        <field name="mmenuLightOcdWidth" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_WIDTH_DESC" default="80%" filter="string" validate="regex" validate_regex="^\d+(?:\.\d+)?(?:%|px|rem|em|vw|vh|vmin|vmax)?$"/>
+        <field name="mmenuLightOcdMinWidth" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MIN_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MIN_WIDTH_DESC" default="200px" filter="string" validate="regex" validate_regex="^\d+(?:\.\d+)?(?:px|rem|em|vw|vh|vmin|vmax)?$"/>
+        <field name="mmenuLightOcdMaxWidth" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_DESC" default="440px" filter="string" validate="regex" validate_regex="^\d+(?:\.\d+)?(?:px|rem|em|vw|vh|vmin|vmax)?$"/>
       </fieldset>
       <!-- NAV offcanvas -->
       <fieldset name="mmenu_light_nav" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_NAV">
