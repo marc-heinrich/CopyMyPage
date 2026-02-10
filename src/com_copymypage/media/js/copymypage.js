@@ -27,11 +27,15 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             // Cached bound handlers (avoid creating a new function on every event).
             this._onScroll = this._debouncedScroll.bind(this);
+            this._onViewportChange = this._desktopUserDropdownHoldOpen.bind(this);
 
             // Internal timers/state.
             this._scrollTimeout = null;
             this._mmenuRestoreTimeout = null;
+            this._mmenuLinksHandlerBound = false;
             this._initialized = false;
+            this._viewportListenerBound = false;
+            this._dropdownHoldOpenCleanup = null;
             this._viewportQueries = {
                 mobile: window.matchMedia('(max-width: 959.98px)'),
                 small: window.matchMedia('(max-width: 639.98px)'),
@@ -82,6 +86,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             // Fire up the features.
             this._backToTop();
             this._desktopUserDropdownHoldOpen();
+            this._bindViewportListeners();
             this._addMmenuLinksHandler();
         }
 
@@ -211,6 +216,48 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
+         * Normalize URL path names so "/de" and "/de/" are treated equally.
+         *
+         * @param {string} path - Pathname to normalize.
+         * @returns {string}
+         */
+        _normalizePath(path) {
+            const trimmed = String(path || '').replace(/\/+$/, '');
+            return trimmed || '/';
+        }
+
+        /**
+         * Bind viewport listeners once so desktop dropdown behavior can react to live resize.
+         */
+        _bindViewportListeners() {
+            if (this._viewportListenerBound) {
+                return;
+            }
+
+            this._viewportListenerBound = true;
+
+            if (typeof this._viewportQueries.mobile.addEventListener === 'function') {
+                this._viewportQueries.mobile.addEventListener('change', this._onViewportChange);
+                return;
+            }
+
+            // Legacy fallback without deprecated addListener API.
+            if ('onchange' in this._viewportQueries.mobile) {
+                this._viewportQueries.mobile.onchange = this._onViewportChange;
+            }
+        }
+
+        /**
+         * Remove active desktop dropdown listeners if present.
+         */
+        _teardownDesktopUserDropdownHoldOpen() {
+            if (typeof this._dropdownHoldOpenCleanup === 'function') {
+                this._dropdownHoldOpenCleanup();
+                this._dropdownHoldOpenCleanup = null;
+            }
+        }
+
+        /**
          * Private method: Keeps the user dropdown open on desktop when hovering.
          * Ensures that both dropdowns (main navbar and user menu) do not open simultaneously.
          */
@@ -226,12 +273,19 @@ window.CopyMyPage = window.CopyMyPage || {};
                 || opt.userDropdownHoldOpenEnabled === '1';
 
             if (!enabled) {
+                this._teardownDesktopUserDropdownHoldOpen();
                 return;
             }
 
             const viewport = this._getViewportState();
 
             if (!viewport.desktop) {
+                this._teardownDesktopUserDropdownHoldOpen();
+                return;
+            }
+
+            // Already active for desktop; avoid duplicate listeners on repeated resize events.
+            if (this._dropdownHoldOpenCleanup) {
                 return;
             }
 
@@ -259,12 +313,14 @@ window.CopyMyPage = window.CopyMyPage || {};
             const navbarDropdown = this._select(selectors.navbarDropdown);
 
             if (!root || !user || !toggle || !dropdown) {
+                this._teardownDesktopUserDropdownHoldOpen();
                 return;
             }
 
             const drop = UIkit.getComponent(dropdown, 'drop') || UIkit.drop(dropdown);
 
             if (!drop?.show || !drop?.hide) {
+                this._teardownDesktopUserDropdownHoldOpen();
                 return;
             }
 
@@ -296,32 +352,52 @@ window.CopyMyPage = window.CopyMyPage || {};
                 }, closeDelay);
             };
 
-            UIkit.util.on(dropdown, 'beforehide', (e) => {
+            const onBeforeHide = (e) => {
                 if (inside()) {
                     e.preventDefault();
                 }
-            });
+            };
 
-            toggle.addEventListener('mouseenter', () => {
+            const onToggleMouseEnter = () => {
                 keepOpen();
                 drop.show();
                 hideNavbarDropdown();
-            });
+            };
 
-            toggle.addEventListener('mouseleave', closeLater);
+            const onToggleMouseLeave = closeLater;
+            const onDropdownMouseEnter = keepOpen;
+            const onDropdownMouseLeave = closeLater;
 
-            dropdown.addEventListener('mouseenter', keepOpen);
-            dropdown.addEventListener('mouseleave', closeLater);
+            UIkit.util.on(dropdown, 'beforehide', onBeforeHide);
+            toggle.addEventListener('mouseenter', onToggleMouseEnter);
+            toggle.addEventListener('mouseleave', onToggleMouseLeave);
+            dropdown.addEventListener('mouseenter', onDropdownMouseEnter);
+            dropdown.addEventListener('mouseleave', onDropdownMouseLeave);
+
+            const onDropdownClick = (ev) => {
+                const a = ev.target?.closest?.('a');
+
+                if (a && a.getAttribute('href') && a.getAttribute('href') !== '#') {
+                    drop.hide(false);
+                }
+            };
 
             if (closeOnNavClick) {
-                dropdown.addEventListener('click', (ev) => {
-                    const a = ev.target?.closest?.('a');
-
-                    if (a && a.getAttribute('href') && a.getAttribute('href') !== '#') {
-                        drop.hide(false);
-                    }
-                });
+                dropdown.addEventListener('click', onDropdownClick);
             }
+
+            this._dropdownHoldOpenCleanup = () => {
+                window.clearTimeout(t);
+                UIkit.util.off?.(dropdown, 'beforehide', onBeforeHide);
+                toggle.removeEventListener('mouseenter', onToggleMouseEnter);
+                toggle.removeEventListener('mouseleave', onToggleMouseLeave);
+                dropdown.removeEventListener('mouseenter', onDropdownMouseEnter);
+                dropdown.removeEventListener('mouseleave', onDropdownMouseLeave);
+
+                if (closeOnNavClick) {
+                    dropdown.removeEventListener('click', onDropdownClick);
+                }
+            };
         }
 
         /**
@@ -331,83 +407,121 @@ window.CopyMyPage = window.CopyMyPage || {};
         _addMmenuLinksHandler() {
             const navOffcanvasId = this.mod?.navbar?.navOffcanvasId;
 
-            if (!navOffcanvasId) {
+            if (!navOffcanvasId || this._mmenuLinksHandlerBound) {
                 return;
             }
 
             // Escape the ID for use in querySelector (in case it contains special characters).
             const escapedOffcanvasId = window.CSS?.escape ? window.CSS.escape(navOffcanvasId) : navOffcanvasId;
+            const offcanvas = document.querySelector(`#${escapedOffcanvasId}`);
 
-            // All links in the mmenu that point to a section.
-            const mmenuLinks = this._select(`#${escapedOffcanvasId} a[href^="#"]`, true);
-
-            if (!mmenuLinks || mmenuLinks.length === 0) {
+            if (!offcanvas) {
                 return;
             }
 
-            let isMenuClick = false;  // Flag to track if the user clicked a mmenu link.
+            this._mmenuLinksHandlerBound = true;
 
-            mmenuLinks.forEach(link => {
-                link.addEventListener('click', (ev) => {
-                    const targetSelector = link.getAttribute('href');
+            let isMenuClick = false;
+            let observedTarget = null;
+            let observerCleanupTimeout = null;
 
-                    if (!targetSelector || targetSelector === '#') {
+            const cleanupObservedTarget = () => {
+                if (observerCleanupTimeout) {
+                    window.clearTimeout(observerCleanupTimeout);
+                    observerCleanupTimeout = null;
+                }
+
+                if (observedTarget) {
+                    mmenuObserver.unobserve(observedTarget);
+                    observedTarget = null;
+                }
+            };
+
+            const mmenuObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (!entry.isIntersecting || !isMenuClick || entry.target !== observedTarget) {
                         return;
                     }
 
-                    const target = this._select(targetSelector);
-
-                    if (!target) {
-                        return;
-                    }
-
-                    ev.preventDefault();
-
+                    // Add the scroll-blocking class back after a short delay.
                     window.clearTimeout(this._mmenuRestoreTimeout);
-                    isMenuClick = true;  // Set the flag to true since the user clicked a menu item.
+                    this._mmenuRestoreTimeout = window.setTimeout(() => {
+                        document.body.classList.add('mm-ocd-opened');
+                    }, 750); // Delay to allow UIkit to do its job.
 
-                    // Temporarily remove the scroll-blocking class.
-                    document.body.classList.remove('mm-ocd-opened');
-
-                    // Scroll to the target section.
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-                    // Observe the target to check when it becomes visible.
-                    let observer = null;
-                    let observerCleanupTimeout = null;
-
-                    const cleanupObserver = () => {
-                        if (observerCleanupTimeout) {
-                            window.clearTimeout(observerCleanupTimeout);
-                            observerCleanupTimeout = null;
-                        }
-
-                        observer?.disconnect?.();
-                        observer = null;
-                    };
-
-                    observer = new IntersectionObserver((entries) => {
-                        entries.forEach((entry) => {
-                            if (entry.isIntersecting && isMenuClick) {
-                                // Add the scroll-blocking class back after a short delay.
-                                window.clearTimeout(this._mmenuRestoreTimeout);
-                                this._mmenuRestoreTimeout = window.setTimeout(() => {
-                                    document.body.classList.add('mm-ocd-opened');
-                                }, 750); // Delay to allow UIkit to do its job.
-                                isMenuClick = false;  // Reset the flag.
-                                cleanupObserver();
-                            }
-                        });
-                    }, { threshold: 0.1 });
-
-                    // Observe the target element.
-                    observer.observe(target);
-
-                    // Safety cleanup in case the target never intersects.
-                    observerCleanupTimeout = window.setTimeout(() => {
-                        cleanupObserver();
-                    }, 3000);
+                    isMenuClick = false;
+                    cleanupObservedTarget();
                 });
+            }, { threshold: 0.1 });
+
+            const observeTarget = (target) => {
+                cleanupObservedTarget();
+                observedTarget = target;
+                mmenuObserver.observe(target);
+
+                // Safety cleanup in case the target never intersects.
+                observerCleanupTimeout = window.setTimeout(() => {
+                    isMenuClick = false;
+                    cleanupObservedTarget();
+                }, 3000);
+            };
+
+            offcanvas.addEventListener('click', (ev) => {
+                const link = ev.target?.closest?.('a[href*="#"]');
+
+                if (!link || !offcanvas.contains(link)) {
+                    return;
+                }
+
+                const href = (link.getAttribute('href') || '').trim();
+
+                if (!href || href === '#') {
+                    return;
+                }
+
+                let parsedUrl;
+
+                try {
+                    parsedUrl = new URL(href, window.location.href);
+                } catch (e) {
+                    return;
+                }
+
+                const targetSelector = parsedUrl.hash;
+
+                if (!targetSelector || targetSelector === '#') {
+                    return;
+                }
+
+                const currentPath = this._normalizePath(window.location.pathname);
+                const targetPath = this._normalizePath(parsedUrl.pathname);
+                const isSameDocument = parsedUrl.origin === window.location.origin
+                    && targetPath === currentPath
+                    && parsedUrl.search === window.location.search;
+
+                // For cross-page links (e.g. /de/#hero from another view), allow normal navigation.
+                if (!isSameDocument && !href.startsWith('#')) {
+                    return;
+                }
+
+                const target = this._select(targetSelector);
+
+                if (!target) {
+                    return;
+                }
+
+                ev.preventDefault();
+
+                window.clearTimeout(this._mmenuRestoreTimeout);
+                isMenuClick = true;
+
+                // Temporarily remove the scroll-blocking class.
+                document.body.classList.remove('mm-ocd-opened');
+
+                // Scroll to the target section.
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                observeTarget(target);
             });
         }
 

@@ -13,6 +13,7 @@ use Joomla\CMS\Filter\OutputFilter;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /**
  * Extracted variables
@@ -25,6 +26,7 @@ use Joomla\CMS\Uri\Uri;
  *                                - navOffcanvasId: string
  *                                - userOffcanvasId: string
  *                                - basketOffcanvasId: string
+ *                                - userDropdownSelectorRoot: string
  *
  * @var array<int, object> $list
  * @var array<int, object> $userItems
@@ -35,13 +37,14 @@ use Joomla\CMS\Uri\Uri;
 
 // Read only the config keys used by this layout.
 // For type normalization (boolean or integer), use the component helper class CopyMyPage.
-$logo               = (string) ($cfg['logo'] ?? '');
-$navOffcanvasId     = (string) ($cfg['navOffcanvasId'] ?? '');
-$userOffcanvasId    = (string) ($cfg['userOffcanvasId'] ?? '');
-$basketOffcanvasId  = (string) ($cfg['basketOffcanvasId'] ?? '');
+$logo                   = (string) ($cfg['logo'] ?? '');
+$navOffcanvasId         = (string) ($cfg['navOffcanvasId'] ?? '');
+$userOffcanvasId        = (string) ($cfg['userOffcanvasId'] ?? '');
+$basketOffcanvasId      = (string) ($cfg['basketOffcanvasId'] ?? '');
+$userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userDropdownSelectorRoot'] ?? '');
 ?>
 <!-- Navbar Module Template: Desktop UIkit Framework (https://getuikit.com/docs/navbar) -->
-<div class="cmp-module cmp-module--navbar">
+<div class="cmp-module <?php echo htmlspecialchars($userDropdownRootClass, ENT_QUOTES, 'UTF-8'); ?>">
     <div
         uk-sticky="start: 1; end: false; sel-target: .uk-navbar-container;
         cls-active: cmp-navbar--scrolled;
