@@ -32,6 +32,11 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._scrollTimeout = null;
             this._mmenuRestoreTimeout = null;
             this._initialized = false;
+            this._viewportQueries = {
+                mobile: window.matchMedia('(max-width: 959.98px)'),
+                small: window.matchMedia('(max-width: 639.98px)'),
+                tablet: window.matchMedia('(min-width: 640px) and (max-width:959.98px)'),
+            };
 
             // Runtime dependency checks.
             if (!Joomla) {
@@ -184,6 +189,28 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
+         * Returns the current viewport state based on UIkit breakpoints.
+         *
+         * @returns {{name: string, mobile: boolean, small: boolean, tablet: boolean, desktop: boolean}}
+         */
+        _getViewportState() {
+            const small = this._viewportQueries.small.matches;
+            const tablet = this._viewportQueries.tablet.matches;
+            const mobile = this._viewportQueries.mobile.matches;
+            const desktop = !mobile;
+
+            const name = small
+                ? 'small'
+                : tablet
+                    ? 'tablet'
+                    : mobile
+                        ? 'mobile'
+                        : 'desktop';
+
+            return { name, mobile, small, tablet, desktop };
+        }
+
+        /**
          * Private method: Keeps the user dropdown open on desktop when hovering.
          * Ensures that both dropdowns (main navbar and user menu) do not open simultaneously.
          */
@@ -202,9 +229,9 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            const desktopMin = parseInt(opt.userDropdownDesktopMin, 10) || 960;
+            const viewport = this._getViewportState();
 
-            if (!window.matchMedia(`(min-width: ${desktopMin}px)`).matches) {
+            if (!viewport.desktop) {
                 return;
             }
 

@@ -104,7 +104,6 @@
           <option value="1">JYES</option>
           <option value="0">JNO</option>
         </field>
-        <field name="userDropdownDesktopMin" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_DESKTOP_MIN_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_DESKTOP_MIN_DESC" default="960" min="0"/>
         <field name="userDropdownCloseDelay" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_DELAY_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_DELAY_DESC" default="180" min="0"/>
         <field name="userDropdownCloseOnNavClick" type="radio" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_ON_NAV_CLICK_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_ON_NAV_CLICK_DESC" default="1" class="btn-group btn-group-yesno">
           <option value="1">JYES</option>
