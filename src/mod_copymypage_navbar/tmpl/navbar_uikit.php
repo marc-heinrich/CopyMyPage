@@ -96,36 +96,81 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
                             <?php
                             $activeId = (int) $active_id;
                             $trailIds = [];
+                            $onepageBase = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
 
                             if (isset($active->tree) && \is_array($active->tree)) {
                                 $trailIds = array_map('intval', $active->tree);
                             } else {
                                 $trailIds = array_map('intval', $path);
                             }
-                            ?>
+                            // Escape plain text for safe HTML output.
+                            $escape = static function (string $value): string {
+                                return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+                            };
 
-                            <?php foreach ($list as $item) : ?>
-                                <?php
-                                $level = (int) $item->level;
-                                $id    = (int) $item->id;
+                            // Convert flat Joomla menu items into a level-based tree.
+                            $buildMenuTree = static function (array $items): array {
+                                $tree  = [];
+                                $stack = [];
 
-                                $isTrail  = \in_array($id, $trailIds, true);
-                                $isActive = ($id === $activeId);
+                                foreach ($items as $menuItem) {
+                                    if (!\is_object($menuItem)) {
+                                        continue;
+                                    }
 
-                                $hasDropdown = (bool) $item->deeper;
+                                    $level = max(1, (int) ($menuItem->level ?? 1));
+                                    $node  = [
+                                        'item'     => $menuItem,
+                                        'level'    => $level,
+                                        'children' => [],
+                                    ];
 
-                                $liClasses = [];
+                                    while (\count($stack) >= $level) {
+                                        array_pop($stack);
+                                    }
 
-                                if ($isActive || $isTrail) {
-                                    $liClasses[] = 'uk-active';
+                                    if ($level === 1 || empty($stack)) {
+                                        $tree[] = $node;
+                                        $rootIndex = array_key_last($tree);
+                                        $stack[] =& $tree[$rootIndex];
+
+                                        continue;
+                                    }
+
+                                    $parentIndex = \count($stack) - 1;
+                                    $parentNode  =& $stack[$parentIndex];
+                                    $parentNode['children'][] = $node;
+
+                                    $childIndex = array_key_last($parentNode['children']);
+                                    $stack[]    =& $parentNode['children'][$childIndex];
+
+                                    unset($parentNode);
                                 }
 
-                                if ($hasDropdown && $level >= 2) {
-                                    $liClasses[] = 'uk-parent';
+                                return $tree;
+                            };
+
+                            // Resolve each item URL with onepage anchor handling.
+                            $resolveItemUrl = static function (object $menuItem, int $level) use ($isOnepage, $onepageBase): string {
+                                $url      = (string) ($menuItem->flink ?? '');
+                                $itemType = (string) ($menuItem->type ?? '');
+                                $itemLink = (string) ($menuItem->link ?? '');
+
+                                if ($isOnepage && $itemType === 'url' && $itemLink !== '' && str_starts_with($itemLink, '#')) {
+                                    return $itemLink;
                                 }
 
+                                if (!$isOnepage && $level === 1 && $itemType === 'url' && $itemLink !== '' && str_starts_with($itemLink, '#')) {
+                                    return $onepageBase . $itemLink;
+                                }
+
+                                return $url;
+                            };
+
+                            // Build shared link attributes for navbar items.
+                            $buildLinkAttribs = static function (object $menuItem, bool $isActive): array {
                                 $attribs = [
-                                    'id'    => $id,
+                                    'id'    => (int) ($menuItem->id ?? 0),
                                     'class' => 'cmp-navbar-link',
                                 ];
 
@@ -133,69 +178,51 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
                                     $attribs['aria-current'] = 'page';
                                 }
 
-                                if (!empty($item->anchor_css)) {
-                                    $attribs['class'] .= ' ' . $item->anchor_css;
+                                if (!empty($menuItem->anchor_css)) {
+                                    $attribs['class'] .= ' ' . $menuItem->anchor_css;
                                 }
 
-                                if (!empty($item->anchor_title)) {
-                                    $attribs['title'] = $item->anchor_title;
+                                if (!empty($menuItem->anchor_title)) {
+                                    $attribs['title'] = $menuItem->anchor_title;
                                 }
 
-                                if (!empty($item->anchor_rel)) {
-                                    $attribs['rel'] = $item->anchor_rel;
+                                if (!empty($menuItem->anchor_rel)) {
+                                    $attribs['rel'] = $menuItem->anchor_rel;
                                 }
 
-                                $url = $item->flink;
+                                return $attribs;
+                            };
 
-                                if (
-                                    $isOnepage
-                                    && $item->type === 'url'
-                                    && !empty($item->link)
-                                    && str_starts_with($item->link, '#')
-                                ) {
-                                    $url = $item->link;
-                                }
+                            // Render one navbar link with UIkit icon and accessibility states.
+                            $renderNavbarLink = static function (
+                                object $menuItem,
+                                int $level,
+                                bool $isActive,
+                                bool $hasChildren,
+                                bool $isTopLevel
+                            ) use ($buildLinkAttribs, $resolveItemUrl, $escape, $isOnepage): string {
+                                $itemType = (string) ($menuItem->type ?? '');
+                                $url      = $resolveItemUrl($menuItem, $level);
+                                $attribs  = $buildLinkAttribs($menuItem, $isActive);
+                                $linkText = $escape((string) ($menuItem->title ?? ''));
 
-                                if (
-                                    !$isOnepage
-                                    && $level === 1
-                                    && $item->type === 'url'
-                                    && !empty($item->link)
-                                    && str_starts_with($item->link, '#')
-                                ) {
-                                    $url = Route::link('site', 'index.php?option=com_copymypage&view=onepage') . $item->link;
-                                }
-
-                                $linkText = $item->title;
-
-                                if ($item->type === 'separator') {
-                                    echo ($level > 1) ? '<li class="uk-nav-divider"></li>' : '<li class="uk-hidden"></li>';
-                                    continue;
-                                }
-
-                                if ($item->type === 'heading') {
+                                if ($itemType === 'heading') {
                                     $url = '#';
-
-                                    if ($hasDropdown && $level === 1) {
-                                        $linkText = '<span>' . $item->title . '</span><span uk-navbar-parent-icon></span>';
-                                    }
-
                                     $attribs['role']          = 'button';
                                     $attribs['aria-haspopup'] = 'true';
                                     $attribs['aria-expanded'] = 'false';
                                     $attribs['onclick']       = 'return false;';
-                                } elseif ($hasDropdown && $level === 1) {
-                                    $linkText = '<span>' . $item->title . '</span><span uk-navbar-parent-icon></span>';
+                                } elseif ($hasChildren && $isTopLevel) {
                                     $attribs['aria-haspopup'] = 'true';
                                     $attribs['aria-expanded'] = 'false';
                                 }
 
-                                $liClassAttr = $liClasses ? ' class="' . implode(' ', $liClasses) . '"' : '';
-                                echo '<li' . $liClassAttr . '>';
+                                if ($hasChildren && $isTopLevel) {
+                                    $linkText = '<span>' . $linkText . '</span><span uk-navbar-parent-icon></span>';
+                                }
 
                                 $isScrollAnchor = $isOnepage
-                                    && $item->type === 'url'
-                                    && \is_string($url)
+                                    && $itemType === 'url'
                                     && $url !== '#'
                                     && str_starts_with($url, '#');
 
@@ -203,37 +230,189 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
                                     $attribs['data-cmp-scroll'] = '1';
                                 }
 
-                                echo HTMLHelper::_(
+                                return HTMLHelper::_(
                                     'link',
                                     OutputFilter::ampReplace(htmlspecialchars($url, ENT_COMPAT, 'UTF-8', false)),
                                     $linkText,
                                     $attribs
                                 );
+                            };
 
-                                if ($item->deeper) {
-                                    if ($level === 1) {
-                                        echo '<div class="uk-navbar-dropdown">';
-                                        echo '<ul class="uk-nav uk-navbar-dropdown-nav uk-nav-parent-icon">';
-                                    } else {
-                                        echo '<ul class="uk-nav-sub">';
+                            // Render dropdown list nodes recursively for nested submenus.
+                            $renderDropdownNodes = null;
+
+                            $renderDropdownNodes = static function (array $nodes) use (
+                                &$renderDropdownNodes,
+                                $renderNavbarLink,
+                                $escape,
+                                $activeId,
+                                $trailIds
+                            ): string {
+                                $html = '';
+
+                                foreach ($nodes as $node) {
+                                    if (!isset($node['item']) || !\is_object($node['item'])) {
+                                        continue;
                                     }
-                                } elseif ($item->shallower) {
-                                    echo '</li>';
 
-                                    for ($j = 0; $j < (int) $item->level_diff; $j++) {
-                                        $closingLevel = $level - $j;
+                                    $item       = $node['item'];
+                                    $level      = (int) ($node['level'] ?? ($item->level ?? 1));
+                                    $children   = $node['children'] ?? [];
+                                    $hasChildren = !empty($children);
+                                    $itemType   = (string) ($item->type ?? '');
 
-                                        if ($closingLevel === 2) {
-                                            echo '</ul></div></li>';
-                                        } else {
-                                            echo '</ul></li>';
+                                    if ($itemType === 'separator') {
+                                        $html .= '<li class="uk-nav-divider"></li>';
+
+                                        continue;
+                                    }
+
+                                    if ($itemType === 'heading') {
+                                        $html .= '<li class="uk-nav-header">' . $escape((string) ($item->title ?? '')) . '</li>';
+
+                                        if ($hasChildren) {
+                                            $html .= $renderDropdownNodes($children);
                                         }
+
+                                        continue;
                                     }
-                                } else {
-                                    echo '</li>';
+
+                                    $id       = (int) ($item->id ?? 0);
+                                    $isActive = ($id === $activeId) || \in_array($id, $trailIds, true);
+
+                                    $liClasses = [];
+
+                                    if ($isActive) {
+                                        $liClasses[] = 'uk-active';
+                                    }
+
+                                    if ($hasChildren) {
+                                        $liClasses[] = 'uk-parent';
+                                    }
+
+                                    $liClassAttr = $liClasses ? ' class="' . implode(' ', $liClasses) . '"' : '';
+                                    $html .= '<li' . $liClassAttr . '>';
+                                    $html .= $renderNavbarLink($item, $level, $isActive, false, false);
+
+                                    if ($hasChildren) {
+                                        $html .= '<ul class="uk-nav-sub">';
+                                        $html .= $renderDropdownNodes($children);
+                                        $html .= '</ul>';
+                                    }
+
+                                    $html .= '</li>';
                                 }
-                                ?>
-                            <?php endforeach; ?>
+
+                                return $html;
+                            };
+
+                            $tree = $buildMenuTree($list);
+
+                            foreach ($tree as $node) :
+                                if (!isset($node['item']) || !\is_object($node['item'])) {
+                                    continue;
+                                }
+
+                                $item     = $node['item'];
+                                $level    = (int) ($node['level'] ?? ($item->level ?? 1));
+                                $itemType = (string) ($item->type ?? '');
+
+                                if ($level !== 1) {
+                                    continue;
+                                }
+
+                                if ($itemType === 'separator') {
+                                    echo '<li class="uk-hidden"></li>';
+
+                                    continue;
+                                }
+
+                                $id       = (int) ($item->id ?? 0);
+                                $isTrail  = \in_array($id, $trailIds, true);
+                                $isActive = ($id === $activeId);
+                                // Keep only real child columns and skip separator pseudo items.
+                                $children = array_values(array_filter(
+                                    $node['children'] ?? [],
+                                    static function (array $childNode): bool {
+                                        return isset($childNode['item'])
+                                            && \is_object($childNode['item'])
+                                            && (string) ($childNode['item']->type ?? '') !== 'separator';
+                                    }
+                                ));
+                                $hasDropdown = !empty($children);
+
+                                $liClasses = [];
+
+                                if ($isActive || $isTrail) {
+                                    $liClasses[] = 'uk-active';
+                                }
+
+                                if ($hasDropdown) {
+                                    $liClasses[] = 'uk-parent';
+                                }
+
+                                $liClassAttr = $liClasses ? ' class="' . implode(' ', $liClasses) . '"' : '';
+                                echo '<li' . $liClassAttr . '>';
+                                echo $renderNavbarLink($item, $level, $isActive, $hasDropdown, true);
+
+                                if ($hasDropdown) {
+                                    // Limit mega dropdown columns to the five-column UIkit variant.
+                                    $columnCount = max(1, min(5, \count($children)));
+                                    $dropdownClasses = ['uk-navbar-dropdown', 'cmp-navbar-mega-dropdown'];
+
+                                    if ($columnCount >= 2) {
+                                        $dropdownClasses[] = 'uk-navbar-dropdown-width-' . $columnCount;
+                                    }
+
+                                    echo '<div class="' . implode(' ', $dropdownClasses) . '">';
+                                    echo '<div class="uk-navbar-dropdown-grid uk-child-width-1-' . $columnCount . '" uk-grid>';
+
+                                    foreach ($children as $columnNode) {
+                                        if (!isset($columnNode['item']) || !\is_object($columnNode['item'])) {
+                                            continue;
+                                        }
+
+                                        $columnItem       = $columnNode['item'];
+                                        $columnLevel      = (int) ($columnNode['level'] ?? ($columnItem->level ?? 2));
+                                        $columnChildren   = $columnNode['children'] ?? [];
+                                        $columnHasChildren = !empty($columnChildren);
+                                        $columnType       = (string) ($columnItem->type ?? '');
+
+                                        if ($columnType === 'separator') {
+                                            continue;
+                                        }
+
+                                        echo '<div><ul class="uk-nav uk-navbar-dropdown-nav">';
+
+                                        if ($columnHasChildren) {
+                                            if ($columnType === 'heading') {
+                                                echo '<li class="uk-nav-header">' . $escape((string) ($columnItem->title ?? '')) . '</li>';
+                                            } else {
+                                                echo '<li class="uk-nav-header">';
+                                                echo $renderNavbarLink($columnItem, $columnLevel, false, false, false);
+                                                echo '</li>';
+                                            }
+
+                                            echo $renderDropdownNodes($columnChildren);
+                                        } else {
+                                            if ($columnType === 'heading') {
+                                                echo '<li class="uk-nav-header">' . $escape((string) ($columnItem->title ?? '')) . '</li>';
+                                            } else {
+                                                echo '<li>';
+                                                echo $renderNavbarLink($columnItem, $columnLevel, false, false, false);
+                                                echo '</li>';
+                                            }
+                                        }
+
+                                        echo '</ul></div>';
+                                    }
+
+                                    echo '</div></div>';
+                                }
+
+                                echo '</li>';
+                            endforeach;
+                            ?>
                         </ul>
                     </div>
 

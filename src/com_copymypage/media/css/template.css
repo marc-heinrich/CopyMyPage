@@ -10,7 +10,7 @@
 
 /* ==========================================================================
    FOUNDATIONS - Design tokens (CSS custom properties)
-   override via webassetmanager in index.php
+   override via Webassetmanager or $doc->addStyleDeclaration()
    ========================================================================== */
 
 :root {
@@ -225,7 +225,8 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li >
 }
 
 /* Animierte Unterstreichung: Basiszustand (unsichtbar, von der Mitte aus) */
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after {
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after,
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navbar-link::after {
     content: "";
     position: absolute;
     bottom: 20px; /* Linie bleibt mit 20px Abstand unter dem Text */
@@ -242,7 +243,9 @@ body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:no
 /* Linie entfaltet sich bei Hover, Fokus und bei aktivem Scrollspy-Link */
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after {
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after,
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cmp-navbar-link::after,
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
     transform: translateX(-50%) scaleX(1);
 }
 /* NO-ONEPAGE NAVBAR LINK HOVER
@@ -252,7 +255,8 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
     padding-bottom: 0;
 }
 
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after {
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after,
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navbar-link::after {
     content: "";
     position: absolute;
     bottom: 20px;
@@ -267,7 +271,9 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:no
 }
 
 body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after {
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cmp-navbar-link::after,
+body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
     transform: translateX(-50%) scaleX(1);
 }
 /* DROPDOWN NAV LINKS
@@ -286,6 +292,25 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:no
 .cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:focus,
 .cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:hover,
 .cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:focus {
+    color: var(--cmp-color-text-default);
+}
+
+/* Mega menu column headings: use a stronger GitHub-like UI accent style. */
+.cmp-navbar-container .cmp-navbar-mega-dropdown .uk-navbar-dropdown-nav > li.uk-nav-header {
+    margin-bottom: var(--cmp-spacing-xs);
+    font-family: var(--cmp-font-family-system);
+    font-size: var(--cmp-font-size-sm);
+    font-weight: 600;
+    letter-spacing: var(--cmp-letter-spacing-sm);
+    color: var(--cmp-color-text-default);
+}
+
+.cmp-navbar-container .cmp-navbar-mega-dropdown .uk-navbar-dropdown-nav > li.uk-nav-header > a.cmp-navbar-link {
+    font-family: var(--cmp-font-family-ui);
+    font-size: inherit;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
     color: var(--cmp-color-text-default);
 }
 
