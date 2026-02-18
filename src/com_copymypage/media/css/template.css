@@ -365,6 +365,8 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     display: block;
     width: auto;
     height: auto;
+    aspect-ratio: auto;
+    object-fit: contain;
     max-height: 32px; /* Desktop */
     max-width: 140px; /* Desktop */
 }

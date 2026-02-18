@@ -456,7 +456,7 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
                                         <span uk-icon="icon: user"></span>
                                     </a>
 
-                                    <div class="uk-navbar-dropdown cmp-navbar-user-dropdown">
+                                    <div class="uk-navbar-dropdown cmp-navbar-user-dropdown" uk-drop="pos: bottom-left">
                                         <ul class="uk-nav uk-navbar-dropdown-nav">
                                             <?php if (empty($userItems)) : ?>
                                                 <li class="uk-disabled"><a class="cmp-navbar-link" href="#" onclick="return false;">—</a></li>
