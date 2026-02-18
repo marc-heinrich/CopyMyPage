@@ -1,4 +1,4 @@
-/*! UIkit 3.25.6 | https://www.getuikit.com | (c) 2014 - 2026 YOOtheme | MIT License */
+/*! UIkit 3.25.11 | https://www.getuikit.com | (c) 2014 - 2026 YOOtheme | MIT License */
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -1487,7 +1487,7 @@
       for (const rect of rects) {
         for (const [, , start, end] of dirs) {
           area[start] = Math.max(area[start] || 0, rect[start]);
-          area[end] = Math.min(...[area[end], rect[end]].filter(Boolean));
+          area[end] = Math.min(...[area[end], rect[end]].filter(isNumber));
         }
       }
       return area;
@@ -2046,13 +2046,14 @@
         resize({
           handler(mutations) {
             for (const {
+              target,
               borderBoxSize: [{ inlineSize, blockSize }]
             } of mutations) {
-              if (inlineSize || blockSize) {
-                this.$emit("resize");
+              if (target === this.$el && !inlineSize && !blockSize) {
                 return;
               }
             }
+            this.$emit("resize");
           },
           target: ({ $el }) => [$el, ...children($el)]
         })
@@ -2485,7 +2486,7 @@
     }
     function sortItems(nodes, sort, order) {
       return [...nodes].sort(
-        (a, b) => data(a, sort).localeCompare(data(b, sort), void 0, { numeric: true }) * (order === "asc" || -1)
+        (a, b) => (data(a, sort) || "").localeCompare(data(b, sort), void 0, { numeric: true }) * (order === "asc" || -1)
       );
     }
     function findButton(el) {
@@ -2613,7 +2614,7 @@
         el,
         "touchstart",
         (e) => {
-          if (e.targetTouches.length !== 1 || matches(e.target, 'input[type="range"')) {
+          if (e.targetTouches.length !== 1 || matches(e.target, 'input[type="range"]')) {
             return;
           }
           let prev = getEventPos(e).y;
@@ -2638,7 +2639,7 @@
             },
             { passive: false }
           );
-          once(el, "scroll touchend touchcanel", offMove, { capture: true });
+          once(el, "scroll touchend touchcancel", offMove, { capture: true });
         },
         { passive: true }
       );
@@ -3789,7 +3790,7 @@
     };
     App.util = util;
     App.options = {};
-    App.version = "3.25.6";
+    App.version = "3.25.11";
 
     const PREFIX = "uk-";
     const DATA = "__uikit__";
@@ -4113,7 +4114,7 @@
               navItems[i] = navChildren.findLast((el) => el.matches(`[${attr2}]`)) || $(`<li ${attr2}><a href></a></li>`);
             }
             if (!isEqual(navItems, navChildren)) {
-              html(this.nav, navItems);
+              html(nav, navItems);
             }
           }
         }
@@ -5261,7 +5262,7 @@
     }
     function getValue(stops, percent) {
       const [start, end, p] = getStop(stops, percent);
-      return start + Math.abs(start - end) * p * (start < end ? 1 : -1);
+      return start + (end - start) * p;
     }
     const unitRe = /^-?\d+(?:\.\d+)?(\S+)?/;
     function getUnit(stops, defaultUnit) {
@@ -5786,13 +5787,8 @@
           for (const slide of this.slides) {
             const active = includes(actives, slide);
             toggleClass(slide, activeClasses, active);
+            slide.inert = !active;
             slide.ariaHidden = !active;
-            for (const focusable of $$(selFocusable, slide)) {
-              if (!hasOwn(focusable, "_tabindex")) {
-                focusable._tabindex = focusable.tabIndex;
-              }
-              focusable.tabIndex = active ? focusable._tabindex : -1;
-            }
           }
         },
         getValidIndex(index = this.index, prevIndex = this.prevIndex) {
@@ -5832,7 +5828,7 @@
           let index = -1;
           const scrollDist = this.center ? getWidth(this.list) - (dimensions$1(this.slides[0]).width + dimensions$1(last(this.slides)).width) / 2 : getWidth(this.list, this.maxIndex);
           let dist = percent * scrollDist;
-          let slidePercent = 0;
+          let slidePercent;
           do {
             const slideWidth = dimensions$1(this.slides[++index]).width;
             const slideDist = this.center ? (slideWidth + dimensions$1(this.slides[index + 1]).width) / 2 : slideWidth;
@@ -6572,6 +6568,7 @@
     }
     async function ajax(url, options) {
       const env = {
+        url,
         data: null,
         method: "GET",
         headers: {},
@@ -6581,7 +6578,7 @@
         ...options
       };
       await env.beforeSend(env);
-      return send(url, env);
+      return send(env.url, env);
     }
     function send(url, env) {
       return new Promise((resolve, reject) => {
@@ -7928,14 +7925,12 @@
       const columnHeights = Array(rows[0].length).fill(0);
       let rowHeights = 0;
       for (let row of rows) {
-        if (isRtl) {
-          row.reverse();
-        }
+        const cells = isRtl ? row.slice().reverse() : row;
         let height = 0;
-        for (const j in row) {
-          const { offsetWidth, offsetHeight } = row[j];
+        for (const j in cells) {
+          const { offsetWidth, offsetHeight } = cells[j];
           const index = next ? j : columnHeights.indexOf(Math.min(...columnHeights));
-          push(columns, index, row[j]);
+          push(columns, index, cells[j]);
           push(translates, index, [
             (index - j) * offsetWidth * (isRtl ? -1 : 1),
             columnHeights[index] - rowHeights
@@ -8082,7 +8077,6 @@
           if (!this.matchMedia) {
             return { minHeight: false };
           }
-          let minHeight = "";
           const box = boxModelAdjust(this.$el, "height", "content-box");
           const { body, scrollingElement } = document;
           const scrollElement = scrollParent(this.$el);
@@ -8090,7 +8084,7 @@
             scrollElement === body ? scrollingElement : scrollElement
           );
           const isScrollingElement = scrollingElement === scrollElement || body === scrollElement;
-          minHeight = `calc(${isScrollingElement ? "100vh" : `${viewportHeight}px`}`;
+          let minHeight = `calc(${isScrollingElement ? "100vh" : `${viewportHeight}px`}`;
           if (this.expand) {
             const diff = dimensions$1(scrollElement).height - dimensions$1(this.$el).height;
             minHeight += ` - ${diff}px`;
@@ -8535,7 +8529,7 @@
         return false;
       }
       const { left, top, height, width } = dim;
-      let last;
+      let last = "";
       for (const percent of [0.25, 0.5, 0.75]) {
         const elements = target.ownerDocument.elementsFromPoint(
           Math.max(0, Math.min(left + width * percent, viewport.width - 1)),
@@ -9791,10 +9785,10 @@
           }
           this.$emit();
         },
-        toggles(toggles) {
+        toggles() {
           this.$emit();
           const active = this.index();
-          this.show(~active ? active : toggles[this.active] || toggles[0]);
+          this.show(~active ? active : this.next(this.active));
         }
       },
       connected() {
@@ -9824,8 +9818,7 @@
             let i = keyCode === keyMap.HOME ? 0 : keyCode === keyMap.END ? "last" : keyCode === keyMap.LEFT && !isVertical || keyCode === keyMap.UP && isVertical ? "previous" : keyCode === keyMap.RIGHT && !isVertical || keyCode === keyMap.DOWN && isVertical ? "next" : -1;
             if (~i) {
               e.preventDefault();
-              const toggles = this.toggles.filter((el) => !matches(el, selDisabled));
-              const next = toggles[getIndex(i, toggles, toggles.indexOf(current))];
+              const next = this.toggles[this.next(i, this.toggles.indexOf(current))];
               next.focus();
               if (this.followFocus) {
                 this.show(next);
@@ -9879,29 +9872,38 @@
         index() {
           return findIndex(this.children, (el) => hasClass(el, this.cls));
         },
-        show(item) {
+        next(item, prev = this.index()) {
+          if (isNumeric(item)) {
+            for (let i = 0; i < this.toggles.length; i++) {
+              let index = getIndex(i + +item, this.toggles);
+              if (!matches(this.toggles[index], selDisabled)) {
+                return index;
+              }
+            }
+          }
           const toggles = this.toggles.filter((el) => !matches(el, selDisabled));
-          const prev = this.index();
-          const next = getIndex(
-            !isNode(item) || includes(toggles, item) ? item : 0,
-            toggles,
-            getIndex(this.toggles[prev], toggles)
+          return getIndex(
+            toggles[getIndex(item, toggles, toggles.indexOf(this.toggles[prev]))],
+            this.toggles
           );
-          const active = getIndex(toggles[next], this.toggles);
+        },
+        show(item) {
+          const prev = this.index();
+          const next = this.next(item);
           this.children.forEach((child, i) => {
-            toggleClass(child, this.cls, active === i);
+            toggleClass(child, this.cls, next === i);
             attr(this.toggles[i], {
-              "aria-selected": active === i,
-              tabindex: active === i ? null : -1
+              "aria-selected": next === i,
+              tabindex: next === i ? null : -1
             });
           });
           const animate = prev >= 0 && prev !== next;
           this.connects.forEach(async ({ children: children2 }) => {
             const actives = toArray(children2).filter(
-              (child, i) => i !== active && hasClass(child, this.cls)
+              (child, i) => i !== next && hasClass(child, this.cls)
             );
             if (await this.toggleElement(actives, false, animate)) {
-              await this.toggleElement(children2[active], true, animate);
+              await this.toggleElement(children2[next], true, animate);
             }
           });
         }
