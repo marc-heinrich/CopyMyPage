@@ -4,16 +4,16 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.5
  */
 
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
-// Read only the config keys used by this layout.
-// For type normalization (boolean or integer), use the component helper class CopyMyPage.
+// Read layout-specific configuration keys.
 $navOffcanvasId    = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId   = (string) ($cfg['userOffcanvasId'] ?? '');
 $basketOffcanvasId = (string) ($cfg['basketOffcanvasId'] ?? '');
@@ -21,14 +21,31 @@ $basketOffcanvasId = (string) ($cfg['basketOffcanvasId'] ?? '');
 // Mmenu-light expects a "selected" class on the <li>.
 $selectedClass = (string) ($cfg['mmenuLightSelectedClass'] ?? 'current');
 
-// Safety: If we don't have a nav id, we cannot render a valid mmenu root.
+// Cannot render the mmenu root without an offcanvas id.
 if ($navOffcanvasId === '') {
     return;
 }
 
+// Register mmenu-light width CSS variables.
+$ocdWidth    = CopyMyPageHelper::cfgCssLength($cfg, 'mmenuLightOcdWidth', '80%', true);
+$ocdMinWidth = CopyMyPageHelper::cfgCssLength($cfg, 'mmenuLightOcdMinWidth', '200px');
+$ocdMaxWidth = CopyMyPageHelper::cfgCssLength($cfg, 'mmenuLightOcdMaxWidth', '440px');
+
+/** @var Joomla\CMS\WebAsset\WebAssetManager $wa */
+$wa = $app->getDocument()->getWebAssetManager();
+$wa->addInlineStyle(
+    ":root {\n"
+    . "    /* mmenu-light tokens */\n"
+    . "    --mm-ocd-width: {$ocdWidth};\n"
+    . "    --mm-ocd-min-width: {$ocdMinWidth};\n"
+    . "    --mm-ocd-max-width: {$ocdMaxWidth};\n"
+    . "}",
+    ['name' => 'mod-copymypage-navbar-mmenu-light-widths-' . (int) ($module->id ?? 0)]
+);
+
 $activeId = (int) ($active_id ?? 0);
 
-// Prefer the active item's tree for "trail"; fall back to $path if needed.
+// Prefer active item tree, fallback to $path.
 $trailIds = [];
 
 if (isset($active) && isset($active->tree) && \is_array($active->tree)) {
@@ -37,11 +54,11 @@ if (isset($active) && isset($active->tree) && \is_array($active->tree)) {
     $trailIds = array_map('intval', $path);
 }
 
-// Helper: build the URL consistent with the desktop navbar logic.
+// Build links aligned with desktop navbar behavior.
 $buildUrl = static function ($item) use ($isOnepage): string {
     $url = (string) ($item->flink ?? '');
 
-    // If we are on the onepage view and the original menu link is a hash, keep it a pure hash.
+    // Keep hash links unchanged on onepage view.
     if (
         $isOnepage
         && ($item->type ?? '') === 'url'
@@ -52,7 +69,7 @@ $buildUrl = static function ($item) use ($isOnepage): string {
         return (string) $item->link;
     }
 
-    // If we are NOT on the onepage view, route top-level hash items to the onepage view + anchor.
+    // On non-onepage views, route top-level hash links to onepage + anchor.
     if (
         !$isOnepage
         && (int) ($item->level ?? 0) === 1

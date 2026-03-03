@@ -27,7 +27,7 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             // Cached bound handlers (avoid creating a new function on every event).
             this._onScroll = this._debouncedScroll.bind(this);
-            this._onViewportChange = this._desktopUserDropdownHoldOpen.bind(this);
+            this._onViewportChange = this._handleViewportChange.bind(this);
 
             // Internal timers/state.
             this._scrollTimeout = null;
@@ -85,7 +85,7 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             // Fire up the features.
             this._backToTop();
-            this._desktopUserDropdownHoldOpen();
+            this._handleViewportChange();
             this._bindViewportListeners();
             this._addMmenuLinksHandler();
         }
@@ -216,6 +216,27 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
+         * Sync viewport-dependent body classes.
+         */
+        _applyViewportBodyClass() {
+            if (!document.body) {
+                return;
+            }
+
+            const viewport = this._getViewportState();
+            document.body.classList.remove('is-small', 'is-tablet', 'is-mobile', 'is-desktop');
+            document.body.classList.add(`is-${viewport.name}`);
+        }
+
+        /**
+         * Handle viewport changes for all responsive runtime behaviors.
+         */
+        _handleViewportChange() {
+            this._applyViewportBodyClass();
+            this._desktopUserDropdownHoldOpen();
+        }
+
+        /**
          * Normalize URL path names so "/de" and "/de/" are treated equally.
          *
          * @param {string} path - Pathname to normalize.
@@ -227,7 +248,7 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
-         * Bind viewport listeners once so desktop dropdown behavior can react to live resize.
+         * Bind viewport listeners once so viewport-dependent behavior can react to live resize.
          */
         _bindViewportListeners() {
             if (this._viewportListenerBound) {
@@ -235,15 +256,18 @@ window.CopyMyPage = window.CopyMyPage || {};
             }
 
             this._viewportListenerBound = true;
+            const queries = Object.values(this._viewportQueries);
 
-            if (typeof this._viewportQueries.mobile.addEventListener === 'function') {
-                this._viewportQueries.mobile.addEventListener('change', this._onViewportChange);
-                return;
-            }
+            for (const query of queries) {
+                if (typeof query.addEventListener === 'function') {
+                    query.addEventListener('change', this._onViewportChange);
+                    continue;
+                }
 
-            // Legacy fallback without deprecated addListener API.
-            if ('onchange' in this._viewportQueries.mobile) {
-                this._viewportQueries.mobile.onchange = this._onViewportChange;
+                // Legacy fallback without deprecated addListener API.
+                if ('onchange' in query) {
+                    query.onchange = this._onViewportChange;
+                }
             }
         }
 

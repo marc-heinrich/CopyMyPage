@@ -17,7 +17,6 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\WebAsset\WebAssetAttachBehaviorInterface;
 use Joomla\CMS\WebAsset\WebAssetItem;
-use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\NavbarParamsHelper as CopyMyPageNavbarParamsHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\Registry\Registry;
@@ -28,23 +27,20 @@ use Joomla\Registry\Registry;
 final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBehaviorInterface
 {
     /**
-     * Prepare the parameters and initialize the JS for CopyMyPage and third-party modules.
+     * Attach script options and inline initializers for CopyMyPage.
      *
-     * @param  Document  $doc  The document object.
+     * @param  Document  $doc  The document instance.
      */
     public function onAttachCallback(Document $doc): void
     {
-        // Add necessary language strings for error handling.
+        // Register language strings used by client-side error logging.
         $this->addLanguageStrings();
 
-        // Fetch DB-backed configuration from template style + navbar module instances.
+        // Load parameters from template style and navbar module instances.
         $templateParams = $this->getTemplateParams();
         $navbarParams   = $this->getNavbarModuleParams();
 
-        // Publish mmenu-light width CSS variables from navbar module params.
-        $doc->addStyleDeclaration($this->getMmenuLightStyle($navbarParams));
-
-        // Merge all options into a single object.
+        // Build options payload for client-side initialization.
         $options = [
             'tmpl'  => $templateParams,
             'mod'   => [
@@ -52,20 +48,19 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
             ],
         ];      
 
-        // Expose for JS (Joomla.getOptions('copymypage.params')).
-        // Note: whether merge with existing (true) or replace (false).
+        // Expose options via Joomla.getOptions('copymypage.params').
         $doc->addScriptOptions('copymypage.params', $options, false);
 
-        // Same object goes into CopyMyPage init.
+        // Encode options for the inline initializer.
         $jsonParams = json_encode($options) ?: '{}';
 
-        // Pass only navbar params into mmenu-light init (single source of truth for ids + options).
+        // Encode navbar options for mmenu-light initialization.
         $jsonNavbarParams = json_encode($navbarParams) ?: '{}';
 
-        // Add the central event listener for DOMContentLoaded.
+        // Attach a DOMContentLoaded initializer.
         $doc->addScriptDeclaration("
             document.addEventListener('DOMContentLoaded', function() {
-                // Initialize CopyMyPage and other third-party modules.
+                // Initialize CopyMyPage and MmenuLight.
                 {$this->getCopyMyPageJS($jsonParams)}
                 {$this->getMmenuLightJS($jsonNavbarParams)}
             });
@@ -91,11 +86,11 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     }
 
     /**
-     * Get the JavaScript initialization code for MmenuLight (third-party).
+     * Build the MmenuLight initialization script.
      *
-     * @param   string  $jsonNavbarParams  JSON encoded navbar module params (DB-backed).
+     * @param   string  $jsonNavbarParams  JSON-encoded navbar module parameters.
      *
-     * @return  string  The JavaScript code for initializing MmenuLight.
+     * @return  string  JavaScript initializer snippet.
      */
     private function getMmenuLightJS(string $jsonNavbarParams): string
     {
@@ -209,28 +204,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     }
 
     /**
-     * Build :root style declaration for mmenu-light width CSS variables.
-     *
-     * @param   array<string, mixed>  $navbarParams  Navbar module params.
-     *
-     * @return  string
-     */
-    private function getMmenuLightStyle(array $navbarParams): string
-    {
-        $ocdWidth    = CopyMyPageHelper::cfgCssLength($navbarParams, 'mmenuLightOcdWidth', '80%', true);
-        $ocdMinWidth = CopyMyPageHelper::cfgCssLength($navbarParams, 'mmenuLightOcdMinWidth', '200px');
-        $ocdMaxWidth = CopyMyPageHelper::cfgCssLength($navbarParams, 'mmenuLightOcdMaxWidth', '440px');
-
-        return ":root {\n"
-            . "    /* mmenu-light tokens */\n"
-            . "    --mm-ocd-width: {$ocdWidth};\n"
-            . "    --mm-ocd-min-width: {$ocdMinWidth};\n"
-            . "    --mm-ocd-max-width: {$ocdMaxWidth};\n"
-            . "}";
-    }
-
-    /**
-     * Adds necessary language strings for error handling.
+     * Register language strings used by inline scripts.
      */
     private function addLanguageStrings(): void
     {
@@ -243,10 +217,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     }
 
     /**
-     * Fetch template style parameters (DB-backed).
-     *
-     * This is the single source of truth for global layout/UI hooks.
-     * Returns a plain array so it can be merged into a JS runtime config.
+     * Fetch template style parameters.
      *
      * @return array<string, mixed>
      */
@@ -271,7 +242,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     }
 
     /**
-     * Fetch navbar module parameters (DB-backed).
+     * Fetch navbar module parameters.
      *
      * @return array<string, mixed>
      */
@@ -289,10 +260,9 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     }
 
     /**
-     * Resolve navbar params helper from the global CopyMyPage registry.
+     * Resolve the navbar parameters helper from the CopyMyPage registry.
      *
-     * Falls back to direct helper instantiation if the registry service is unavailable.
-     * This keeps the runtime resilient when plugin boot order differs.
+     * Falls back to direct helper instantiation when the registry service is unavailable.
      */
     private function getNavbarParamsHelper(): ?object
     {
