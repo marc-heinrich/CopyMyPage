@@ -56,14 +56,17 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
 
                     <!-- LEFT: Desktop = Logo, Mobile = Nav toggle -->
                     <div class="uk-navbar-left">
-                        <button
-                            class="uk-navbar-toggle uk-hidden@m cmp-navbar-toggle"
-                            type="button"
+                        <mm-burger
+                            class="uk-hidden@m cmp-navbar-toggle"
+                            fx="collapse"
+                            ease="ease"
+                            role="button"
+                            tabindex="0"
                             aria-label="Open menu"
+                            aria-expanded="false"
+                            title="Open menu"
                             data-cmp-mmenulight-open="#<?php echo htmlspecialchars($navOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
-                        >
-                            <span uk-navbar-toggle-icon></span>
-                        </button>
+                        ></mm-burger>
 
                         <a class="uk-navbar-item uk-logo uk-visible@m cmp-navbar-logo-link" href="<?php echo Uri::root(); ?>">
                             <img

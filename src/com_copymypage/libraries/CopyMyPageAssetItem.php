@@ -164,6 +164,20 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
 
                     drawers.push(drawer);
 
+                    const openers = Array.from(
+                        document.querySelectorAll('[data-cmp-mmenulight-open=\"#' + m.id + '\"]')
+                    );
+
+                    const setOpenersState = (isOpen) => {
+                        openers.forEach((opener) => {
+                            opener.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+                            if (typeof opener.state !== 'undefined') {
+                                opener.state = isOpen ? 'cross' : 'bars';
+                            }
+                        });
+                    };
+
                     const open = () => {
                         closeAllExcept(drawer);
 
@@ -172,11 +186,41 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
                         }
                     };
 
+                    if (drawer && drawer.wrapper instanceof Element) {
+                        const syncState = () => {
+                            setOpenersState(drawer.wrapper.classList.contains('mm-ocd--open'));
+                        };
+
+                        const observer = new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.attributeName === 'class') {
+                                    syncState();
+                                }
+                            });
+                        });
+
+                        observer.observe(drawer.wrapper, {
+                            attributes: true,
+                            attributeFilter: ['class']
+                        });
+
+                        syncState();
+                    } else {
+                        setOpenersState(false);
+                    }
+
                     // Bind all openers pointing to this menu id.
-                    document.querySelectorAll('[data-cmp-mmenulight-open=\"#' + m.id + '\"]').forEach((opener) => {
+                    openers.forEach((opener) => {
                         opener.addEventListener('click', (ev) => {
                             ev.preventDefault();
                             open();
+                        });
+
+                        opener.addEventListener('keyup', (ev) => {
+                            if (ev.key === 'Enter' || ev.key === ' ') {
+                                ev.preventDefault();
+                                open();
+                            }
                         });
                     });
 

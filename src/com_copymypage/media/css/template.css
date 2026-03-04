@@ -10,22 +10,20 @@
 
 /* ==========================================================================
    FOUNDATIONS - Design tokens (CSS custom properties)
-   override via Webassetmanager or $doc->addStyleDeclaration()
+   override via Webassetmanager
    ========================================================================== */
 
 :root {
 
-    /* Font families */
+    /* Typography */
     --cmp-font-family-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
         "Apple Color Emoji", "Segoe UI Emoji";
 
-    /* Canonical: only Mona Sans */
     --cmp-font-family-body: "Mona Sans", var(--cmp-font-family-system);
     --cmp-font-family-ui: var(--cmp-font-family-body);
     --cmp-font-family-display: var(--cmp-font-family-body);
     --cmp-font-family-code: var(--cmp-font-family-body);
 
-    /* Backwards-compatible aliases (phase out later) */
     --cmp-font-family-sans-serif: var(--cmp-font-family-body);
     --cmp-font-family-sans-serif-alt: var(--cmp-font-family-body);
 
@@ -41,7 +39,7 @@
     --cmp-color-text-default: #333;
     --cmp-color-text-muted: #6c757d;
 
-    /* Borders */
+    /* Borders and shadows */
     --cmp-border-radius-sm: 0.125rem;
     --cmp-border-radius: 0.25rem;
     --cmp-border-radius-lg: 0.5rem;
@@ -51,18 +49,16 @@
     --cmp-border-color: var(--cmp-color);
     --cmp-border-muted: var(--cmp-color-muted);
 
-    /* Box shadows */
     --cmp-box-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
     --cmp-box-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
     --cmp-box-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
 
-    /* Text shadows */
     --cmp-text-shadow-xs: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.25));
     --cmp-text-shadow-sm: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
     --cmp-text-shadow-md: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.45));
     --cmp-text-shadow-lg: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.55));
 
-    /* Font sizes */
+    /* Sizing */
     --cmp-font-size-xs: 0.75rem;
     --cmp-font-size-sm: 0.875rem;
     --cmp-font-size: 1rem;
@@ -71,10 +67,8 @@
     --cmp-font-size-2xl: 1.5rem;
     --cmp-font-size-3xl: 1.875rem;
 
-    /* Navbar sizing (single source of truth) */
     --cmp-navbar-item-size: var(--cmp-font-size-lg);
 
-    /* Headings */
     --cmp-font-size-heading-sm: clamp(1.25rem, 2.2vw, 1.75rem);
     --cmp-font-size-heading: clamp(1.5rem, 2.4vw, 2rem);
     --cmp-font-size-heading-lg: clamp(1.75rem, 2.8vw, 2.5rem);
@@ -83,21 +77,19 @@
     --cmp-font-size-heading-3xl: clamp(3rem, 4.8vw, 4rem);
     --cmp-font-size-heading-4xl: clamp(3.5rem, 5.6vw, 5rem);
 
-    /* Spacing */
     --cmp-spacing-xs: 0.25rem;
     --cmp-spacing-sm: 0.5rem;
     --cmp-spacing-md: 1rem;
     --cmp-spacing-lg: 1.5rem;
     --cmp-spacing-xl: 2rem;
 
-    /* Letter spacing */
     --cmp-letter-spacing-xs: -0.1rem;
     --cmp-letter-spacing-sm: -0.05rem;
     --cmp-letter-spacing: 0;
     --cmp-letter-spacing-lg: 0.05rem;
     --cmp-letter-spacing-xl: 0.1rem;
 
-    /* Z-index */
+    /* Layering and offsets */
     --cmp-z-index-backto-top: 1010;
     --cmp-z-index-sticky: 1020;
     --cmp-z-index-dropdown: 1030;
@@ -105,7 +97,6 @@
     --cmp-z-index-modal: 1050;
     --cmp-z-index-tooltip: 1060;
 
-    /* Header offset for anchor links */
     --cmp-header-offset: 80px;
 }
 
@@ -125,7 +116,7 @@ html {
     scroll-behavior: smooth;
 }
 
-/* Global headings: override UIkit family everywhere (keep UIkit spacing/weights/colors) */
+/* Keep heading typography consistent across UIkit and native heading tags. */
 :is(
     .uk-h1, .uk-h2, .uk-h3, .uk-h4, .uk-h5, .uk-h6,
     .uk-heading-2xlarge, .uk-heading-3xlarge, .uk-heading-large,
@@ -175,7 +166,7 @@ html {
     color: var(--cmp-color-text-default);
 }
 
-/* NEW: ensure parent-icon arrow follows currentColor */
+/* Keep parent arrow color aligned with current text color. */
 .cmp-navbar-container .uk-navbar-parent-icon svg polyline {
     stroke: currentColor;
 }
@@ -184,7 +175,7 @@ html {
     font-size: var(--cmp-navbar-item-size);
 }
 
-/* Scrolled / non-onepage shared navbar surface */
+/* Shared navbar surface for scrolled and non-onepage states. */
 .cmp-navbar-container.cmp-navbar--scrolled,
 body.no-onepage .cmp-navbar-container {
     background-color: rgba(255, 255, 255, 0.94);
@@ -194,53 +185,53 @@ body.no-onepage .cmp-navbar-container {
         0 28px 70px rgba(0, 0, 0, 0.06);
 }
 
-/* Scrolled / non-onepage shared navbar text + icon state */
+/* Shared text and icon color for scrolled and non-onepage states. */
 .cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li > a.cmp-navbar-link,
 .cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-right a.cmp-navbar-icon,
 .cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-right a.cmp-navbar-icon-link,
+.cmp-navbar-container.cmp-navbar--scrolled .cmp-navbar-toggle,
 body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link,
 body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon,
-body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon-link {
+body.no-onepage .cmp-navbar-container .uk-navbar-right a.cmp-navbar-icon-link,
+body.no-onepage .cmp-navbar-container .cmp-navbar-toggle {
     color: var(--cmp-color-text-default);
     filter: none;
 }
-/* Onepage hero/top: improve contrast for top-level items only */
+/* Onepage top state: stronger contrast for top-level nav items. */
 body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-nav > li > a.cmp-navbar-link {
     filter: var(--cmp-text-shadow-md);
     color: var(--cmp-color-logo-light);
 }
 
-/* ACTIVE NAVBAR LINKS (scrollspy)
+/* ACTIVE NAVBAR LINKS
    ========================================================================== */
 
-/* Gemeinsame Eigenschaften fÃ¼r beide ZustÃ¤nde */
+/* Onepage underline animation. */
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
-    position: relative; /* FÃ¼r die absolute Position der Unterstreichung */
-    padding-bottom: 0; /* Abstand fÃ¼r die Linie */
+    position: relative;
+    padding-bottom: 0;
 }
 
-/* Gescrollter Zustand: Navbar ist gescrollt */
 body.is-onepage .cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li > a.cmp-navbar-link {
-    color: var(--cmp-color-text-default); /* Textfarbe im gescrollten Zustand */
+    color: var(--cmp-color-text-default);
 }
 
-/* Animierte Unterstreichung: Basiszustand (unsichtbar, von der Mitte aus) */
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after,
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navbar-link::after {
     content: "";
     position: absolute;
-    bottom: 20px; /* Linie bleibt mit 20px Abstand unter dem Text */
+    bottom: 20px;
     left: 50%;
-    width: 100%; /* Linie über die gesamte Breite */
-    height: 2px; /* Dicke der Linie */
-    background-color: currentColor; /* Unterstreichung bekommt die gleiche Farbe wie der Text */
+    width: 100%;
+    height: 2px;
+    background-color: currentColor;
     transform: translateX(-50%) scaleX(0);
     transform-origin: center;
     transition: transform 0.3s ease;
     border-radius: 20px;
 }
 
-/* Linie entfaltet sich bei Hover, Fokus und bei aktivem Scrollspy-Link */
+/* Expand underline on hover, focus, and active states. */
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after,
@@ -248,7 +239,8 @@ body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cm
 body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
     transform: translateX(-50%) scaleX(1);
 }
-/* NO-ONEPAGE NAVBAR LINK HOVER
+
+/* NON-ONEPAGE NAVBAR LINK HOVER
    ========================================================================== */
 body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
     position: relative;
@@ -276,18 +268,19 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cm
 body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
     transform: translateX(-50%) scaleX(1);
 }
+
 /* DROPDOWN NAV LINKS
    ========================================================================== */
-/* Rounded dropdown corners */
+
 .cmp-navbar-container .uk-navbar-dropdown {
     border-radius: var(--cmp-border-radius-lg);
 }
+
 .cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link,
 .cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link {
     color: var(--cmp-color-text-default);
 }
 
-/* Keep it consistent on interaction states */
 .cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:hover,
 .cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:focus,
 .cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:hover,
@@ -295,7 +288,7 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.
     color: var(--cmp-color-text-default);
 }
 
-/* Mega menu column headings: use a stronger GitHub-like UI accent style. */
+/* Mega menu column headings. */
 .cmp-navbar-container .cmp-navbar-mega-dropdown .uk-navbar-dropdown-nav > li.uk-nav-header {
     margin-bottom: var(--cmp-spacing-xs);
     font-family: var(--cmp-font-family-system);
@@ -314,10 +307,9 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.
     color: var(--cmp-color-text-default);
 }
 
-/* NAVBAR ICONS (right side)
+/* NAVBAR ICONS
    ========================================================================== */
 
-/* Desktop icon nav spacing */
 .cmp-navbar-icons-nav {
     gap: 0;
 }
@@ -327,13 +319,10 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.
     line-height: 1;
 }
 
-/* Icons follow the link font-size (single source of truth) */
 .uk-navbar-right a.cmp-navbar-icon,
 .uk-navbar-right a.cmp-navbar-icon-link {
     font-size: var(--cmp-navbar-item-size);
     line-height: 1;
-
-    /* NEW: default icon color = token */
     color: var(--cmp-color-text-default);
 }
 
@@ -342,14 +331,14 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.
     height: var(--cmp-font-size-2xl);
 }
 
-/* Onepage hero/top: improve contrast for icons */
+/* Onepage top state: stronger icon contrast. */
 body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-navbar-icon,
 body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-navbar-icon-link {
     color: var(--cmp-color-logo-light);
     filter: var(--cmp-text-shadow-lg);
 }
 
-/* NEW: make UIkit SVG icons obey currentColor everywhere (not only hero/top) */
+/* Force UIkit SVG icon parts to follow currentColor. */
 .cmp-navbar-container .uk-icon svg [stroke] {
     stroke: currentColor;
 }
@@ -367,19 +356,18 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     height: auto;
     aspect-ratio: auto;
     object-fit: contain;
-    max-height: 32px; /* Desktop */
-    max-width: 140px; /* Desktop */
+    max-height: 32px;
+    max-width: 140px;
 }
 
-/* Mobile (< 960px, matches UIkit @m breakpoint) */
+/* Responsive logo sizing by breakpoint. */
 @media (max-width: 959px) {
     .cmp-navbar-logo {
-        max-height: 28px; /* Mobile */
-        max-width: 120px; /* Mobile */
+        max-height: 28px;
+        max-width: 120px;
     }
 }
 
-/* Mobile (< 768px) */
 @media (max-width: 767px) {
     .cmp-navbar-logo {
         max-height: 24px;
@@ -402,37 +390,51 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
     border: 0;
     padding: 0;
     cursor: pointer;
+    color: inherit;
+}
+
+mm-burger.cmp-navbar-toggle {
+    --mb-bar-width: 1.5rem;
+    --mb-bar-height: 0.10rem;
+    --mb-bar-spacing: 0.32rem;
+    display: inline-flex;
+    line-height: 1;
+}
+
+mm-burger.cmp-navbar-toggle:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 0.25rem;
 }
 
 /* MOBILE MENU (mmenu-light)
    ========================================================================== */
 
-/* Keep mobile-menu links free of generic hover decoration */
+/* Normalize hover and focus behavior in mmenu-light panels. */
 #cmp-mobilemenu-nav.mm-spn a:hover,
 #cmp-mobilemenu-nav.mm-spn a:focus-visible {
     color: inherit;
     background: inherit;
     text-decoration: none;
 }
-/* Fallback for right off-canvas instances without stable nav id */
+
 .mm-ocd.mm-ocd--right .mm-spn a:hover,
 .mm-ocd.mm-ocd--right .mm-spn a:focus-visible {
     color: inherit !important;
     text-decoration: none !important;
 }
-/* Keep split trigger area (right side) neutral without touching chevrons */
+
 #cmp-mobilemenu-nav.mm-spn li:hover,
 #cmp-mobilemenu-nav.mm-spn li:focus-within {
     background: inherit;
 }
 
-/* mmenu-light draws chevrons via li::before; show them only for items with submenus */
+/* Hide chevrons for leaf items. */
 #cmp-mobilemenu-nav.mm-spn li:not(:has(> ul))::before {
     content: none;
     display: none;
 }
 
-/* Subtle side-dependent edge shadow for the open panel (paper-roll effect) */
+/* Side-dependent panel edge shadow. */
 .mm-ocd.mm-ocd--open.mm-ocd--left .mm-ocd__content {
     box-shadow: 10px 0 14px -10px rgba(0, 0, 0, 0.50), inset -7px 0 10px -10px rgba(0, 0, 0, 0.42);
 }
@@ -544,7 +546,7 @@ body.no-onepage .cmp-section--component {
     padding: 2rem;
 }
 
-/* Text overlay inside the slideshow */
+/* Text overlay. */
 .cmp-module--slideshow .cmp-slideshow-overlay {
     color: var(--cmp-color-logo-light);
     text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
@@ -570,7 +572,7 @@ body.no-onepage .cmp-section--component {
     line-height: 1.4;
 }
 
-/* Slidenav arrows â€“ circular buttons with inner running ring */
+/* Slidenav ring animation container. */
 .cmp-module--slideshow .uk-slidenav-previous,
 .cmp-module--slideshow .uk-slidenav-next {
     display: inline-flex;
@@ -585,14 +587,12 @@ body.no-onepage .cmp-section--component {
     overflow: hidden;
 }
 
-/* Ensure the UIKit icon stays above the animated ring */
 .cmp-module--slideshow .uk-slidenav-previous span,
 .cmp-module--slideshow .uk-slidenav-next span {
     position: relative;
     z-index: 1;
 }
 
-/* Animated inner ring only on the border */
 .cmp-module--slideshow .uk-slidenav-previous::before,
 .cmp-module--slideshow .uk-slidenav-next::before {
     content: "";
@@ -610,7 +610,7 @@ body.no-onepage .cmp-section--component {
         rgba(255, 255, 255, 0.0) 360deg
     );
 
-    /* Show only the ring border, keep the inner area calm */
+    /* Keep only the ring border visible. */
     -webkit-mask: radial-gradient(
         farthest-side,
         transparent calc(100% - 2px),
@@ -628,7 +628,7 @@ body.no-onepage .cmp-section--component {
     animation: cmp-slidenav-ring 4s linear infinite;
 }
 
-/* Keyframes for the running ring effect â€“ short active phase, long pause */
+/* Ring keyframes with a short active phase. */
 @keyframes cmp-slidenav-ring {
     0% {
         opacity: 0;
@@ -656,7 +656,7 @@ body.no-onepage .cmp-section--component {
     }
 }
 
-/* Dot navigation â€“ small bullets inside the slideshow image */
+/* Dot navigation inside the slideshow. */
 .cmp-module--slideshow .uk-slideshow-nav {
     position: absolute;
     left: 50%;
@@ -667,7 +667,6 @@ body.no-onepage .cmp-section--component {
     z-index: 1;
 }
 
-/* Override UIKit spacing inside slideshow */
 .cmp-module--slideshow .uk-dotnav {
     margin-left: 0;
 }
@@ -676,7 +675,6 @@ body.no-onepage .cmp-section--component {
     padding-left: 0.35rem;
 }
 
-/* Base dot style: small, subtle, without border, with soft shadow */
 .cmp-module--slideshow .uk-dotnav > * > * {
     width: 0.5rem;
     height: 0.5rem;
@@ -686,7 +684,6 @@ body.no-onepage .cmp-section--component {
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
 }
 
-/* Active slide dot â€“ almost white, slightly larger, stronger shadow */
 .cmp-module--slideshow .uk-dotnav > .uk-active > * {
     background-color: rgba(255, 255, 255, 0.95);
     border: none;

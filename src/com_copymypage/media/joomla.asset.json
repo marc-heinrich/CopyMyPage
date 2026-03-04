@@ -41,7 +41,8 @@
         "messages",
         "uikit",
         "uikit.icons",
-        "mmenu.light"
+        "mmenu.light",
+        "mburger"
       ],
       "attributes": {
         "defer": true
@@ -104,6 +105,15 @@
       "version": "3.2.2",
       "attributes": {
         "defer": true
+      }
+    },
+    {
+      "name": "mburger",
+      "type": "script",
+      "uri": "com_copymypage/mburger/index.js",
+      "version": "3.1.4",
+      "attributes": {
+        "type": "module"
       }
     }
   ]
