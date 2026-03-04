@@ -56,6 +56,8 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
 
                     <!-- LEFT: Desktop = Logo, Mobile = Nav toggle -->
                     <div class="uk-navbar-left">
+                        
+                        <!-- Animated hamburger (https://mmenujs.com/mburger/) -->
                         <mm-burger
                             class="uk-hidden@m cmp-navbar-toggle"
                             fx="collapse"
