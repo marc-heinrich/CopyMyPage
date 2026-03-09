@@ -42,11 +42,119 @@
         "uikit",
         "uikit.icons",
         "mmenu.light",
-        "mburger"
+        "mburger",
+        "copymypage.formcheck"
       ],
       "attributes": {
         "defer": true
       }      
+    },
+    {
+      "name": "copymypage.modal.dialog",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-dialog.js",
+      "version": "0.0.5",
+      "dependencies": [
+        "core",
+        "uikit"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.modal.alert",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-alert.js",
+      "version": "0.0.5",
+      "dependencies": [
+        "core",
+        "uikit",
+        "copymypage.modal.dialog"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.modal.confirm",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-confirm.js",
+      "version": "0.0.5",
+      "dependencies": [
+        "core",
+        "uikit",
+        "copymypage.modal.dialog"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.modal.prompt",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-prompt.js",
+      "version": "0.0.5",
+      "dependencies": [
+        "core",
+        "uikit",
+        "copymypage.modal.dialog"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.modal.dialogs",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-modal-dialogs.js",
+      "version": "0.0.5",
+      "dependencies": [
+        "core",
+        "messages",
+        "uikit",
+        "copymypage.modal.dialog",
+        "copymypage.modal.alert",
+        "copymypage.modal.confirm",
+        "copymypage.modal.prompt"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.dialog",
+      "type": "preset",
+      "dependencies": [
+        "copymypage.modal.dialogs"
+      ]
+    },
+    {
+      "name": "copymypage.formcheck",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-formcheck.js",
+      "version": "0.0.5",
+      "dependencies": [
+        "core",
+        "form.validate",
+        "copymypage.modal.dialogs"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.modal.dev",
+      "type": "script",
+      "uri": "com_copymypage/dev/copymypage-modal-dev.js",
+      "version": "0.0.5",
+      "dependencies": [
+        "core",
+        "copymypage.modal.dialogs"
+      ],
+      "attributes": {
+        "defer": true
+      }
     },
     {
       "name": "uikit",

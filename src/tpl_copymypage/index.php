@@ -97,6 +97,13 @@ $wa->usePreset($this->template . '.site')
         . "    --cmp-header-offset: {$headerOffset}px;\n"
         . "}");
 
+// Enable modal dev harness if in debug mode or URL param is set.
+$enableModalDevHarness = ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmpdev', 0) === 1);
+
+if ($enableModalDevHarness) {
+    $wa->useScript('copymypage.modal.dev');
+}
+
 // Build body classes and navbar attributes.
 $bodyClasses = [
     'cmp-site',

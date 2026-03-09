@@ -88,6 +88,10 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._handleViewportChange();
             this._bindViewportListeners();
             this._addMmenuLinksHandler();
+
+            if (window.CopyMyPageDialog && typeof window.CopyMyPageDialog.initSystemMessages === 'function') {
+                window.CopyMyPageDialog.initSystemMessages();
+            }
         }
 
         /**
