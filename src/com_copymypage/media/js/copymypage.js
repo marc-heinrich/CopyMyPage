@@ -38,7 +38,8 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._dropdownHoldOpenCleanup = null;
             this._viewportQueries = {
                 mobile: window.matchMedia('(max-width: 959.98px)'),
-                small: window.matchMedia('(max-width: 639.98px)'),
+                narrow: window.matchMedia('(max-width: 767.98px)'),
+                small:  window.matchMedia('(max-width: 639.98px)'),
                 tablet: window.matchMedia('(min-width: 640px) and (max-width:959.98px)'),
             };
 
@@ -200,12 +201,13 @@ window.CopyMyPage = window.CopyMyPage || {};
         /**
          * Returns the current viewport state based on UIkit breakpoints.
          *
-         * @returns {{name: string, mobile: boolean, small: boolean, tablet: boolean, desktop: boolean}}
+         * @returns {{name: string, mobile: boolean, narrow: boolean, small: boolean, tablet: boolean, desktop: boolean}}
          */
         _getViewportState() {
-            const small = this._viewportQueries.small.matches;
-            const tablet = this._viewportQueries.tablet.matches;
-            const mobile = this._viewportQueries.mobile.matches;
+            const small   = this._viewportQueries.small.matches;
+            const tablet  = this._viewportQueries.tablet.matches;
+            const mobile  = this._viewportQueries.mobile.matches;
+            const narrow  = this._viewportQueries.narrow.matches;
             const desktop = !mobile;
 
             const name = small
@@ -216,7 +218,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                         ? 'mobile'
                         : 'desktop';
 
-            return { name, mobile, small, tablet, desktop };
+            return { name, mobile, narrow, small, tablet, desktop };
         }
 
         /**
@@ -228,8 +230,13 @@ window.CopyMyPage = window.CopyMyPage || {};
             }
 
             const viewport = this._getViewportState();
-            document.body.classList.remove('is-small', 'is-tablet', 'is-mobile', 'is-desktop');
+            document.body.classList.remove('is-small', 'is-tablet', 'is-mobile', 'is-desktop', 'is-narrow');
             document.body.classList.add(`is-${viewport.name}`);
+            document.body.classList.toggle('is-mobile', viewport.mobile);
+            document.body.classList.toggle('is-narrow', viewport.narrow);
+            document.body.classList.toggle('is-small', viewport.small);
+            document.body.classList.toggle('is-tablet', viewport.tablet);
+            document.body.classList.toggle('is-desktop', viewport.desktop);
         }
 
         /**

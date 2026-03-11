@@ -143,6 +143,22 @@ html {
     z-index: var(--cmp-z-index-sticky);
 }
 
+/* Targeted fix: keep DPCalendar token field from causing mobile layout drift on profile edit. */
+@media (orientation: portrait) {
+    body.com_users.view-profile.layout-edit.is-small .dp-token-container {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    body.com_users.view-profile.layout-edit.is-small .dp-token-container .dp-token {
+        flex: 1 1 12rem;
+        min-width: 0;
+        margin-right: 0;
+    }
+}
+
 /* ==========================================================================
    COMPONENTS - System UI
    ========================================================================== */
@@ -363,18 +379,14 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
 }
 
 /* Responsive logo sizing by breakpoint. */
-@media (max-width: 959px) {
-    .cmp-navbar-logo {
-        max-height: 28px;
-        max-width: 120px;
-    }
+body.is-mobile .cmp-navbar-logo {
+    max-height: 28px;
+    max-width: 120px;
 }
 
-@media (max-width: 767px) {
-    .cmp-navbar-logo {
-        max-height: 24px;
-        max-width: 110px;
-    }
+body.is-narrow .cmp-navbar-logo {
+    max-height: 24px;
+    max-width: 110px;
 }
 
 .cmp-navbar-logo-link {
@@ -525,13 +537,11 @@ mm-burger.cmp-navbar-toggle:focus-visible {
     stroke-linejoin: round;
 }
 
-@media (max-width: 767px) {
-    .cmp-back-to-top {
-        min-width: 2.25rem;
-        min-height: 2.25rem;
-        inset-inline-end: 0.75rem;
-        bottom: 0.75rem;
-    }
+body.is-narrow .cmp-back-to-top {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    inset-inline-end: 0.75rem;
+    bottom: 0.75rem;
 }
 
 /* ==========================================================================
@@ -841,18 +851,16 @@ body.no-onepage .cmp-section--component {
     margin-top: 0.45rem;
 }
 
-@media (max-width: 640px) {
-    .cmp-uikit-dialog {
-        padding: 0.6rem;
-    }
+body.is-small .cmp-uikit-dialog {
+    padding: 0.6rem;
+}
 
-    .cmp-uikit-dialog .cmp-uikit-dialog__panel {
-        width: min(96vw, 42rem);
-    }
+body.is-small .cmp-uikit-dialog .cmp-uikit-dialog__panel {
+    width: min(96vw, 42rem);
+}
 
-    .cmp-uikit-dialog .cmp-uikit-dialog__header {
-        padding-inline-end: 2.6rem;
-    }
+body.is-small .cmp-uikit-dialog .cmp-uikit-dialog__header {
+    padding-inline-end: 2.6rem;
 }
 
 /* ==========================================================================
