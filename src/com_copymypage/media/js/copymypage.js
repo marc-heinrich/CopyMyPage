@@ -50,6 +50,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             // Internal timers/state.
             this._scrollTimeout = null;
             this._mmenuRestoreTimeout = null;
+            this._preloaderRemovalTimeout = null;
             this._mmenuLinksHandlerBound = false;
             this._initialized = false;
             this._viewportListenerBound = false;
@@ -99,6 +100,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._initialized = true;
 
             // Fire up the features.
+            this._preloader();
             this._backToTop();
             this._handleViewportChange();
             this._bindViewportListeners();
@@ -116,8 +118,10 @@ window.CopyMyPage = window.CopyMyPage || {};
         destroy() {
             window.clearTimeout(this._scrollTimeout);
             window.clearTimeout(this._mmenuRestoreTimeout);
+            window.clearTimeout(this._preloaderRemovalTimeout);
             this._scrollTimeout = null;
             this._mmenuRestoreTimeout = null;
+            this._preloaderRemovalTimeout = null;
 
             this._teardownDesktopUserDropdownHoldOpen();
 
@@ -193,6 +197,49 @@ window.CopyMyPage = window.CopyMyPage || {};
 
                 this[key] = value;
             }
+        }
+
+        /**
+         * Private method: Fades out and removes the initial page preloader.
+         */
+        _preloader() {
+            const preloader = document.getElementById('cmp-preloader');
+
+            if (!document.body) {
+                return;
+            }
+
+            if (!preloader) {
+                document.body.classList.remove('cmp-preloader-active');
+                return;
+            }
+
+            const removePreloader = () => {
+                if (preloader.isConnected) {
+                    preloader.remove();
+                }
+            };
+
+            const hidePreloader = () => {
+                document.body.classList.remove('cmp-preloader-active');
+
+                if (preloader.classList.contains('is-loaded')) {
+                    return;
+                }
+
+                preloader.classList.add('is-loaded');
+                preloader.addEventListener('transitionend', removePreloader, { once: true });
+
+                window.clearTimeout(this._preloaderRemovalTimeout);
+                this._preloaderRemovalTimeout = window.setTimeout(removePreloader, 500);
+            };
+
+            if (document.readyState === 'complete') {
+                window.requestAnimationFrame(hidePreloader);
+                return;
+            }
+
+            this._listen(window, 'load', hidePreloader, { once: true });
         }
 
         /**

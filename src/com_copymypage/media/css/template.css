@@ -111,6 +111,7 @@
     --cmp-z-index-dropdown: 1020;
     --cmp-z-index-modal-backdrop: 1040;
     --cmp-z-index-modal: 1010;
+    --cmp-z-index-preloader: 1050;
     --cmp-z-index-tooltip: 1030;
 
     --cmp-header-offset: 80px;
@@ -125,6 +126,10 @@ body {
     margin: 0;
     padding: 0;
     font-family: var(--cmp-font-family-body);
+}
+
+body.cmp-preloader-active {
+    overflow: hidden;
 }
 
 html {
@@ -471,6 +476,262 @@ mm-burger.cmp-navbar-toggle:focus-visible {
 .mm-ocd.mm-ocd--open.mm-ocd--right .mm-ocd__content {
     box-shadow: -10px 0 14px -10px rgba(0, 0, 0, 0.50), inset 7px 0 10px -10px rgba(0, 0, 0, 0.42);
 }
+
+/* PRELOADER
+   ========================================================================== */
+
+.cmp-preloader {
+    position: fixed;
+    inset: 0;
+    z-index: var(--cmp-z-index-preloader);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(circle at top, rgba(4, 203, 208, 0.18), transparent 35%),
+        rgba(255, 255, 255, 0.96);
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+}
+
+.cmp-preloader.is-loaded {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.cmp-preloader__content {
+    display: grid;
+    justify-items: center;
+    gap: calc(var(--cmp-spacing-sm) + var(--cmp-spacing-xs));
+}
+
+.cmp-preloader__text {
+    margin: 0;
+    font-family: var(--cmp-font-family-ui);
+    color: var(--cmp-color-logo-dark);
+    font-size: var(--cmp-font-size-sm);
+    font-weight: 600;
+    letter-spacing: var(--cmp-letter-spacing);
+    text-transform: uppercase;
+}
+
+.cmp-preloader__dots {
+    position: relative;
+    width: 4.5rem;
+    height: 0.875rem;
+}
+
+.cmp-preloader--dots .cmp-preloader__dot {
+    position: absolute;
+    top: 0;
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 50%;
+    background-color: var(--cmp-color);
+    box-shadow: 0 0 0.75rem rgba(4, 203, 208, 0.35);
+    animation-duration: 0.6s;
+    animation-iteration-count: infinite;
+    animation-timing-function: cubic-bezier(0, 1, 1, 0);
+}
+
+.cmp-preloader--dots .cmp-preloader__dot:nth-child(1) {
+    left: 0;
+    animation-name: cmp-preloader-grow;
+}
+
+.cmp-preloader--dots .cmp-preloader__dot:nth-child(2) {
+    left: 0;
+    animation-name: cmp-preloader-shift;
+}
+
+.cmp-preloader--dots .cmp-preloader__dot:nth-child(3) {
+    left: 1.75rem;
+    animation-name: cmp-preloader-shift;
+}
+
+.cmp-preloader--dots .cmp-preloader__dot:nth-child(4) {
+    left: 3.5rem;
+    animation-name: cmp-preloader-shrink;
+}
+
+.cmp-preloader--ring .cmp-preloader__ring {
+    display: block;
+    width: 3.75rem;
+    height: 3.75rem;
+    border: 0.28rem solid rgba(4, 203, 208, 0.18);
+    border-top-color: var(--cmp-color);
+    border-radius: 50%;
+    box-shadow: 0 0 1.25rem rgba(4, 203, 208, 0.18);
+    animation: cmp-preloader-spin 0.9s linear infinite;
+}
+
+.cmp-preloader--bars .cmp-preloader__bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.35rem;
+    height: 3rem;
+}
+
+.cmp-preloader--bars .cmp-preloader__bar {
+    width: 0.5rem;
+    height: 30%;
+    border-radius: 999px;
+    background-color: var(--cmp-color);
+    box-shadow: 0 0 0.75rem rgba(4, 203, 208, 0.24);
+    transform-origin: center bottom;
+    animation: cmp-preloader-bars 0.9s ease-in-out infinite;
+}
+
+.cmp-preloader--bars .cmp-preloader__bar:nth-child(2) {
+    animation-delay: 0.12s;
+}
+
+.cmp-preloader--bars .cmp-preloader__bar:nth-child(3) {
+    animation-delay: 0.24s;
+}
+
+.cmp-preloader--bars .cmp-preloader__bar:nth-child(4) {
+    animation-delay: 0.36s;
+}
+
+.cmp-preloader--pulse .cmp-preloader__pulse {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+}
+
+.cmp-preloader--pulse .cmp-preloader__pulse-core,
+.cmp-preloader--pulse .cmp-preloader__pulse-halo {
+    position: absolute;
+    border-radius: 50%;
+}
+
+.cmp-preloader--pulse .cmp-preloader__pulse-core {
+    width: 1rem;
+    height: 1rem;
+    background-color: var(--cmp-color);
+    box-shadow: 0 0 1rem rgba(4, 203, 208, 0.30);
+    animation: cmp-preloader-pulse-core 1.2s ease-in-out infinite;
+}
+
+.cmp-preloader--pulse .cmp-preloader__pulse-halo {
+    inset: 0;
+    border: 0.15rem solid rgba(4, 203, 208, 0.28);
+    animation: cmp-preloader-pulse-halo 1.2s ease-out infinite;
+}
+
+.cmp-preloader--logo .cmp-preloader__logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cmp-preloader--logo .cmp-preloader__logo {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: min(16rem, 42vw);
+    max-height: 5rem;
+    object-fit: contain;
+    filter: drop-shadow(0 0.5rem 1.15rem rgba(6, 18, 37, 0.12));
+    animation: cmp-preloader-logo-breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes cmp-preloader-grow {
+    0% {
+        transform: scale(0);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes cmp-preloader-shrink {
+    0% {
+        transform: scale(1);
+    }
+
+    100% {
+        transform: scale(0);
+    }
+}
+
+@keyframes cmp-preloader-shift {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(1.75rem);
+    }
+}
+
+@keyframes cmp-preloader-spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes cmp-preloader-bars {
+    0%,
+    100% {
+        height: 30%;
+        opacity: 0.55;
+    }
+
+    50% {
+        height: 100%;
+        opacity: 1;
+    }
+}
+
+@keyframes cmp-preloader-pulse-core {
+    0%,
+    100% {
+        transform: scale(0.88);
+        opacity: 0.85;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 1;
+    }
+}
+
+@keyframes cmp-preloader-pulse-halo {
+    0% {
+        transform: scale(0.45);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1.15);
+        opacity: 0;
+    }
+}
+
+@keyframes cmp-preloader-logo-breathe {
+    0%,
+    100% {
+        transform: scale(0.98);
+        opacity: 0.92;
+    }
+
+    50% {
+        transform: scale(1.02);
+        opacity: 1;
+    }
+}
+
 /* BACK TO TOP BUTTON
    ========================================================================== */
 

@@ -89,6 +89,32 @@ $backToTopID      = CopyMyPageHelper::selectorToToken((string) $this->params->ge
 $mainContentID    = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopTargetSelector'));
 $headerOffset     = (int) $this->params->get('headerOffset', 80);
 
+// Build preloader config.
+$preloaderEnabled = (bool) $this->params->get('preloaderEnabled', 1);
+$preloaderType    = strtolower(trim((string) $this->params->get('preloaderType', 'logo')));
+$preloaderText    = trim((string) $this->params->get('preloaderText', ''));
+$preloaderLogo    = trim((string) $this->params->get('preloaderLogo', ''));
+$defaultLogoPath  = 'media/com_' . $this->template . '/images/logo/logo-cmp-preloader.png';
+$allowedTypes     = ['dots', 'ring', 'bars', 'logo', 'pulse'];
+
+if (!\in_array($preloaderType, $allowedTypes, true)) {
+    $preloaderType = 'logo';
+}
+
+if ($preloaderLogo === '') {
+    $preloaderLogo = $defaultLogoPath;
+}
+
+$preloaderLogoUrl = '';
+
+if ($preloaderLogo !== '') {
+    if (preg_match('#^(?:[a-z][a-z0-9+.-]*:)?//#i', $preloaderLogo) || str_starts_with($preloaderLogo, 'data:')) {
+        $preloaderLogoUrl = $preloaderLogo;
+    } else {
+        $preloaderLogoUrl = Uri::root() . ltrim($preloaderLogo, '/');
+    }
+}
+
 // Register and load web assets (aligned with offline.php).
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
 $wa->usePreset($this->template . '.site')
@@ -107,12 +133,14 @@ if ($enableModalDevHarness) {
 // Build body classes and navbar attributes.
 $bodyClasses = [
     'cmp-site',
+    $preloaderEnabled ? 'cmp-preloader-active' : '',
     $option ?: 'no-option',
     'view-' . ($view ?: 'no-view'),
     $layout ? 'layout-' . $layout : 'no-layout',
     $task ? 'task-' . $task : 'no-task',
     $itemId ? 'itemid-' . $itemId : '',
     $isOnepage ? 'is-onepage' : 'no-onepage',
+    // further class param for current viewport (e.g. is-mobile or is-desktop) @see copymypage.js
 ];
 
 $navbarAttrs = [
@@ -130,8 +158,80 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
         <jdoc:include type="metas" />
         <jdoc:include type="styles" />
         <jdoc:include type="scripts" />
+        <?php if ($preloaderEnabled) : ?>
+            <noscript>
+                <style>
+                    body.cmp-preloader-active {
+                        overflow: auto !important;
+                    }
+
+                    #cmp-preloader {
+                        display: none !important;
+                    }
+                </style>
+            </noscript>
+        <?php endif; ?>
     </head>
     <body class="<?php echo htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8'); ?>">
+
+        <?php if ($preloaderEnabled) : ?>
+            <!-- Preloader -->
+            <div
+                id="cmp-preloader"
+                class="cmp-preloader cmp-preloader--<?php echo htmlspecialchars($preloaderType, ENT_QUOTES, 'UTF-8'); ?>"
+                data-cmp-preloader-type="<?php echo htmlspecialchars($preloaderType, ENT_QUOTES, 'UTF-8'); ?>"
+                aria-hidden="true"
+            >
+                <div class="cmp-preloader__content">
+                    <?php switch ($preloaderType) :
+                        case 'ring': ?>
+                            <span class="cmp-preloader__ring"></span>
+                            <?php break; ?>
+
+                        <?php case 'bars': ?>
+                            <div class="cmp-preloader__bars">
+                                <span class="cmp-preloader__bar"></span>
+                                <span class="cmp-preloader__bar"></span>
+                                <span class="cmp-preloader__bar"></span>
+                                <span class="cmp-preloader__bar"></span>
+                            </div>
+                            <?php break; ?>
+
+                        <?php case 'pulse': ?>
+                            <div class="cmp-preloader__pulse">
+                                <span class="cmp-preloader__pulse-halo"></span>
+                                <span class="cmp-preloader__pulse-core"></span>
+                            </div>
+                            <?php break; ?>
+
+                        <?php case 'logo': ?>
+                            <div class="cmp-preloader__logo-wrap">
+                                <img
+                                    class="cmp-preloader__logo"
+                                    src="<?php echo htmlspecialchars($preloaderLogoUrl, ENT_QUOTES, 'UTF-8'); ?>"
+                                    alt=""
+                                    loading="eager"
+                                    decoding="async"
+                                >
+                            </div>
+                            <?php break; ?>
+
+                        <?php case 'dots':
+                        default: ?>
+                            <div class="cmp-preloader__dots">
+                                <span class="cmp-preloader__dot"></span>
+                                <span class="cmp-preloader__dot"></span>
+                                <span class="cmp-preloader__dot"></span>
+                                <span class="cmp-preloader__dot"></span>
+                            </div>
+                    <?php endswitch; ?>
+
+                    <?php if ($preloaderText !== '') : ?>
+                        <p class="cmp-preloader__text"><?php echo htmlspecialchars($preloaderText, ENT_QUOTES, 'UTF-8'); ?></p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <!-- Page Wrapper -->
         <div id="page" class="<?php echo htmlspecialchars($pageWrapperClass, ENT_QUOTES, 'UTF-8'); ?>">

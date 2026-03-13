@@ -63,6 +63,19 @@
         <field name="backToTopSelector" type="text" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_DESC" default="#back-top"/>
         <field name="backToTopPosition" type="number" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_DESC" default="100" min="0"/>
         <field name="backToTopTargetSelector" type="text" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_DESC" default="#main-content" filter="raw"/>
+        <field name="preloaderEnabled" type="radio" label="TPL_COPYMYPAGE_FIELD_PRELOADER_ENABLED_LABEL" description="TPL_COPYMYPAGE_FIELD_PRELOADER_ENABLED_DESC" default="1" class="btn-group btn-group-yesno">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field name="preloaderType" type="list" label="TPL_COPYMYPAGE_FIELD_PRELOADER_TYPE_LABEL" description="TPL_COPYMYPAGE_FIELD_PRELOADER_TYPE_DESC" default="logo" showon="preloaderEnabled:1">
+          <option value="dots">TPL_COPYMYPAGE_FIELD_PRELOADER_OPTION_TYPE_DOTS</option>
+          <option value="ring">TPL_COPYMYPAGE_FIELD_PRELOADER_OPTION_TYPE_RING</option>
+          <option value="bars">TPL_COPYMYPAGE_FIELD_PRELOADER_OPTION_TYPE_BARS</option>
+          <option value="logo">TPL_COPYMYPAGE_FIELD_PRELOADER_OPTION_TYPE_LOGO</option>
+          <option value="pulse">TPL_COPYMYPAGE_FIELD_PRELOADER_OPTION_TYPE_PULSE</option>
+        </field>
+        <field name="preloaderLogo" type="media" label="TPL_COPYMYPAGE_FIELD_PRELOADER_LOGO_LABEL" description="TPL_COPYMYPAGE_FIELD_PRELOADER_LOGO_DESC" showon="preloaderEnabled:1" schemes="http,https,data,file" validate="url" relative="true"/>
+        <field name="preloaderText" type="text" label="TPL_COPYMYPAGE_FIELD_PRELOADER_TEXT_LABEL" description="TPL_COPYMYPAGE_FIELD_PRELOADER_TEXT_DESC" showon="preloaderEnabled:1" filter="string"/>
       </fieldset>
     </fields>
   </config>
