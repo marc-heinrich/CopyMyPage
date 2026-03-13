@@ -185,6 +185,9 @@ html {
 /* NAVBAR
    ========================================================================== */
 
+/* BASICS
+   ========================================================================== */
+
 .cmp-navbar-container {
     font-family: var(--cmp-font-family-ui);
     background-color: transparent;
@@ -212,6 +215,9 @@ html {
     font-size: var(--cmp-navbar-item-size);
 }
 
+/* STATES
+   ========================================================================== */
+
 /* Shared navbar surface for scrolled and non-onepage states. */
 .cmp-navbar-container.cmp-navbar--scrolled,
 body.no-onepage .cmp-navbar-container {
@@ -234,86 +240,14 @@ body.no-onepage .cmp-navbar-container .cmp-navbar-toggle {
     color: var(--cmp-color-text-default);
     filter: none;
 }
+
 /* Onepage top state: stronger contrast for top-level nav items. */
 body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-nav > li > a.cmp-navbar-link {
     filter: var(--cmp-text-shadow-md);
     color: var(--cmp-color-logo-light);
 }
 
-/* ACTIVE NAVBAR LINKS
-   ========================================================================== */
-
-/* Onepage underline animation. */
-body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
-    position: relative;
-    padding-bottom: 0;
-}
-
 body.is-onepage .cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li > a.cmp-navbar-link {
-    color: var(--cmp-color-text-default);
-}
-
-body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after,
-body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navbar-link::after {
-    content: "";
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    width: 100%;
-    height: 2px;
-    background-color: currentColor;
-    transform: translateX(-50%) scaleX(0);
-    transform-origin: center;
-    transition: transform 0.3s ease;
-    border-radius: 20px;
-}
-
-/* Expand underline on hover and focus states. */
-body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
-body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
-body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cmp-navbar-link::after,
-body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
-    transform: translateX(-50%) scaleX(1);
-}
-
-/* Onepage active state keeps underline visible. */
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after {
-    transform: translateX(-50%) scaleX(1);
-}
-
-/* DROPDOWN NAV LINKS
-   ========================================================================== */
-
-.cmp-navbar-container .uk-navbar-dropdown {
-    border-radius: var(--cmp-border-radius-lg);
-    z-index: var(--cmp-z-index-dropdown);
-}
-
-.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link,
-.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link,
-.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:hover,
-.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:focus,
-.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:hover,
-.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:focus {
-    color: var(--cmp-color-text-default);
-}
-
-/* Mega menu column headings. */
-.cmp-navbar-container .cmp-navbar-mega-dropdown .uk-navbar-dropdown-nav > li.uk-nav-header {
-    margin-bottom: var(--cmp-spacing-xs);
-    font-family: var(--cmp-font-family-system);
-    font-size: var(--cmp-font-size-sm);
-    font-weight: 600;
-    letter-spacing: var(--cmp-letter-spacing-sm);
-    color: var(--cmp-color-text-default);
-}
-
-.cmp-navbar-container .cmp-navbar-mega-dropdown .uk-navbar-dropdown-nav > li.uk-nav-header > a.cmp-navbar-link {
-    font-family: var(--cmp-font-family-ui);
-    font-size: inherit;
-    font-weight: 400;
-    letter-spacing: normal;
-    text-transform: none;
     color: var(--cmp-color-text-default);
 }
 
@@ -355,6 +289,79 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-right a.cmp-nav
 
 .cmp-navbar-container .uk-icon svg circle:not([fill="none"]) {
     fill: currentColor;
+}
+
+/* ACTIVE LINKS
+   ========================================================================== */
+
+/* Onepage underline animation. */
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
+    position: relative;
+    padding-bottom: 0;
+}
+
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after,
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navbar-link::after {
+    content: "";
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background-color: currentColor;
+    transform: translateX(-50%) scaleX(0);
+    transform-origin: center;
+    transition: transform 0.3s ease;
+    border-radius: 20px;
+}
+
+/* Expand underline on hover and focus states. */
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cmp-navbar-link::after,
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+/* Onepage active state keeps underline visible. */
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+/* DROPDOWN LINKS
+   ========================================================================== */
+
+.cmp-navbar-container .uk-navbar-dropdown {
+    border-radius: var(--cmp-border-radius-lg);
+    z-index: var(--cmp-z-index-dropdown);
+}
+
+.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link,
+.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link,
+.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:hover,
+.cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:focus,
+.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:hover,
+.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:focus {
+    color: var(--cmp-color-text-default);
+}
+
+/* Mega menu column headings. */
+.cmp-navbar-container .cmp-navbar-mega-dropdown .uk-navbar-dropdown-nav > li.uk-nav-header {
+    margin-bottom: var(--cmp-spacing-xs);
+    font-family: var(--cmp-font-family-system);
+    font-size: var(--cmp-font-size-sm);
+    font-weight: 600;
+    letter-spacing: var(--cmp-letter-spacing-sm);
+    color: var(--cmp-color-text-default);
+}
+
+.cmp-navbar-container .cmp-navbar-mega-dropdown .uk-navbar-dropdown-nav > li.uk-nav-header > a.cmp-navbar-link {
+    font-family: var(--cmp-font-family-ui);
+    font-size: inherit;
+    font-weight: 400;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--cmp-color-text-default);
 }
 
 /* LOGO
@@ -824,29 +831,28 @@ body.no-onepage .cmp-section--component {
     font-size: var(--cmp-font-size-sm);
 }
 
-/* SLIDESHOW
+/* HERO
    ========================================================================== */
 
-.cmp-module--slideshow {
+/* BASICS
+   ========================================================================== */
+
+.cmp-module--hero {
     position: relative;
 }
 
-.cmp-module--slideshow .uk-position-center {
-    padding: 2rem;
-}
-
-/* Text overlay. */
-.cmp-module--slideshow .cmp-slideshow-overlay {
+/* Shared text overlay. */
+.cmp-module--hero .cmp-hero-overlay {
     color: var(--cmp-color-logo-light);
     text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
 }
 
-.cmp-module--slideshow .cmp-slideshow-overlay h2,
-.cmp-module--slideshow .cmp-slideshow-overlay p {
+.cmp-module--hero .cmp-hero-overlay h2,
+.cmp-module--hero .cmp-hero-overlay p {
     margin: 0;
 }
 
-.cmp-module--slideshow .cmp-slideshow-overlay h2 {
+.cmp-module--hero .cmp-hero-overlay h2 {
     font-weight: 700;
     font-size: var(--cmp-font-size-heading-3xl);
     line-height: 1.1;
@@ -855,15 +861,25 @@ body.no-onepage .cmp-section--component {
     margin-bottom: var(--cmp-spacing-sm);
 }
 
-.cmp-module--slideshow .cmp-slideshow-overlay p {
+.cmp-module--hero .cmp-hero-overlay p {
     font-weight: 400;
     font-size: var(--cmp-font-size-heading-lg);
     line-height: 1.4;
 }
 
+/* LAYOUT VARIANTS
+   ========================================================================== */
+
+/* Slideshow
+   -------------------------------------------------------------------------- */
+
+.cmp-module--hero-slideshow .uk-position-center {
+    padding: 2rem;
+}
+
 /* Slidenav ring animation container. */
-.cmp-module--slideshow .uk-slidenav-previous,
-.cmp-module--slideshow .uk-slidenav-next {
+.cmp-module--hero-slideshow .uk-slidenav-previous,
+.cmp-module--hero-slideshow .uk-slidenav-next {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -876,14 +892,14 @@ body.no-onepage .cmp-section--component {
     overflow: hidden;
 }
 
-.cmp-module--slideshow .uk-slidenav-previous span,
-.cmp-module--slideshow .uk-slidenav-next span {
+.cmp-module--hero-slideshow .uk-slidenav-previous span,
+.cmp-module--hero-slideshow .uk-slidenav-next span {
     position: relative;
     z-index: 1;
 }
 
-.cmp-module--slideshow .uk-slidenav-previous::before,
-.cmp-module--slideshow .uk-slidenav-next::before {
+.cmp-module--hero-slideshow .uk-slidenav-previous::before,
+.cmp-module--hero-slideshow .uk-slidenav-next::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -945,8 +961,8 @@ body.no-onepage .cmp-section--component {
     }
 }
 
-/* Dot navigation inside the slideshow. */
-.cmp-module--slideshow .uk-slideshow-nav {
+/* Dot navigation inside the hero slideshow. */
+.cmp-module--hero-slideshow .uk-slideshow-nav {
     position: absolute;
     left: 50%;
     bottom: 1.5rem;
@@ -956,15 +972,15 @@ body.no-onepage .cmp-section--component {
     z-index: 1;
 }
 
-.cmp-module--slideshow .uk-dotnav {
+.cmp-module--hero-slideshow .uk-dotnav {
     margin-left: 0;
 }
 
-.cmp-module--slideshow .uk-dotnav > * {
+.cmp-module--hero-slideshow .uk-dotnav > * {
     padding-left: 0.35rem;
 }
 
-.cmp-module--slideshow .uk-dotnav > * > * {
+.cmp-module--hero-slideshow .uk-dotnav > * > * {
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 50%;
@@ -973,7 +989,7 @@ body.no-onepage .cmp-section--component {
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.45);
 }
 
-.cmp-module--slideshow .uk-dotnav > .uk-active > * {
+.cmp-module--hero-slideshow .uk-dotnav > .uk-active > * {
     background-color: rgba(255, 255, 255, 0.95);
     border: none;
     transform: scale(1.15);
