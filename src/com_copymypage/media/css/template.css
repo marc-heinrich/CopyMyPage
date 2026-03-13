@@ -11,6 +11,13 @@
 /* ==========================================================================
    FOUNDATIONS - Design tokens (CSS custom properties)
    override via Webassetmanager
+
+   Viewport class mapping from media/com_copymypage/js/copymypage.js:
+   is-small   : <= 639.98px
+   is-narrow  : 640px - 767.98px
+   is-mobile  : 768px - 959.98px
+   is-tablet  : 960px - 1199.98px
+   is-desktop : >= 1200px
    ========================================================================== */
 
 :root {
@@ -40,6 +47,13 @@
     --cmp-color-text-muted: #6c757d;
     --cmp-overlay-backdrop-color: rgba(6, 18, 37, 0.20);
     --cmp-overlay-backdrop-filter: blur(5px) saturate(90%);
+
+    /* UIkit dialog message tokens */
+    --cmp-dialog-message-color-default: #3f7ff3;
+    --cmp-dialog-message-color-success: #198754;
+    --cmp-dialog-message-color-info: #0d6efd;
+    --cmp-dialog-message-color-warning: #f08c00;
+    --cmp-dialog-message-color-danger: #dc3545;
 
     /* Borders and shadows */
     --cmp-border-radius-sm: 0.125rem;
@@ -94,10 +108,10 @@
     /* Layering and offsets */
     --cmp-z-index-backto-top: 1010;
     --cmp-z-index-sticky: 1020;
-    --cmp-z-index-dropdown: 1030;
+    --cmp-z-index-dropdown: 1020;
     --cmp-z-index-modal-backdrop: 1040;
-    --cmp-z-index-modal: 1050;
-    --cmp-z-index-tooltip: 1060;
+    --cmp-z-index-modal: 1010;
+    --cmp-z-index-tooltip: 1030;
 
     --cmp-header-offset: 80px;
 }
@@ -225,7 +239,7 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--top .uk-navbar-nav > li > a.cm
    ========================================================================== */
 
 /* Onepage underline animation. */
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
     position: relative;
     padding-bottom: 0;
 }
@@ -234,8 +248,8 @@ body.is-onepage .cmp-navbar-container.cmp-navbar--scrolled .uk-navbar-nav > li >
     color: var(--cmp-color-text-default);
 }
 
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after,
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navbar-link::after {
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after,
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navbar-link::after {
     content: "";
     position: absolute;
     bottom: 20px;
@@ -249,41 +263,16 @@ body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navb
     border-radius: 20px;
 }
 
-/* Expand underline on hover, focus, and active states. */
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after,
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cmp-navbar-link::after,
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
+/* Expand underline on hover and focus states. */
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cmp-navbar-link::after,
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
     transform: translateX(-50%) scaleX(1);
 }
 
-/* NON-ONEPAGE NAVBAR LINK HOVER
-   ========================================================================== */
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link {
-    position: relative;
-    padding-bottom: 0;
-}
-
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"])::after,
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent > a.cmp-navbar-link::after {
-    content: "";
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    width: 100%;
-    height: 2px;
-    background-color: currentColor;
-    transform: translateX(-50%) scaleX(0);
-    transform-origin: center;
-    transition: transform 0.3s ease;
-    border-radius: 20px;
-}
-
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):hover::after,
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li > a.cmp-navbar-link:not([href="#"][role="button"]):focus-visible::after,
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent:hover > a.cmp-navbar-link::after,
-body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.cmp-navbar-link::after {
+/* Onepage active state keeps underline visible. */
+body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after {
     transform: translateX(-50%) scaleX(1);
 }
 
@@ -292,13 +281,11 @@ body.no-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-parent.uk-open > a.
 
 .cmp-navbar-container .uk-navbar-dropdown {
     border-radius: var(--cmp-border-radius-lg);
+    z-index: var(--cmp-z-index-dropdown);
 }
 
 .cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link,
-.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link {
-    color: var(--cmp-color-text-default);
-}
-
+.cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link,
 .cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:hover,
 .cmp-navbar-container .uk-navbar-dropdown-nav > li > a.cmp-navbar-link:focus,
 .cmp-navbar-container .uk-navbar-dropdown-nav .uk-nav-sub a.cmp-navbar-link:hover,
@@ -384,7 +371,8 @@ body.is-mobile .cmp-navbar-logo {
     max-width: 120px;
 }
 
-body.is-narrow .cmp-navbar-logo {
+body.is-narrow .cmp-navbar-logo,
+body.is-small .cmp-navbar-logo {
     max-height: 24px;
     max-width: 110px;
 }
@@ -499,7 +487,7 @@ mm-burger.cmp-navbar-toggle:focus-visible {
     padding: 0.5rem;
     border-radius: 50%;
     border: var(--cmp-border-width) solid var(--cmp-color-surface);
-    background-color: #fff;
+    background-color: var(--cmp-color-background-default);
     color: var(--cmp-color-text-default);
     box-shadow: 0 0.375rem 1rem rgba(0, 0, 0, 0.2);
     pointer-events: none;
@@ -537,7 +525,8 @@ mm-burger.cmp-navbar-toggle:focus-visible {
     stroke-linejoin: round;
 }
 
-body.is-narrow .cmp-back-to-top {
+body.is-narrow .cmp-back-to-top,
+body.is-small .cmp-back-to-top {
     min-width: 2.25rem;
     min-height: 2.25rem;
     inset-inline-end: 0.75rem;
@@ -741,6 +730,16 @@ body.no-onepage .cmp-section--component {
     padding: 1rem;
 }
 
+/* Override UIkit modal mask so the shared CopyMyPage backdrop variables drive the visual. */
+.uk-modal.cmp-uikit-dialog {
+    background: transparent;
+    z-index: var(--cmp-z-index-modal);
+}
+
+.uk-tooltip {
+    z-index: var(--cmp-z-index-tooltip);
+}
+
 .cmp-uikit-dialog::before {
     content: "";
     position: fixed;
@@ -762,7 +761,7 @@ body.no-onepage .cmp-section--component {
     border: 1px solid rgba(0, 0, 0, 0.12);
     border-radius: 12px;
     overflow: hidden;
-    background: #ffffff;
+    background: var(--cmp-color-background-default);
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
 }
 
@@ -814,7 +813,7 @@ body.no-onepage .cmp-section--component {
 .cmp-uikit-dialog .cmp-uikit-dialog__message {
     margin: 0 0 1rem;
     padding-inline-start: 0.9rem;
-    border-inline-start: 4px solid #3f7ff3;
+    border-inline-start: 4px solid var(--cmp-dialog-message-color-default);
 }
 
 .cmp-uikit-dialog .cmp-uikit-dialog__message:last-child {
@@ -826,19 +825,19 @@ body.no-onepage .cmp-section--component {
 }
 
 .cmp-uikit-dialog .cmp-uikit-dialog__message--success {
-    border-inline-start-color: #198754;
+    border-inline-start-color: var(--cmp-dialog-message-color-success);
 }
 
 .cmp-uikit-dialog .cmp-uikit-dialog__message--info {
-    border-inline-start-color: #0d6efd;
+    border-inline-start-color: var(--cmp-dialog-message-color-info);
 }
 
 .cmp-uikit-dialog .cmp-uikit-dialog__message--warning {
-    border-inline-start-color: #f08c00;
+    border-inline-start-color: var(--cmp-dialog-message-color-warning);
 }
 
 .cmp-uikit-dialog .cmp-uikit-dialog__message--danger {
-    border-inline-start-color: #dc3545;
+    border-inline-start-color: var(--cmp-dialog-message-color-danger);
 }
 
 .cmp-uikit-dialog .cmp-uikit-dialog__message-title {

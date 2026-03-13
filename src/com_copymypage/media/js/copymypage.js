@@ -11,6 +11,24 @@ window.CopyMyPage = window.CopyMyPage || {};
 (function (Joomla, UIkit, window, document) {
     'use strict';
 
+    const VIEWPORT_QUERY_DEFINITIONS = Object.freeze({
+        // Exclusive class tiers: small -> narrow -> mobile -> tablet -> desktop.
+        small: '(max-width: 639.98px)',
+        narrow: '(min-width: 640px) and (max-width: 767.98px)',
+        mobile: '(min-width: 768px) and (max-width: 959.98px)',
+        tablet: '(min-width: 960px) and (max-width: 1199.98px)',
+        // UIkit desktop behavior starts at @m (960px).
+        uiDesktop: '(min-width: 960px)',
+    });
+
+    const VIEWPORT_BODY_CLASSES = Object.freeze([
+        'is-small',
+        'is-tablet',
+        'is-mobile',
+        'is-desktop',
+        'is-narrow',
+    ]);
+
     /**
      * CopyMyPage Class
      * Provides functionality for template interactions and behaviors.
@@ -36,12 +54,8 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._initialized = false;
             this._viewportListenerBound = false;
             this._dropdownHoldOpenCleanup = null;
-            this._viewportQueries = {
-                mobile: window.matchMedia('(max-width: 959.98px)'),
-                narrow: window.matchMedia('(max-width: 767.98px)'),
-                small:  window.matchMedia('(max-width: 639.98px)'),
-                tablet: window.matchMedia('(min-width: 640px) and (max-width:959.98px)'),
-            };
+            this._cleanupCallbacks = [];
+            this._viewportQueries = this._createViewportQueries();
 
             // Runtime dependency checks.
             if (!Joomla) {
@@ -96,6 +110,56 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
+         * Destroys active runtime bindings and timers.
+         * Safe to call multiple times.
+         */
+        destroy() {
+            window.clearTimeout(this._scrollTimeout);
+            window.clearTimeout(this._mmenuRestoreTimeout);
+            this._scrollTimeout = null;
+            this._mmenuRestoreTimeout = null;
+
+            this._teardownDesktopUserDropdownHoldOpen();
+
+            while (this._cleanupCallbacks.length > 0) {
+                const cleanup = this._cleanupCallbacks.pop();
+
+                try {
+                    cleanup();
+                } catch (e) {
+                    // Ignore teardown errors to ensure all cleanup callbacks are attempted.
+                }
+            }
+
+            this._viewportListenerBound = false;
+            this._mmenuLinksHandlerBound = false;
+            this._initialized = false;
+        }
+
+        /**
+         * Registers a cleanup callback that is executed during destroy().
+         *
+         * @param {Function} cleanup - Cleanup function.
+         */
+        _addCleanup(cleanup) {
+            if (typeof cleanup === 'function') {
+                this._cleanupCallbacks.push(cleanup);
+            }
+        }
+
+        /**
+         * Creates media query listeners from centralized definitions.
+         *
+         * @returns {{small: MediaQueryList, narrow: MediaQueryList, mobile: MediaQueryList, tablet: MediaQueryList, uiDesktop: MediaQueryList}}
+         */
+        _createViewportQueries() {
+            return Object.entries(VIEWPORT_QUERY_DEFINITIONS).reduce((queries, [key, query]) => {
+                queries[key] = window.matchMedia(query);
+                return queries;
+            }, {});
+        }
+
+        /**
          * Log an error message to the console with a given key.
          *
          * @param {string} messageKey - The key of the error message to be logged.
@@ -144,14 +208,14 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            this.backToTopPosition = Number(tmpl.backToTopPosition ?? 100);
+            this.backToTopPosition = this._toNumber(tmpl.backToTopPosition, 100);
 
             // Prefer DB param, fallback to the anchor href (single source of truth stays the markup/db).
             const hrefTarget = this.backToTopButton.getAttribute('href') || '';
             this.backToTopTargetSelector = tmpl.backToTopTargetSelector || hrefTarget || 'body';
 
             this._checkScrollPos();
-            window.addEventListener('scroll', this._onScroll, { passive: true });
+            this._listen(window, 'scroll', this._onScroll, { passive: true });
 
             this._on('click', this.backToTopButton, (ev) => {
                 ev.preventDefault();
@@ -201,24 +265,19 @@ window.CopyMyPage = window.CopyMyPage || {};
         /**
          * Returns the current viewport state based on UIkit breakpoints.
          *
-         * @returns {{name: string, mobile: boolean, narrow: boolean, small: boolean, tablet: boolean, desktop: boolean}}
+         * @returns {{name: string, mobile: boolean, narrow: boolean, small: boolean, tablet: boolean, desktop: boolean, uiDesktop: boolean}}
          */
         _getViewportState() {
-            const small   = this._viewportQueries.small.matches;
-            const tablet  = this._viewportQueries.tablet.matches;
-            const mobile  = this._viewportQueries.mobile.matches;
-            const narrow  = this._viewportQueries.narrow.matches;
-            const desktop = !mobile;
+            const small = this._viewportQueries.small.matches;
+            const tablet = this._viewportQueries.tablet.matches;
+            const mobile = this._viewportQueries.mobile.matches;
+            const narrow = this._viewportQueries.narrow.matches;
+            const uiDesktop = this._viewportQueries.uiDesktop.matches;
+            const desktop = !small && !narrow && !mobile && !tablet;
 
-            const name = small
-                ? 'small'
-                : tablet
-                    ? 'tablet'
-                    : mobile
-                        ? 'mobile'
-                        : 'desktop';
+            const name = this._resolveViewportName({ small, narrow, mobile, tablet });
 
-            return { name, mobile, narrow, small, tablet, desktop };
+            return { name, mobile, narrow, small, tablet, desktop, uiDesktop };
         }
 
         /**
@@ -230,13 +289,8 @@ window.CopyMyPage = window.CopyMyPage || {};
             }
 
             const viewport = this._getViewportState();
-            document.body.classList.remove('is-small', 'is-tablet', 'is-mobile', 'is-desktop', 'is-narrow');
+            document.body.classList.remove(...VIEWPORT_BODY_CLASSES);
             document.body.classList.add(`is-${viewport.name}`);
-            document.body.classList.toggle('is-mobile', viewport.mobile);
-            document.body.classList.toggle('is-narrow', viewport.narrow);
-            document.body.classList.toggle('is-small', viewport.small);
-            document.body.classList.toggle('is-tablet', viewport.tablet);
-            document.body.classList.toggle('is-desktop', viewport.desktop);
         }
 
         /**
@@ -271,13 +325,18 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             for (const query of queries) {
                 if (typeof query.addEventListener === 'function') {
-                    query.addEventListener('change', this._onViewportChange);
+                    this._listen(query, 'change', this._onViewportChange);
                     continue;
                 }
 
                 // Legacy fallback without deprecated addListener API.
                 if ('onchange' in query) {
                     query.onchange = this._onViewportChange;
+                    this._addCleanup(() => {
+                        if (query.onchange === this._onViewportChange) {
+                            query.onchange = null;
+                        }
+                    });
                 }
             }
         }
@@ -303,9 +362,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            const enabled = opt.userDropdownHoldOpenEnabled === true
-                || opt.userDropdownHoldOpenEnabled === 1
-                || opt.userDropdownHoldOpenEnabled === '1';
+            const enabled = this._toBool(opt.userDropdownHoldOpenEnabled);
 
             if (!enabled) {
                 this._teardownDesktopUserDropdownHoldOpen();
@@ -314,7 +371,7 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             const viewport = this._getViewportState();
 
-            if (!viewport.desktop) {
+            if (!viewport.uiDesktop) {
                 this._teardownDesktopUserDropdownHoldOpen();
                 return;
             }
@@ -324,11 +381,9 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            const closeDelay = parseInt(opt.userDropdownCloseDelay, 10) || 180;
+            const closeDelay = this._toInteger(opt.userDropdownCloseDelay, 180);
 
-            const closeOnNavClick = opt.userDropdownCloseOnNavClick === true
-                || opt.userDropdownCloseOnNavClick === 1
-                || opt.userDropdownCloseOnNavClick === '1';
+            const closeOnNavClick = this._toBool(opt.userDropdownCloseOnNavClick);
 
             // Selector hooks (DB-backed).
             const selectors = {
@@ -501,7 +556,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                 }, 3000);
             };
 
-            offcanvas.addEventListener('click', (ev) => {
+            const onOffcanvasClick = (ev) => {
                 const link = ev.target?.closest?.('a[href*="#"]');
 
                 if (!link || !offcanvas.contains(link)) {
@@ -557,7 +612,91 @@ window.CopyMyPage = window.CopyMyPage || {};
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
                 observeTarget(target);
+            };
+
+            this._listen(offcanvas, 'click', onOffcanvasClick);
+            this._addCleanup(() => {
+                cleanupObservedTarget();
+                mmenuObserver.disconnect();
+                this._mmenuLinksHandlerBound = false;
             });
+        }
+
+        /**
+         * Resolves the current viewport name by priority.
+         *
+         * @param {{small: boolean, narrow: boolean, mobile: boolean, tablet: boolean}} viewport
+         * @returns {string}
+         */
+        _resolveViewportName(viewport) {
+            if (viewport.small) {
+                return 'small';
+            }
+
+            if (viewport.narrow) {
+                return 'narrow';
+            }
+
+            if (viewport.mobile) {
+                return 'mobile';
+            }
+
+            if (viewport.tablet) {
+                return 'tablet';
+            }
+
+            return 'desktop';
+        }
+
+        /**
+         * Normalizes common truthy config values (true/1/"1").
+         *
+         * @param {unknown} value - Value to normalize.
+         * @returns {boolean}
+         */
+        _toBool(value) {
+            return value === true || value === 1 || value === '1';
+        }
+
+        /**
+         * Parses integer-like config values and falls back on invalid/0.
+         * Mirrors legacy `parseInt(value, 10) || fallback` behavior.
+         *
+         * @param {unknown} value - Value to parse.
+         * @param {number} fallback - Fallback value.
+         * @returns {number}
+         */
+        _toInteger(value, fallback) {
+            return Number.parseInt(value, 10) || fallback;
+        }
+
+        /**
+         * Parses number-like config values and falls back on null/undefined.
+         * Mirrors legacy `Number(value ?? fallback)` behavior.
+         *
+         * @param {unknown} value - Value to parse.
+         * @param {number} fallback - Fallback value.
+         * @returns {number}
+         */
+        _toNumber(value, fallback) {
+            return Number(value ?? fallback);
+        }
+
+        /**
+         * Adds an event listener and auto-registers its removal for destroy().
+         *
+         * @param {EventTarget} target - Event target.
+         * @param {string} type - Event type.
+         * @param {Function} listener - Event callback.
+         * @param {boolean|AddEventListenerOptions} [options] - Listener options.
+         */
+        _listen(target, type, listener, options) {
+            if (!target || typeof target.addEventListener !== 'function' || typeof listener !== 'function') {
+                return;
+            }
+
+            target.addEventListener(type, listener, options);
+            this._addCleanup(() => target.removeEventListener(type, listener, options));
         }
 
         /**
@@ -575,7 +714,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            selectEl.addEventListener(type, listener);
+            this._listen(selectEl, type, listener);
         }
 
         /**

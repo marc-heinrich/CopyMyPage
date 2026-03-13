@@ -22,7 +22,8 @@
         "uikit",
         "joomla.fontawesome",
         "mmenu.light",
-        "template.fonts"
+        "template.fonts",
+        "webcomponent.joomla-alert"
       ]
     },
     {

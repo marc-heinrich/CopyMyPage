@@ -77,8 +77,28 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
     {
         return "
             if (typeof window.CopyMyPage !== 'undefined') {
+                const destroyCopyMyPage = function() {
+                    if (window.__copyMyPageInstance && typeof window.__copyMyPageInstance.destroy === 'function') {
+                        window.__copyMyPageInstance.destroy();
+                    }
+                };
+
+                // Ensure re-inits (e.g. partial page updates) do not leak listeners.
+                destroyCopyMyPage();
+
                 const copyMyPage = new window.CopyMyPage($jsonParams);
                 copyMyPage.init();
+                window.__copyMyPageInstance = copyMyPage;
+
+                // Bind lifecycle hooks once.
+                if (!window.__copyMyPageLifecycleBound) {
+                    window.addEventListener('beforeunload', destroyCopyMyPage);
+                    window.addEventListener('pagehide', destroyCopyMyPage);
+                    document.addEventListener('turbo:before-cache', destroyCopyMyPage);
+                    document.addEventListener('pjax:beforeReplace', destroyCopyMyPage);
+                    document.addEventListener('copymypage:destroy', destroyCopyMyPage);
+                    window.__copyMyPageLifecycleBound = true;
+                }
             } else {
                 console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'CopyMyPage'));
             }
