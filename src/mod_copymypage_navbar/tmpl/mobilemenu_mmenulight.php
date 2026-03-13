@@ -26,16 +26,18 @@ if ($navOffcanvasId === '') {
     return;
 }
 
-// Register mmenu-light width CSS variables.
-$ocdWidth    = CopyMyPageHelper::cfgCssLength($cfg, 'mmenuLightOcdWidth', '80%', true);
-$ocdMinWidth = CopyMyPageHelper::cfgCssLength($cfg, 'mmenuLightOcdMinWidth', '200px');
-$ocdMaxWidth = CopyMyPageHelper::cfgCssLength($cfg, 'mmenuLightOcdMaxWidth', '440px');
+// Register mmenu-light sizing CSS variables.
+$itemHeight  = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightItemHeight', 50, 0) . 'px';
+$ocdWidth    = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdWidth', 80, 0) . '%';
+$ocdMinWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMinWidth', 200, 0) . 'px';
+$ocdMaxWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMaxWidth', 440, 0) . 'px';
 
 /** @var Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $app->getDocument()->getWebAssetManager();
 $wa->addInlineStyle(
     ":root {\n"
     . "    /* mmenu-light tokens */\n"
+    . "    --mm-spn-item-height: {$itemHeight};\n"
     . "    --mm-ocd-width: {$ocdWidth};\n"
     . "    --mm-ocd-min-width: {$ocdMinWidth};\n"
     . "    --mm-ocd-max-width: {$ocdMaxWidth};\n"

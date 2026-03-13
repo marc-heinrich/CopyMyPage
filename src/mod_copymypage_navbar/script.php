@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.5
  */
 
 \defined('_JEXEC') or die;
@@ -185,6 +185,15 @@ return new class () implements ServiceProviderInterface
                         // Soft warning only: the extension may still be usable without the auto-menu bootstrap.
                         $app->enqueueMessage(
                             Text::sprintf('CopyMyPage menu setup failed: %s', $e->getMessage()),
+                            'warning'
+                        );
+                    }
+
+                    try {
+                        $this->normalizeNavbarModuleParams($db);
+                    } catch (\Throwable $e) {
+                        $app->enqueueMessage(
+                            Text::sprintf('CopyMyPage navbar param normalization failed: %s', $e->getMessage()),
                             'warning'
                         );
                     }
@@ -606,6 +615,83 @@ return new class () implements ServiceProviderInterface
                     $db->setQuery($query);
 
                     return (int) $db->loadResult();
+                }
+
+                /**
+                 * Normalize stored navbar module params so numeric fields no longer persist CSS units.
+                 */
+                private function normalizeNavbarModuleParams(DatabaseInterface $db): void
+                {
+                    $module = 'mod_copymypage_navbar';
+
+                    $query = $db->getQuery(true)
+                        ->select([$db->quoteName('id'), $db->quoteName('params')])
+                        ->from($db->quoteName('#__modules'))
+                        ->where($db->quoteName('module') . ' = :module')
+                        ->bind(':module', $module, ParameterType::STRING);
+
+                    $db->setQuery($query);
+                    $rows = (array) $db->loadObjectList();
+
+                    foreach ($rows as $row) {
+                        $params = json_decode((string) ($row->params ?? ''), true);
+
+                        if (!\is_array($params)) {
+                            $params = [];
+                        }
+
+                        $normalized = $params;
+                        $normalized['mmenuLightItemHeight']   = $this->extractNumericParam($params['mmenuLightItemHeight'] ?? null, 50);
+                        $normalized['mmenuLightOcdWidth']     = $this->extractNumericParam($params['mmenuLightOcdWidth'] ?? null, 80);
+                        $normalized['mmenuLightOcdMinWidth']  = $this->extractNumericParam($params['mmenuLightOcdMinWidth'] ?? null, 200);
+                        $normalized['mmenuLightOcdMaxWidth']  = $this->extractNumericParam($params['mmenuLightOcdMaxWidth'] ?? null, 440);
+                        $normalized['userDropdownCloseDelay'] = $this->extractNumericParam($params['userDropdownCloseDelay'] ?? null, 180);
+
+                        if ($normalized === $params) {
+                            continue;
+                        }
+
+                        $encodedParams = json_encode($normalized, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+                        if (!\is_string($encodedParams)) {
+                            throw new \RuntimeException('Failed to encode normalized navbar module params.');
+                        }
+
+                        $update = $db->getQuery(true)
+                            ->update($db->quoteName('#__modules'))
+                            ->set($db->quoteName('params') . ' = :params')
+                            ->where($db->quoteName('id') . ' = :id')
+                            ->bind(':params', $encodedParams, ParameterType::STRING)
+                            ->bind(':id', (int) $row->id, ParameterType::INTEGER);
+
+                        $db->setQuery($update)->execute();
+                    }
+                }
+
+                /**
+                 * Extract the numeric portion from an integer-like setting, tolerating legacy unit suffixes.
+                 */
+                private function extractNumericParam(mixed $value, int $default, int $min = 0, ?int $max = null): int
+                {
+                    if (\is_int($value)) {
+                        $number = $value;
+                    } elseif (\is_numeric($value)) {
+                        $number = (int) $value;
+                    } elseif (\is_string($value) && preg_match('/^-?\d+(?:\.\d+)?/', trim($value), $matches) === 1) {
+                        $number = (int) $matches[0];
+                    } else {
+                        $number = $default;
+                    }
+
+                    if ($number < $min) {
+                        $number = $min;
+                    }
+
+                    if ($max !== null && $number > $max) {
+                        $number = $max;
+                    }
+
+                    return $number;
                 }
             }
         );

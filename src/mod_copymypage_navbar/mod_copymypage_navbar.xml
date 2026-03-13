@@ -49,7 +49,7 @@
       <fieldset name="mmenu_light_global" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_GLOBAL">
         <!-- Plugin option -->
         <field name="mmenuLightMediaQuery" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_MEDIAQUERY_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_MEDIAQUERY_DESC" default="all"/>
-        <!-- navigation() options -->
+        <!-- Navigation options -->
         <field name="mmenuLightSelectedClass" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_SELECTED_CLASS_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_SELECTED_CLASS_DESC" default="Selected" filter="cmd"/>
         <field name="mmenuLightSlidingSubmenus" type="radio" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_SLIDING_SUBMENUS_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_SLIDING_SUBMENUS_DESC" default="1" class="btn-group btn-group-yesno">
           <option value="1">JYES</option>
@@ -65,10 +65,10 @@
           <option value="0">JNO</option>
         </field>
         <!-- Optional: CSS variables from docs (advanced styling) -->
-        <field name="mmenuLightItemHeight" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_ITEM_HEIGHT_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_ITEM_HEIGHT_DESC" default="50px" filter="string"/>
-        <field name="mmenuLightOcdWidth" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_WIDTH_DESC" default="80%" filter="string" validate="regex" validate_regex="^\d+(?:\.\d+)?(?:%|px|rem|em|vw|vh|vmin|vmax)?$"/>
-        <field name="mmenuLightOcdMinWidth" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MIN_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MIN_WIDTH_DESC" default="200px" filter="string" validate="regex" validate_regex="^\d+(?:\.\d+)?(?:px|rem|em|vw|vh|vmin|vmax)?$"/>
-        <field name="mmenuLightOcdMaxWidth" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_DESC" default="440px" filter="string" validate="regex" validate_regex="^\d+(?:\.\d+)?(?:px|rem|em|vw|vh|vmin|vmax)?$"/>
+        <field name="mmenuLightItemHeight" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_ITEM_HEIGHT_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_ITEM_HEIGHT_DESC" default="50" hint="50" min="0"/>
+        <field name="mmenuLightOcdWidth" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_WIDTH_DESC" default="80" hint="80" min="0"/>
+        <field name="mmenuLightOcdMinWidth" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MIN_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MIN_WIDTH_DESC" default="200" hint="200" min="0"/>
+        <field name="mmenuLightOcdMaxWidth" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_DESC" default="440" hint="440" min="0"/>
       </fieldset>
       <!-- NAV offcanvas -->
       <fieldset name="mmenu_light_nav" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_NAV">
@@ -100,7 +100,7 @@
           <option value="1">JYES</option>
           <option value="0">JNO</option>
         </field>
-        <field name="userDropdownCloseDelay" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_DELAY_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_DELAY_DESC" default="180" min="0"/>
+        <field name="userDropdownCloseDelay" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_DELAY_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_DELAY_DESC" default="180" hint="180" min="0"/>
         <field name="userDropdownCloseOnNavClick" type="radio" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_ON_NAV_CLICK_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_CLOSE_ON_NAV_CLICK_DESC" default="1" class="btn-group btn-group-yesno">
           <option value="1">JYES</option>
           <option value="0">JNO</option>

@@ -102,6 +102,9 @@ abstract class CopyMyPageHelper
             $int = $value;
         } elseif (\is_numeric($value)) {
             $int = (int) $value;
+        } elseif (\is_string($value) && preg_match('/^-?\d+(?:\.\d+)?/', trim($value), $matches) === 1) {
+            // Accept legacy stored values like "50px" or "80%" and normalize them to integers.
+            $int = (int) $matches[0];
         } else {
             $int = $default;
         }
