@@ -618,7 +618,7 @@ return new class () implements ServiceProviderInterface
                 }
 
                 /**
-                 * Normalize stored navbar module params so numeric fields no longer persist CSS units.
+                 * Normalize stored navbar module params so obsolete variants and numeric fields are cleaned up.
                  */
                 private function normalizeNavbarModuleParams(DatabaseInterface $db): void
                 {
@@ -641,6 +641,7 @@ return new class () implements ServiceProviderInterface
                         }
 
                         $normalized = $params;
+                        $normalized['layoutVariant']          = $this->normalizeLayoutVariant($params['layoutVariant'] ?? null);
                         $normalized['mmenuLightItemHeight']   = $this->extractNumericParam($params['mmenuLightItemHeight'] ?? null, 50);
                         $normalized['mmenuLightOcdWidth']     = $this->extractNumericParam($params['mmenuLightOcdWidth'] ?? null, 80);
                         $normalized['mmenuLightOcdMinWidth']  = $this->extractNumericParam($params['mmenuLightOcdMinWidth'] ?? null, 200);
@@ -666,6 +667,23 @@ return new class () implements ServiceProviderInterface
 
                         $db->setQuery($update)->execute();
                     }
+                }
+
+                /**
+                 * Normalize deprecated or missing layout variants to supported values.
+                 */
+                private function normalizeLayoutVariant(mixed $value): string
+                {
+                    $variant = \is_string($value) ? strtolower(trim($value)) : '';
+
+                    return match ($variant) {
+                        'navbar_bootstrap' => 'navbar_uikit',
+                        'navbar_uikit',
+                        'mobilemenu_mmenulight',
+                        'mobilemenu_uikit',
+                        'default' => $variant,
+                        default => 'default',
+                    };
                 }
 
                 /**

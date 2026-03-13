@@ -31,7 +31,6 @@
           <!-- Divider: Navbar -->
           <option value="" disabled="disabled">──────── Navbar ────────</option>
           <option value="navbar_uikit">UIkit</option>
-          <option value="navbar_bootstrap">Bootstrap</option>
           <!-- Divider: Mobile menu -->
           <option value="" disabled="disabled">────── Mobile menu ──────</option>
           <option value="mobilemenu_mmenulight">MmenuLight</option>
