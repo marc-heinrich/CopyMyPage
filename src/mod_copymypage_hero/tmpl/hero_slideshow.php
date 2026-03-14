@@ -15,7 +15,7 @@
 /** @var string $slideshowOptions */
 /** @var string $moduleclass_sfx */
 
-$moduleClass = 'cmp-module cmp-module--hero';
+$moduleClass = 'cmp-module cmp-module--hero cmp-module--hero-slideshow';
 
 if (!empty($moduleclass_sfx)) {
     $moduleClass .= ' ' . $moduleclass_sfx;
