@@ -658,12 +658,14 @@ return new class () implements ServiceProviderInterface
                             throw new \RuntimeException('Failed to encode normalized navbar module params.');
                         }
 
+                        $moduleId = (int) ($row->id ?? 0);
+
                         $update = $db->getQuery(true)
                             ->update($db->quoteName('#__modules'))
                             ->set($db->quoteName('params') . ' = :params')
                             ->where($db->quoteName('id') . ' = :id')
                             ->bind(':params', $encodedParams, ParameterType::STRING)
-                            ->bind(':id', (int) $row->id, ParameterType::INTEGER);
+                            ->bind(':id', $moduleId, ParameterType::INTEGER);
 
                         $db->setQuery($update)->execute();
                     }
