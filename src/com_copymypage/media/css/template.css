@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.6
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -872,6 +872,28 @@ body.no-onepage .cmp-section--component {
 
 /* Slideshow
    -------------------------------------------------------------------------- */
+
+.cmp-module--hero-slideshow .uk-position-relative[uk-slideshow],
+.cmp-module--hero-slideshow .uk-slideshow-items {
+    min-height: 100vh;
+    min-height: 100svh;
+}
+
+.cmp-module--hero-slideshow .uk-slideshow-items {
+    margin: 0;
+    padding: 0;
+}
+
+.cmp-module--hero-slideshow .uk-slideshow-items > li {
+    min-height: inherit;
+}
+
+.cmp-module--hero-slideshow .uk-slideshow-items > li > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 
 .cmp-module--hero-slideshow .uk-position-center {
     padding: 2rem;

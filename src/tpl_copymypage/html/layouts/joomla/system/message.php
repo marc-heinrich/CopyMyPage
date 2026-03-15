@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.6
  */
 
 defined('_JEXEC') or die;
@@ -29,6 +29,10 @@ $alert     = [
     CMSApplication::MSG_MESSAGE   => 'success'
 ];
 
+if (!is_array($msgList) || empty($msgList)) {
+    return;
+}
+
 // Load JavaScript message titles.
 Text::script('ERROR');
 Text::script('MESSAGE');
@@ -44,33 +48,31 @@ Text::script('JYES');
 Text::script('JNO');
 Text::script('JGLOBAL_VALIDATION_FORM_FAILED');
 
-// Alerts progressive enhancement.
+// Load message assets only when there is actual message content to enhance.
 $document->getWebAssetManager()
     ->useStyle('webcomponent.joomla-alert')
     ->useScript('messages')
     ->useScript('copymypage.modal.dialogs');
 
-if (is_array($msgList) && !empty($msgList)) {
-    $messages = [];
+$messages = [];
 
-    foreach ($msgList as $type => $msgs) {
-        // JS loaded messages.
-        $messages[] = [$alert[$type] ?? $type => $msgs];
-        // Noscript fallback.
-        if (!empty($msgs)) {
-            $msgOutput .= '<div class="alert alert-' . ($alert[$type] ?? $type) . '">';
-            foreach ($msgs as $msg) :
-                $msgOutput .= $msg;
-            endforeach;
-            $msgOutput .= '</div>';
-        }
+foreach ($msgList as $type => $msgs) {
+    // JS loaded messages.
+    $messages[] = [$alert[$type] ?? $type => $msgs];
+    // Noscript fallback.
+    if (!empty($msgs)) {
+        $msgOutput .= '<div class="alert alert-' . ($alert[$type] ?? $type) . '">';
+        foreach ($msgs as $msg) :
+            $msgOutput .= $msg;
+        endforeach;
+        $msgOutput .= '</div>';
     }
-
-    if ($msgOutput !== '') {
-        $msgOutput = '<noscript>' . $msgOutput . '</noscript>';
-    }
-
-    $document->addScriptOptions('joomla.messages', $messages);
 }
+
+if ($msgOutput !== '') {
+    $msgOutput = '<noscript>' . $msgOutput . '</noscript>';
+}
+
+$document->addScriptOptions('joomla.messages', $messages);
 ?>
 <div id="system-message-container" aria-live="polite"><?php echo $msgOutput; ?></div>

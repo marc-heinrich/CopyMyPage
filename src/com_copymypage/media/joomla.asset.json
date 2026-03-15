@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "assets": [
@@ -16,14 +16,12 @@
     {
       "name": "template",
       "type": "style",
-      "uri": "com_copymypage/template.css",
-      "version": "0.0.5",
+      "uri": "com_copymypage/template.min.css",
+      "version": "0.0.6",
       "dependencies": [
         "uikit",
-        "joomla.fontawesome",
         "mmenu.light",
-        "template.fonts",
-        "webcomponent.joomla-alert"
+        "template.fonts"
       ]
     },
     {
@@ -34,17 +32,15 @@
     {
       "name": "copymypage",
       "type": "script",
-      "uri": "com_copymypage/copymypage.js",
-      "version": "0.0.5",
+      "uri": "com_copymypage/copymypage.min.js",
+      "version": "0.0.6",
       "class": "CopyMyPageAssetItem",
       "dependencies": [
         "core",
-        "messages",
         "uikit",
         "uikit.icons",
         "mmenu.light",
-        "mburger",
-        "copymypage.formcheck"
+        "mburger"
       ],
       "attributes": {
         "defer": true
@@ -53,8 +49,8 @@
     {
       "name": "copymypage.modal.dialog",
       "type": "script",
-      "uri": "com_copymypage/copymypage-dialog.js",
-      "version": "0.0.5",
+      "uri": "com_copymypage/copymypage-dialog.min.js",
+      "version": "0.0.6",
       "dependencies": [
         "core",
         "uikit"
@@ -66,8 +62,8 @@
     {
       "name": "copymypage.modal.alert",
       "type": "script",
-      "uri": "com_copymypage/copymypage-alert.js",
-      "version": "0.0.5",
+      "uri": "com_copymypage/copymypage-alert.min.js",
+      "version": "0.0.6",
       "dependencies": [
         "core",
         "uikit",
@@ -80,8 +76,8 @@
     {
       "name": "copymypage.modal.confirm",
       "type": "script",
-      "uri": "com_copymypage/copymypage-confirm.js",
-      "version": "0.0.5",
+      "uri": "com_copymypage/copymypage-confirm.min.js",
+      "version": "0.0.6",
       "dependencies": [
         "core",
         "uikit",
@@ -94,8 +90,8 @@
     {
       "name": "copymypage.modal.prompt",
       "type": "script",
-      "uri": "com_copymypage/copymypage-prompt.js",
-      "version": "0.0.5",
+      "uri": "com_copymypage/copymypage-prompt.min.js",
+      "version": "0.0.6",
       "dependencies": [
         "core",
         "uikit",
@@ -108,8 +104,8 @@
     {
       "name": "copymypage.modal.dialogs",
       "type": "script",
-      "uri": "com_copymypage/copymypage-modal-dialogs.js",
-      "version": "0.0.5",
+      "uri": "com_copymypage/copymypage-modal-dialogs.min.js",
+      "version": "0.0.6",
       "dependencies": [
         "core",
         "messages",
@@ -131,24 +127,10 @@
       ]
     },
     {
-      "name": "copymypage.formcheck",
-      "type": "script",
-      "uri": "com_copymypage/copymypage-formcheck.js",
-      "version": "0.0.5",
-      "dependencies": [
-        "core",
-        "form.validate",
-        "copymypage.modal.dialogs"
-      ],
-      "attributes": {
-        "defer": true
-      }
-    },
-    {
       "name": "copymypage.modal.dev",
       "type": "script",
-      "uri": "com_copymypage/dev/copymypage-modal-dev.js",
-      "version": "0.0.5",
+      "uri": "com_copymypage/dev/copymypage-modal-dev.min.js",
+      "version": "0.0.6",
       "dependencies": [
         "core",
         "copymypage.modal.dialogs"
