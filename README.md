@@ -27,3 +27,12 @@ The entire project will remain **always free**, with the possibility to make **i
 
 **Reach and Multilingualism:**  
 The reach of the **snowball system** is **far-reaching**. Through **multilingualism** 🇩🇪🇮🇹🇪🇸, not only small businesses and associations in Germany can benefit, but also, for example, a **painter in Italy** or an **association in Spain**.
+## Deployment Files
+
+Apache deployment files that belong to the project but are not shipped inside the Joomla package are stored in `deployment/apache/`.
+
+Current example:
+
+- `deployment/apache/.htaccess`
+
+This file is intended to be uploaded manually to the Joomla web root during deployment.
