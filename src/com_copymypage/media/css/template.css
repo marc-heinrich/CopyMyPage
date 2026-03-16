@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.6
+ * @since       0.0.7
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -26,13 +26,19 @@
     --cmp-font-family-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif,
         "Apple Color Emoji", "Segoe UI Emoji";
 
-    --cmp-font-family-body: "Mona Sans", var(--cmp-font-family-system);
+    --cmp-font-family-google-mona-sans: "Mona Sans";
+    --cmp-font-family-google-open-sans: "Open Sans";
+    --cmp-font-family-google-finger-paint: "Finger Paint";
+
+    --cmp-font-family-body: var(--cmp-font-family-google-mona-sans), var(--cmp-font-family-system);
     --cmp-font-family-ui: var(--cmp-font-family-body);
-    --cmp-font-family-display: var(--cmp-font-family-body);
+    --cmp-font-family-display: var(--cmp-font-family-google-mona-sans), var(--cmp-font-family-system);
+    --cmp-font-family-display-accent: var(--cmp-font-family-google-finger-paint), var(--cmp-font-family-system);
+    --cmp-font-family-body-alt: var(--cmp-font-family-google-open-sans), var(--cmp-font-family-system);
     --cmp-font-family-code: var(--cmp-font-family-body);
 
     --cmp-font-family-sans-serif: var(--cmp-font-family-body);
-    --cmp-font-family-sans-serif-alt: var(--cmp-font-family-body);
+    --cmp-font-family-sans-serif-alt: var(--cmp-font-family-body-alt);
 
     /* Colors */
     --cmp-color: #04cbd0;
@@ -853,11 +859,12 @@ body.no-onepage .cmp-section--component {
 }
 
 .cmp-module--hero .cmp-hero-overlay h2 {
-    font-weight: 700;
+    font-family: var(--cmp-font-family-display-accent);
+    font-weight: 400;
     font-size: var(--cmp-font-size-heading-3xl);
     line-height: 1.1;
-    letter-spacing: var(--cmp-letter-spacing-xs);
-    text-transform: uppercase;
+    letter-spacing: var(--cmp-letter-spacing);
+    text-transform: none;
     margin-bottom: var(--cmp-spacing-sm);
 }
 

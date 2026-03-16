@@ -27,10 +27,10 @@ $root    = Uri::root(true);
 $fontPath = $root . '/media/com_' . $this->template . '/css/fonts-local/';
 $logoPath = 'com_' . $this->template . '/logo/';
 
-// Preload custom font.
-$preload->preload($fontPath . 'mona-sans/mona-sans-v4-latin-regular.woff2', [
+// Preload the primary variable body font from the new local Google Fonts package.
+$preload->preload($fontPath . 'Mona_Sans/MonaSans-VariableFont_wdth,wght.ttf', [
     'as'          => 'font',
-    'type'        => 'font/woff2',
+    'type'        => 'font/ttf',
     'crossorigin' => 'anonymous',
 ]);
 

@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.6
+ * @since       0.0.7
  */
 
 namespace Joomla\Module\CopyMyPage\Hero\Site\Helper;
@@ -36,44 +36,34 @@ final class HeroHelper
 
         return [
             (object) [
-                'src'           => $basePath . '/slide-1.webp',
+                'src'           => $basePath . '/slide_1.jpg',
                 'alt'           => 'CopyMyPage hero image 1',
-                'headline'      => 'CopyMyPage Hero',
-                'subline'       => 'Default slideshow-based hero variant for the start page.',
+                'headline'      => 'Fernbreitenbach Helau',
+                'subline'       => 'Willkommen auf der Website des Fernbreiterbacher Carneval-Vereins',
                 'isLazy'        => false,
                 'fetchPriority' => 'high',
                 'width'         => 1920,
                 'height'        => 1280,
             ],
             (object) [
-                'src'           => $basePath . '/slide-2.webp',
+                'src'           => $basePath . '/slide_2.jpg',
                 'alt'           => 'CopyMyPage hero image 2',
-                'headline'      => 'Second slide',
-                'subline'       => 'Additional placeholder content for the hero slideshow.',
-                'isLazy'        => true,
-                'fetchPriority' => 'low',
-                'width'         => 1920,
-                'height'        => 1281,
-            ],
-            (object) [
-                'src'           => $basePath . '/slide-3.webp',
-                'alt'           => 'CopyMyPage hero image 3',
-                'headline'      => 'Third slide',
-                'subline'       => 'Prepared as a future-ready hero module variant foundation.',
+                'headline'      => 'Feiern, lachen, leben – Carneval verbindet!',
+                'subline'       => 'ohne',
                 'isLazy'        => true,
                 'fetchPriority' => 'low',
                 'width'         => 1920,
                 'height'        => 1280,
             ],
             (object) [
-                'src'           => $basePath . '/slide-4.webp',
-                'alt'           => 'CopyMyPage hero image 4',
-                'headline'      => 'Fourth slide',
-                'subline'       => 'Static demo slide for the first hero implementation.',
+                'src'           => $basePath . '/slide_3.jpg',
+                'alt'           => 'CopyMyPage hero image 3',
+                'headline'      => 'Junge Jecken, großer Spaß – Wir machen den Carneval von morgen!',
+                'subline'       => 'ohne',
                 'isLazy'        => true,
                 'fetchPriority' => 'low',
                 'width'         => 1920,
-                'height'        => 1440,
+                'height'        => 1280,
             ],
         ];
     }

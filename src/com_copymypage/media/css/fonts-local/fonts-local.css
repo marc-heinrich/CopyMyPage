@@ -1,7 +1,14 @@
 @charset "UTF-8";
 @font-face {
+    font-family: "Finger Paint";
+    src: url("Finger_Paint/FingerPaint-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
     font-family: "Mona Sans";
-    src: url("mona-sans/mona-sans-v4-latin-regular.woff2") format("woff2");
+    src: url("Mona_Sans/MonaSans-VariableFont_wdth,wght.ttf") format("truetype-variations");
     font-weight: 200 900;
     font-stretch: 75% 125%;
     font-style: normal;
@@ -9,9 +16,23 @@
 }
 @font-face {
     font-family: "Mona Sans";
-    src: url("mona-sans/mona-sans-v4-latin-italic.woff2") format("woff2");
+    src: url("Mona_Sans/MonaSans-Italic-VariableFont_wdth,wght.ttf") format("truetype-variations");
     font-weight: 200 900;
     font-stretch: 75% 125%;
+    font-style: italic;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Open Sans";
+    src: url("Open_Sans/OpenSans-VariableFont_wdth,wght.ttf") format("truetype-variations");
+    font-weight: 300 800;
+    font-style: normal;
+    font-display: swap;
+}
+@font-face {
+    font-family: "Open Sans";
+    src: url("Open_Sans/OpenSans-Italic-VariableFont_wdth,wght.ttf") format("truetype-variations");
+    font-weight: 300 800;
     font-style: italic;
     font-display: swap;
 }
