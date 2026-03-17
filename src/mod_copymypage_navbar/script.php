@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.7
  */
 
 \defined('_JEXEC') or die;
@@ -85,7 +85,7 @@ return new class () implements ServiceProviderInterface
                  */
                 public function install(InstallerAdapter $adapter): bool
                 {
-                    // We create menu items in postflight() so the environment is fully ready.
+                    // We create the initial menu structure in postflight() once the environment is fully ready.
                     return true;
                 }
 
@@ -94,7 +94,7 @@ return new class () implements ServiceProviderInterface
                  */
                 public function update(InstallerAdapter $adapter): bool
                 {
-                    // We create/ensure menu items in postflight() to keep the logic unified.
+                    // Intentionally no-op: updates must not rebuild or alter user-managed menu structures.
                     return true;
                 }
 
@@ -150,43 +150,54 @@ return new class () implements ServiceProviderInterface
 
                     $db = Factory::getContainer()->get(DatabaseInterface::class);
 
-                    // Ensure the component exists so we can safely create the component menu item.
-                    $componentId = $this->getExtensionId($db, 'component', 'com_copymypage');
-
-                    if ($componentId === 0) {
-                        $app->enqueueMessage('CopyMyPage menu setup skipped: com_copymypage is not installed.', 'warning');
-
-                        return true;
-                    }
-
-                    try {
-                        // 1) Ensure menu type exists.
-                        $this->ensureMenuType($db);
-
-                        // 2) Ensure the hidden component entry exists.
-                        $this->ensureHomeMenuItem($db, $componentId);
-
-                        // 3) Ensure the onepage anchor items exist (language-specific).
+                    if ($type === 'install') {
+                        // Initial menu bootstrap belongs to first install only.
+                        // Updates must never interfere with user-managed menu structures.
                         $language = $this->getDefaultSiteLanguage();
 
-                        $this->ensureAnchorMenuItem($db, $language, 'Home', 'hero', '#hero');
-                        $this->ensureAnchorMenuItem($db, $language, 'Galerie', 'gallery', '#gallery');
-                        $this->ensureAnchorMenuItem($db, $language, 'Team', 'team', '#team');
-                        $this->ensureAnchorMenuItem($db, $language, 'Kontakt', 'contact', '#contact');
+                        if ($this->menuTypeExists($db)) {
+                            $app->enqueueMessage(
+                                'CopyMyPage menu setup skipped: menu type "copymypage" already exists.',
+                                'message'
+                            );
+                        } else {
+                            // Ensure the component exists so we can safely create the component menu item.
+                            $componentId = $this->getExtensionId($db, 'component', 'com_copymypage');
 
-                        // 4) Optional demo structure: unpublished menu heading + 3 unpublished children.
-                        // This is useful for testing dropdown/nesting output later.
-                        $headingId = $this->ensureHeadingMenuItem($db, 'Heading', self::DEMO_HEADING_ALIAS, '*');
+                            if ($componentId === 0) {
+                                $app->enqueueMessage('CopyMyPage menu setup skipped: com_copymypage is not installed.', 'warning');
 
-                        $this->ensureChildUrlMenuItem($db, $headingId, 'Sub-Item 1', 'sub-item-1', '#', '*');
-                        $this->ensureChildUrlMenuItem($db, $headingId, 'Sub-Item 2', 'sub-item-2', '#', '*');
-                        $this->ensureChildUrlMenuItem($db, $headingId, 'Sub-Item 3', 'sub-item-3', '#', '*');
-                    } catch (\Throwable $e) {
-                        // Soft warning only: the extension may still be usable without the auto-menu bootstrap.
-                        $app->enqueueMessage(
-                            Text::sprintf('CopyMyPage menu setup failed: %s', $e->getMessage()),
-                            'warning'
-                        );
+                                return true;
+                            }
+
+                            try {
+                                // 1) Ensure menu type exists.
+                                $this->ensureMenuType($db, $language);
+
+                                // 2) Ensure the hidden component entry exists.
+                                $this->ensureHomeMenuItem($db, $componentId, $language);
+
+                                // 3) Ensure the onepage anchor items exist (language-specific).
+                                $this->ensureAnchorMenuItem($db, $language, 'Menuitem 1', 'hero', '#hero');
+                                $this->ensureAnchorMenuItem($db, $language, 'Menuitem 2', 'gallery', '#gallery');
+                                $this->ensureAnchorMenuItem($db, $language, 'Menuitem 3', 'team', '#team');
+                                $this->ensureAnchorMenuItem($db, $language, 'Menuitem 4', 'contact', '#contact');
+
+                                // 4) Optional demo structure: unpublished menu heading + 3 unpublished children.
+                                // This is useful for testing dropdown/nesting output later.
+                                $headingId = $this->ensureHeadingMenuItem($db, 'Heading', self::DEMO_HEADING_ALIAS, $language);
+
+                                $this->ensureChildUrlMenuItem($db, $headingId, 'Submenuitem 1', 'sub-item-1', '#', $language);
+                                $this->ensureChildUrlMenuItem($db, $headingId, 'Submenuitem 2', 'sub-item-2', '#', $language);
+                                $this->ensureChildUrlMenuItem($db, $headingId, 'Submenuitem 3', 'sub-item-3', '#', $language);
+                            } catch (\Throwable $e) {
+                                // Soft warning only: the extension may still be usable without the auto-menu bootstrap.
+                                $app->enqueueMessage(
+                                    Text::sprintf('CopyMyPage menu setup failed: %s', $e->getMessage()),
+                                    'warning'
+                                );
+                            }
+                        }
                     }
 
                     try {
@@ -204,7 +215,7 @@ return new class () implements ServiceProviderInterface
                 /**
                  * Creates the menu type if it does not exist yet.
                  */
-                private function ensureMenuType(DatabaseInterface $db): void
+                private function ensureMenuType(DatabaseInterface $db, string $language): void
                 {
                     $app = Factory::getApplication();
 
@@ -220,8 +231,8 @@ return new class () implements ServiceProviderInterface
                     $data = [
                         'id'          => 0,
                         'menutype'    => self::MENU_TYPE,
-                        'title'       => 'CopyMyPage Menu (de-DE)',
-                        'description' => 'Das CopyMypage Main Menu for the site in language German (Germany)',
+                        'title'       => 'CopyMyPage Menu (' . $language . ')',
+                        'description' => 'CopyMyPage main menu for the site in language ' . $language,
                         'client_id'   => 0,
                     ];
 
@@ -231,9 +242,27 @@ return new class () implements ServiceProviderInterface
                 }
 
                 /**
+                 * Checks whether the dedicated CopyMyPage menu type already exists.
+                 */
+                private function menuTypeExists(DatabaseInterface $db): bool
+                {
+                    $menuType = self::MENU_TYPE;
+
+                    $query = $db->getQuery(true)
+                        ->select('COUNT(*)')
+                        ->from($db->quoteName('#__menu_types'))
+                        ->where($db->quoteName('menutype') . ' = :menutype')
+                        ->bind(':menutype', $menuType, ParameterType::STRING);
+
+                    $db->setQuery($query);
+
+                    return (int) $db->loadResult() > 0;
+                }
+
+                /**
                  * Ensures the hidden component entry exists (component router entry).
                  */
-                private function ensureHomeMenuItem(DatabaseInterface $db, int $componentId): void
+                private function ensureHomeMenuItem(DatabaseInterface $db, int $componentId, string $language): void
                 {
                     $app = Factory::getApplication();
 
@@ -242,12 +271,12 @@ return new class () implements ServiceProviderInterface
                         ->createTable('Menu', 'Administrator', ['dbo' => $db]);
 
                     // Idempotent lookup by menutype+alias+language+parent.
-                    if ($table->load(['menutype' => self::MENU_TYPE, 'alias' => self::HOME_ALIAS, 'language' => '*', 'parent_id' => 1])) {
+                    if ($table->load(['menutype' => self::MENU_TYPE, 'alias' => self::HOME_ALIAS, 'language' => $language, 'parent_id' => 1])) {
                         return;
                     }
 
-                    // Only set as global home if there isn't one already.
-                    $shouldBeHome = !$this->hasHomeForLanguage($db, '*');
+                    // Only set as home if there isn't one already for the default site language.
+                    $shouldBeHome = !$this->hasHomeForLanguage($db, $language);
 
                     $params = [
                         'menu-anchor_title'     => '',
@@ -279,7 +308,7 @@ return new class () implements ServiceProviderInterface
                         'access'       => 1,
                         'client_id'    => 0,
                         'home'         => $shouldBeHome ? 1 : 0,
-                        'language'     => '*',
+                        'language'     => $language,
                         'params'       => json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
                     ];
 
