@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "assets": [
@@ -17,7 +17,7 @@
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.min.css",
-      "version": "0.0.6",
+      "version": "0.0.7",
       "dependencies": [
         "uikit",
         "mmenu.light",
@@ -201,7 +201,7 @@
     {
       "name": "mburger",
       "type": "script",
-      "uri": "com_copymypage/mburger/index.js",
+      "uri": "com_copymypage/mburger/index.min.js",
       "version": "3.1.4",
       "attributes": {
         "type": "module"

@@ -32,7 +32,6 @@
 
     --cmp-font-family-body: var(--cmp-font-family-google-mona-sans), var(--cmp-font-family-system);
     --cmp-font-family-ui: var(--cmp-font-family-body);
-    --cmp-font-family-display: var(--cmp-font-family-google-mona-sans), var(--cmp-font-family-system);
     --cmp-font-family-display-accent: var(--cmp-font-family-google-finger-paint), var(--cmp-font-family-system);
     --cmp-font-family-body-alt: var(--cmp-font-family-google-open-sans), var(--cmp-font-family-system);
     --cmp-font-family-code: var(--cmp-font-family-body);
@@ -150,7 +149,7 @@ html {
     .uk-heading-medium, .uk-heading-small, .uk-heading-xlarge,
     h1, h2, h3, h4, h5, h6
 ) {
-    font-family: var(--cmp-font-family-display);
+    font-family: var(--cmp-font-family-body);
 }
 
 /* ==========================================================================
@@ -159,6 +158,12 @@ html {
 
 /* HEADER
    ========================================================================== */
+
+.cmp-main {
+    -webkit-hyphens: auto;
+    -ms-hyphens: auto;
+    hyphens: auto;
+}
 
 .cmp-header {
     position: absolute;
@@ -379,20 +384,20 @@ body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navb
     height: auto;
     aspect-ratio: auto;
     object-fit: contain;
-    max-height: 32px;
-    max-width: 140px;
+    max-height: 45px;
+    max-width: 126px;
 }
 
 /* Responsive logo sizing by breakpoint. */
 body.is-mobile .cmp-navbar-logo {
-    max-height: 28px;
-    max-width: 120px;
+    max-height: 39px;
+    max-width: 126px;
 }
 
 body.is-narrow .cmp-navbar-logo,
 body.is-small .cmp-navbar-logo {
-    max-height: 24px;
-    max-width: 110px;
+    max-height: 34px;
+    max-width: 126px;
 }
 
 .cmp-navbar-logo-link {
@@ -859,7 +864,7 @@ body.no-onepage .cmp-section--component {
 }
 
 .cmp-module--hero .cmp-hero-overlay h2 {
-    font-family: var(--cmp-font-family-display-accent);
+    font-family: var(--cmp-font-family-body);
     font-weight: 400;
     font-size: var(--cmp-font-size-heading-3xl);
     line-height: 1.1;
@@ -904,6 +909,14 @@ body.no-onepage .cmp-section--component {
 
 .cmp-module--hero-slideshow .uk-position-center {
     padding: 2rem;
+}
+
+.cmp-module--hero-slideshow .cmp-hero-overlay h2 {
+    font-family: var(--cmp-font-family-display-accent);
+    font-weight: 700;
+    font-size: var(--cmp-font-size-heading-4xl);
+    letter-spacing: var(--cmp-letter-spacing-xs);
+    text-shadow: 4px 4px 10px rgba(0,0,0,0.8);
 }
 
 /* Slidenav ring animation container. */

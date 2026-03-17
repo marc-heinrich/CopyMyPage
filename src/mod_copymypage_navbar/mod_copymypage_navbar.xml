@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.6</version>
+  <version>0.0.7</version>
   <!-- Short description via language constant -->
   <description>MOD_COPYMYPAGE_NAVBAR_XML_DESCRIPTION</description>
   <!-- Installer script (Service Provider aware) -->
@@ -39,7 +39,7 @@
       </fieldset>
       <!-- Navbar Settings -->
       <fieldset name="nav" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_NAV">
-        <field name="logo" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_DESC" default="media/com_copymypage/images/logo/logo-cmp-1.png"/>
+        <field name="logo" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_DESC" default="media/com_copymypage/images/logo/logo-cmp.png"/>
         <field name="navOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_NAV_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_NAV_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-nav" filter="cmd"/>
         <field name="userOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_USER_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_USER_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-user" filter="cmd"/>
         <field name="basketOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_BASKET_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_BASKET_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-basket" filter="cmd"/>
