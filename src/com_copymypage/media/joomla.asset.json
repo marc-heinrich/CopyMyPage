@@ -33,7 +33,7 @@
       "name": "copymypage",
       "type": "script",
       "uri": "com_copymypage/copymypage.min.js",
-      "version": "0.0.6",
+      "version": "0.0.7",
       "class": "CopyMyPageAssetItem",
       "dependencies": [
         "core",

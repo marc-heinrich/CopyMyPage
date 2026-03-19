@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.7
  */
 
 \defined('_JEXEC') or die;
@@ -42,6 +42,8 @@ $navOffcanvasId         = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId        = (string) ($cfg['userOffcanvasId'] ?? '');
 $basketOffcanvasId      = (string) ($cfg['basketOffcanvasId'] ?? '');
 $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userDropdownSelectorRoot'] ?? '');
+$onepageBase            = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
+$logoHref               = $isOnepage ? '#top' : $onepageBase;
 ?>
 <!-- Navbar Module Template: Desktop UIkit Framework (https://getuikit.com/docs/navbar) -->
 <div class="cmp-module <?php echo htmlspecialchars($userDropdownRootClass, ENT_QUOTES, 'UTF-8'); ?>">
@@ -70,7 +72,7 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
                             data-cmp-mmenulight-open="#<?php echo htmlspecialchars($navOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
                         ></mm-burger>
 
-                        <a class="uk-navbar-item uk-logo uk-visible@m cmp-navbar-logo-link" href="<?php echo Uri::root(); ?>">
+                        <a class="uk-navbar-item uk-logo uk-visible@m cmp-navbar-logo-link" href="<?php echo htmlspecialchars($logoHref, ENT_QUOTES, 'UTF-8'); ?>">
                             <img
                                 class="cmp-navbar-logo"
                                 src="<?php echo htmlspecialchars($logo, ENT_QUOTES, 'UTF-8'); ?>"
@@ -85,7 +87,7 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
 
                     <!-- CENTER: Desktop = Nav items, Mobile = Logo -->
                     <div class="uk-navbar-center">
-                        <a class="uk-navbar-item uk-logo uk-hidden@m cmp-navbar-logo-link" href="<?php echo Uri::root(); ?>">
+                        <a class="uk-navbar-item uk-logo uk-hidden@m cmp-navbar-logo-link" href="<?php echo htmlspecialchars($logoHref, ENT_QUOTES, 'UTF-8'); ?>">
                             <img
                                 class="cmp-navbar-logo"
                                 src="<?php echo htmlspecialchars($logo, ENT_QUOTES, 'UTF-8'); ?>"
@@ -101,8 +103,6 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
                             <?php
                             $activeId = (int) $active_id;
                             $trailIds = [];
-                            $onepageBase = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
-
                             if (isset($active->tree) && \is_array($active->tree)) {
                                 $trailIds = array_map('intval', $active->tree);
                             } else {

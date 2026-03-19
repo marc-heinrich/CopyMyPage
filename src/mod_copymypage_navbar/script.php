@@ -11,6 +11,7 @@
 
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Filter\OutputFilter;
 use Joomla\CMS\Installer\InstallerAdapter;
 use Joomla\CMS\Installer\InstallerScriptInterface;
 use Joomla\CMS\Language\Text;
@@ -63,13 +64,6 @@ return new class () implements ServiceProviderInterface
                  * @var string
                  */
                 private const HOME_ALIAS = 'placeholder';
-
-                /**
-                 * Unpublished demo heading alias.
-                 *
-                 * @var string
-                 */
-                private const DEMO_HEADING_ALIAS = 'heading';
 
                 /**
                  * Runs before install or update starts.
@@ -177,19 +171,8 @@ return new class () implements ServiceProviderInterface
                                 // 2) Ensure the hidden component entry exists.
                                 $this->ensureHomeMenuItem($db, $componentId, $language);
 
-                                // 3) Ensure the onepage anchor items exist (language-specific).
-                                $this->ensureAnchorMenuItem($db, $language, 'Menuitem 1', 'hero', '#hero');
-                                $this->ensureAnchorMenuItem($db, $language, 'Menuitem 2', 'gallery', '#gallery');
-                                $this->ensureAnchorMenuItem($db, $language, 'Menuitem 3', 'team', '#team');
-                                $this->ensureAnchorMenuItem($db, $language, 'Menuitem 4', 'contact', '#contact');
-
-                                // 4) Optional demo structure: unpublished menu heading + 3 unpublished children.
-                                // This is useful for testing dropdown/nesting output later.
-                                $headingId = $this->ensureHeadingMenuItem($db, 'Heading', self::DEMO_HEADING_ALIAS, $language);
-
-                                $this->ensureChildUrlMenuItem($db, $headingId, 'Submenuitem 1', 'sub-item-1', '#', $language);
-                                $this->ensureChildUrlMenuItem($db, $headingId, 'Submenuitem 2', 'sub-item-2', '#', $language);
-                                $this->ensureChildUrlMenuItem($db, $headingId, 'Submenuitem 3', 'sub-item-3', '#', $language);
+                                // 3) Ensure the declarative menu tree from the manifest exists.
+                                $this->bootstrapMenuItemsFromManifest($adapter, $db, $language);
                             } catch (\Throwable $e) {
                                 // Soft warning only: the extension may still be usable without the auto-menu bootstrap.
                                 $app->enqueueMessage(
@@ -329,81 +312,84 @@ return new class () implements ServiceProviderInterface
                 }
 
                 /**
-                 * Ensures a top-level anchor item exists (onepage section link).
+                 * Create the menu tree declared in the module manifest.
                  */
-                private function ensureAnchorMenuItem(
+                private function bootstrapMenuItemsFromManifest(
+                    InstallerAdapter $adapter,
                     DatabaseInterface $db,
-                    string $language,
-                    string $title,
-                    string $alias,
-                    string $link
+                    string $language
                 ): void {
-                    $app = Factory::getApplication();
+                    $manifest = $adapter->getManifest();
 
-                    $table = $app->bootComponent('com_menus')
-                        ->getMVCFactory()
-                        ->createTable('Menu', 'Administrator', ['dbo' => $db]);
-
-                    // Idempotent lookup by menutype+alias+language+parent.
-                    if ($table->load(['menutype' => self::MENU_TYPE, 'alias' => $alias, 'language' => $language, 'parent_id' => 1])) {
+                    if (!isset($manifest->menuBootstrap)) {
                         return;
                     }
 
-                    $params = [
-                        'menu-anchor_title' => '',
-                        'menu-anchor_css'   => '',
-                        'menu_icon_css'     => '',
-                        'menu-anchor_rel'   => '',
-                        'menu_image'        => '',
-                        'menu_image_css'    => '',
-                        'menu_text'         => 1,
-                        'menu_show'         => 1,
-                    ];
-
-                    $data = [
-                        'id'           => 0,
-                        'menutype'     => self::MENU_TYPE,
-                        'title'        => $title,
-                        'alias'        => $alias,
-                        'type'         => 'url',
-                        'link'         => $link,
-                        'component_id' => 0,
-                        'published'    => 1,
-                        'parent_id'    => 1,
-                        'level'        => 1,
-                        'access'       => 1,
-                        'client_id'    => 0,
-                        'home'         => 0,
-                        'language'     => $language,
-                        'params'       => json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                    ];
-
-                    if (!$table->bind($data)) {
-                        throw new \RuntimeException('Failed to bind anchor menu item: ' . $alias);
-                    }
-
-                    // Proper nested set placement.
-                    $table->setLocation(1, 'last-child');
-
-                    if (!$table->check() || !$table->store()) {
-                        throw new \RuntimeException('Failed to store anchor menu item: ' . $alias);
-                    }
-
-                    if (!$table->rebuildPath((int) $table->id)) {
-                        throw new \RuntimeException('Failed to rebuild anchor menu item path: ' . $alias);
+                    foreach ($manifest->menuBootstrap->item as $item) {
+                        $this->ensureManifestMenuItemTree($db, $item, $language, 1, 1);
                     }
                 }
 
                 /**
-                 * Ensure an unpublished "Menu Heading" item exists and return its ID.
-                 *
-                 * Menu headings are useful as non-clickable dropdown containers.
+                 * Ensure a manifest-defined menu item exists and recurse into its children.
                  */
-                private function ensureHeadingMenuItem(
+                private function ensureManifestMenuItemTree(
+                    DatabaseInterface $db,
+                    \SimpleXMLElement $item,
+                    string $language,
+                    int $parentId,
+                    int $level
+                ): void {
+                    $title = trim((string) $item['title']);
+
+                    if ($title === '') {
+                        throw new \RuntimeException('Manifest menu item is missing a title attribute.');
+                    }
+
+                    $type = strtolower(trim((string) $item['type']));
+                    $type = $type !== '' ? $type : 'url';
+                    $alias = $this->deriveMenuAliasFromTitle($title);
+
+                    if ($type === 'heading') {
+                        $link      = '';
+                        $published = $this->normalizeManifestPublishedState((string) $item['published'], 0);
+                    } elseif ($type === 'url') {
+                        $link      = '#' . $alias;
+                        $published = $this->normalizeManifestPublishedState((string) $item['published'], 1);
+                    } else {
+                        throw new \RuntimeException('Unsupported manifest menu item type: ' . $type);
+                    }
+
+                    $itemId = $this->ensureMenuItem(
+                        $db,
+                        $title,
+                        $alias,
+                        $type,
+                        $link,
+                        $language,
+                        $parentId,
+                        $level,
+                        $published
+                    );
+
+                    foreach ($item->item as $child) {
+                        $this->ensureManifestMenuItemTree($db, $child, $language, $itemId, $level + 1);
+                    }
+                }
+
+                /**
+                 * Ensure a menu item exists for the given parent and level.
+                 */
+                private function ensureMenuItem(
                     DatabaseInterface $db,
                     string $title,
                     string $alias,
-                    string $language
+                    string $type,
+                    string $link,
+                    string $language,
+                    int $parentId,
+                    int $level,
+                    int $published
                 ): int {
                     $app = Factory::getApplication();
 
@@ -411,7 +397,7 @@ return new class () implements ServiceProviderInterface
                         ->getMVCFactory()
                         ->createTable('Menu', 'Administrator', ['dbo' => $db]);
 
-                    if ($table->load(['menutype' => self::MENU_TYPE, 'alias' => $alias, 'language' => $language, 'parent_id' => 1])) {
+                    if ($table->load(['menutype' => self::MENU_TYPE, 'alias' => $alias, 'language' => $language, 'parent_id' => $parentId])) {
                         return (int) $table->id;
                     }
 
@@ -425,17 +411,21 @@ return new class () implements ServiceProviderInterface
                         'menu_show'         => 1,
                     ];
 
+                    if ($type === 'url') {
+                        $params['menu-anchor_rel'] = '';
+                    }
+
                     $data = [
                         'id'           => 0,
                         'menutype'     => self::MENU_TYPE,
                         'title'        => $title,
                         'alias'        => $alias,
-                        'type'         => 'heading',
-                        'link'         => '',
+                        'type'         => $type,
+                        'link'         => $link,
                         'component_id' => 0,
-                        'published'    => 0,
-                        'parent_id'    => 1,
-                        'level'        => 1,
+                        'published'    => $published,
+                        'parent_id'    => $parentId,
+                        'level'        => $level,
                         'access'       => 1,
                         'client_id'    => 0,
                         'home'         => 0,
@@ -444,89 +434,48 @@ return new class () implements ServiceProviderInterface
                     ];
 
                     if (!$table->bind($data)) {
-                        throw new \RuntimeException('Failed to bind menu heading item: ' . $alias);
+                        throw new \RuntimeException('Failed to bind menu item: ' . $alias);
                     }
 
-                    $table->setLocation(1, 'last-child');
+                    $table->setLocation($parentId, 'last-child');
 
                     if (!$table->check() || !$table->store()) {
-                        throw new \RuntimeException('Failed to store menu heading item: ' . $alias);
+                        throw new \RuntimeException('Failed to store menu item: ' . $alias);
                     }
 
                     if (!$table->rebuildPath((int) $table->id)) {
-                        throw new \RuntimeException('Failed to rebuild menu heading item path: ' . $alias);
+                        throw new \RuntimeException('Failed to rebuild menu item path: ' . $alias);
                     }
 
                     return (int) $table->id;
                 }
 
                 /**
-                 * Ensure an unpublished URL child item exists under a given parent.
-                 *
-                 * This demonstrates real nesting (level 2) for later dropdown/mobile menu output.
+                 * Derive a stable menu alias from the visible title.
                  */
-                private function ensureChildUrlMenuItem(
-                    DatabaseInterface $db,
-                    int $parentId,
-                    string $title,
-                    string $alias,
-                    string $link,
-                    string $language
-                ): void {
-                    $app = Factory::getApplication();
+                private function deriveMenuAliasFromTitle(string $title): string
+                {
+                    $alias = str_replace('-', '', OutputFilter::stringURLSafe($title));
 
-                    $table = $app->bootComponent('com_menus')
-                        ->getMVCFactory()
-                        ->createTable('Menu', 'Administrator', ['dbo' => $db]);
-
-                    // Idempotent lookup by menutype+alias+language+parent.
-                    if ($table->load(['menutype' => self::MENU_TYPE, 'alias' => $alias, 'language' => $language, 'parent_id' => $parentId])) {
-                        return;
+                    if ($alias === '') {
+                        throw new \RuntimeException('Failed to derive a menu alias from title: ' . $title);
                     }
 
-                    $params = [
-                        'menu-anchor_title' => '',
-                        'menu-anchor_css'   => '',
-                        'menu_icon_css'     => '',
-                        'menu-anchor_rel'   => '',
-                        'menu_image'        => '',
-                        'menu_image_css'    => '',
-                        'menu_text'         => 1,
-                        'menu_show'         => 1,
-                    ];
+                    return $alias;
+                }
 
-                    $data = [
-                        'id'           => 0,
-                        'menutype'     => self::MENU_TYPE,
-                        'title'        => $title,
-                        'alias'        => $alias,
-                        'type'         => 'url',
-                        'link'         => $link,
-                        'component_id' => 0,
-                        'published'    => 0,
-                        'parent_id'    => $parentId,
-                        'level'        => 2,
-                        'access'       => 1,
-                        'client_id'    => 0,
-                        'home'         => 0,
-                        'language'     => $language,
-                        'params'       => json_encode($params, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                    ];
+                /**
+                 * Normalize a manifest published flag to 0 or 1.
+                 */
+                private function normalizeManifestPublishedState(string $value, int $default): int
+                {
+                    $normalized = strtolower(trim($value));
 
-                    if (!$table->bind($data)) {
-                        throw new \RuntimeException('Failed to bind child menu item: ' . $alias);
+                    if ($normalized === '') {
+                        return $default;
                     }
 
-                    // Proper nested set placement (attach below the parent).
-                    $table->setLocation($parentId, 'last-child');
-
-                    if (!$table->check() || !$table->store()) {
-                        throw new \RuntimeException('Failed to store child menu item: ' . $alias);
-                    }
-
-                    if (!$table->rebuildPath((int) $table->id)) {
-                        throw new \RuntimeException('Failed to rebuild child menu item path: ' . $alias);
-                    }
+                    return \in_array($normalized, ['1', 'true', 'yes', 'on'], true) ? 1 : 0;
                 }
 
                 /**

@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.7
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -46,11 +46,13 @@ window.CopyMyPage = window.CopyMyPage || {};
             // Cached bound handlers (avoid creating a new function on every event).
             this._onScroll = this._debouncedScroll.bind(this);
             this._onViewportChange = this._handleViewportChange.bind(this);
+            this._onOnepageNavStateChange = this._scheduleOnepageNavbarTopStateSync.bind(this);
 
             // Internal timers/state.
             this._scrollTimeout = null;
             this._mmenuRestoreTimeout = null;
             this._preloaderRemovalTimeout = null;
+            this._onepageNavSyncFrame = null;
             this._mmenuLinksHandlerBound = false;
             this._initialized = false;
             this._viewportListenerBound = false;
@@ -102,9 +104,13 @@ window.CopyMyPage = window.CopyMyPage || {};
             // Fire up the features.
             this._preloader();
             this._backToTop();
+            this._bindOnepageNavbarStateObserver();
             this._handleViewportChange();
+            this._scheduleOnepageNavbarTopStateSync();
             this._bindViewportListeners();
             this._addMmenuLinksHandler();
+            this._listen(window, 'load', this._onOnepageNavStateChange);
+            this._listen(window, 'hashchange', this._onOnepageNavStateChange);
 
             if (window.CopyMyPageDialog && typeof window.CopyMyPageDialog.initSystemMessages === 'function') {
                 window.CopyMyPageDialog.initSystemMessages();
@@ -119,9 +125,11 @@ window.CopyMyPage = window.CopyMyPage || {};
             window.clearTimeout(this._scrollTimeout);
             window.clearTimeout(this._mmenuRestoreTimeout);
             window.clearTimeout(this._preloaderRemovalTimeout);
+            window.cancelAnimationFrame(this._onepageNavSyncFrame);
             this._scrollTimeout = null;
             this._mmenuRestoreTimeout = null;
             this._preloaderRemovalTimeout = null;
+            this._onepageNavSyncFrame = null;
 
             this._teardownDesktopUserDropdownHoldOpen();
 
@@ -305,7 +313,10 @@ window.CopyMyPage = window.CopyMyPage || {};
             window.clearTimeout(this._scrollTimeout);
 
             this._scrollTimeout = window.setTimeout(() => {
-                window.requestAnimationFrame(() => this._checkScrollPos());
+                window.requestAnimationFrame(() => {
+                    this._checkScrollPos();
+                    this._scheduleOnepageNavbarTopStateSync();
+                });
             }, 100);
         }
 
@@ -346,6 +357,140 @@ window.CopyMyPage = window.CopyMyPage || {};
         _handleViewportChange() {
             this._applyViewportBodyClass();
             this._desktopUserDropdownHoldOpen();
+            this._scheduleOnepageNavbarTopStateSync();
+        }
+
+        /**
+         * Coalesces onepage navbar state syncs so rapid Scrollspy mutations settle in one frame.
+         */
+        _scheduleOnepageNavbarTopStateSync() {
+            if (this._onepageNavSyncFrame !== null) {
+                return;
+            }
+
+            this._onepageNavSyncFrame = window.requestAnimationFrame(() => {
+                this._onepageNavSyncFrame = null;
+                this._syncOnepageNavbarTopState();
+            });
+        }
+
+        /**
+         * Watches ScrollspyNav class mutations so the top-state correction can run immediately.
+         */
+        _bindOnepageNavbarStateObserver() {
+            if (!document.body || !document.body.classList.contains('is-onepage')) {
+                return;
+            }
+
+            const navbar = document.querySelector('#navbar[uk-scrollspy-nav] .cmp-navbar-nav');
+
+            if (!(navbar instanceof HTMLElement)) {
+                return;
+            }
+
+            const observer = new MutationObserver((mutations) => {
+                const hasRelevantChange = mutations.some((mutation) => mutation.type === 'attributes');
+
+                if (!hasRelevantChange) {
+                    return;
+                }
+
+                this._scheduleOnepageNavbarTopStateSync();
+            });
+
+            observer.observe(navbar, {
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['class', 'aria-current'],
+            });
+
+            this._addCleanup(() => observer.disconnect());
+        }
+
+        /**
+         * Keeps the first visible onepage nav item active while the viewport is at the true page top.
+         *
+         * UIkit ScrollspyNav intentionally activates sections early (header offset + viewport threshold),
+         * which can cause the second item to win on reload when the first section is short.
+         */
+        _syncOnepageNavbarTopState() {
+            if (!document.body || !document.body.classList.contains('is-onepage')) {
+                return;
+            }
+
+            const navbar = document.querySelector('#navbar[uk-scrollspy-nav] .cmp-navbar-nav');
+
+            if (!navbar) {
+                return;
+            }
+
+            const scrollLinks = Array.from(navbar.querySelectorAll(':scope > li > a[data-cmp-scroll="1"]'));
+
+            if (scrollLinks.length === 0) {
+                return;
+            }
+
+            const firstLink = scrollLinks[0];
+            const firstItem = firstLink.closest('li');
+
+            if (!(firstItem instanceof HTMLElement)) {
+                return;
+            }
+
+            const rootStyles = getComputedStyle(document.documentElement);
+            const stickyOffset = Number.parseFloat(rootStyles.getPropertyValue('--cmp-header-offset')) || 0;
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            const secondLink = scrollLinks[1] || null;
+            const secondTargetSelector = secondLink?.getAttribute('href') || '';
+            const secondTarget = secondTargetSelector.startsWith('#')
+                ? document.querySelector(secondTargetSelector)
+                : null;
+            const secondTargetTop = secondTarget instanceof HTMLElement
+                ? secondTarget.getBoundingClientRect().top
+                : null;
+            const hasOtherActiveItem = scrollLinks.slice(1).some((link) => {
+                const item = link.closest('li');
+                return item instanceof HTMLElement && item.classList.contains('uk-active');
+            });
+            const shouldPinFirstLink = scrollY <= stickyOffset + 1
+                && (secondTargetTop === null || secondTargetTop > stickyOffset + 1);
+
+            if (shouldPinFirstLink) {
+                scrollLinks.slice(1).forEach((link) => {
+                    const item = link.closest('li');
+
+                    if (item instanceof HTMLElement) {
+                        item.classList.remove('uk-active');
+                    }
+
+                    if (link.getAttribute('aria-current') === 'page') {
+                        link.removeAttribute('aria-current');
+                    }
+                });
+
+                firstItem.classList.add('uk-active');
+
+                if (firstLink.dataset.cmpTopActive !== '1') {
+                    firstLink.dataset.cmpTopActive = '1';
+                }
+
+                if (firstLink.getAttribute('aria-current') !== 'page') {
+                    firstLink.setAttribute('aria-current', 'page');
+                    firstLink.dataset.cmpTopAriaCurrent = '1';
+                }
+
+                return;
+            }
+
+            if (firstLink.dataset.cmpTopActive === '1' && hasOtherActiveItem) {
+                firstItem.classList.remove('uk-active');
+                delete firstLink.dataset.cmpTopActive;
+            }
+
+            if (firstLink.dataset.cmpTopAriaCurrent === '1' && hasOtherActiveItem) {
+                firstLink.removeAttribute('aria-current');
+                delete firstLink.dataset.cmpTopAriaCurrent;
+            }
         }
 
         /**
