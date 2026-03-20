@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.8
  */
 
 \defined('_JEXEC') or die;
@@ -20,19 +20,10 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 $app     = Factory::getApplication();
 $input   = $app->getInput();
 $wa      = $this->getWebAssetManager();
-$preload = $this->getPreloadManager();
 $root    = Uri::root(true);
 
 // Build path variables.
-$fontPath = $root . '/media/com_' . $this->template . '/css/fonts-local/';
 $logoPath = 'com_' . $this->template . '/logo/';
-
-// Preload the primary variable body font from the new local Google Fonts package.
-$preload->preload($fontPath . 'Mona_Sans/MonaSans-VariableFont_wdth,wght.ttf', [
-    'as'          => 'font',
-    'type'        => 'font/ttf',
-    'crossorigin' => 'anonymous',
-]);
 
 // Add favicons and app manifest.
 $this->addHeadLink(

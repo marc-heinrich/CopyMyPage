@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.7
+ * @since       0.0.8
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -509,14 +509,19 @@ mm-burger.cmp-navbar-toggle:focus-visible {
         radial-gradient(circle at top, rgba(4, 203, 208, 0.18), transparent 35%),
         rgba(255, 255, 255, 0.96);
     opacity: 1;
-    visibility: visible;
-    transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+    transition: opacity 0.24s ease-out;
+    will-change: opacity;
 }
 
 .cmp-preloader.is-loaded {
     opacity: 0;
-    visibility: hidden;
     pointer-events: none;
+}
+
+@media (max-width: 959.98px) {
+    .cmp-preloader {
+        background: rgba(255, 255, 255, 0.96);
+    }
 }
 
 .cmp-preloader__content {
@@ -527,7 +532,7 @@ mm-burger.cmp-navbar-toggle:focus-visible {
 
 .cmp-preloader__text {
     margin: 0;
-    font-family: var(--cmp-font-family-ui);
+    font-family: var(--cmp-font-family-system);
     color: var(--cmp-color-logo-dark);
     font-size: var(--cmp-font-size-sm);
     font-weight: 600;

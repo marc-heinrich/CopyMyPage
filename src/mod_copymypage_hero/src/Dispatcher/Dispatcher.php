@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.8
  */
 
 namespace Joomla\Module\CopyMyPage\Hero\Site\Dispatcher;
@@ -14,7 +14,6 @@ namespace Joomla\Module\CopyMyPage\Hero\Site\Dispatcher;
 // phpcs:enable PSR1.Files.SideEffects
 
 use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
-use Joomla\CMS\Factory;
 use Joomla\CMS\Helper\HelperFactoryAwareInterface;
 use Joomla\CMS\Helper\HelperFactoryAwareTrait;
 use Joomla\CMS\Helper\ModuleHelper;
@@ -105,20 +104,6 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             : [];
         $data['slides']           = $helper->getSlides($data['module'], $data['params']);
         $data['slideshowOptions'] = $helper->getSlideshowOptions($data['module'], $data['params']);
-
-        // Preload the first (non-lazy) slide image via Joomla's PreloadManager.
-        if (!empty($data['slides'])) {
-            $firstSlide = $data['slides'][0];
-
-            if (
-                \is_object($firstSlide)
-                && !empty($firstSlide->src)
-                && (empty($firstSlide->isLazy) || $firstSlide->isLazy === false)
-            ) {
-                $preloadManager = Factory::getApplication()->getDocument()->getPreloadManager();
-                $preloadManager->preload($firstSlide->src, ['as' => 'image']);
-            }
-        }
 
         // Core-style escaping.
         $data['moduleclass_sfx'] = htmlspecialchars(

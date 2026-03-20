@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.7
+ * @since       0.0.8
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -239,15 +239,21 @@ window.CopyMyPage = window.CopyMyPage || {};
                 preloader.addEventListener('transitionend', removePreloader, { once: true });
 
                 window.clearTimeout(this._preloaderRemovalTimeout);
-                this._preloaderRemovalTimeout = window.setTimeout(removePreloader, 500);
+                this._preloaderRemovalTimeout = window.setTimeout(removePreloader, 320);
             };
 
-            if (document.readyState === 'complete') {
+            const scheduleHidePreloader = () => {
                 window.requestAnimationFrame(hidePreloader);
+            };
+
+            if (document.readyState === 'loading') {
+                this._listen(document, 'DOMContentLoaded', scheduleHidePreloader, { once: true });
+                this._listen(window, 'load', scheduleHidePreloader, { once: true });
                 return;
             }
 
-            this._listen(window, 'load', hidePreloader, { once: true });
+            scheduleHidePreloader();
+            this._listen(window, 'load', scheduleHidePreloader, { once: true });
         }
 
         /**
