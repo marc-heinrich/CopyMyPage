@@ -27,10 +27,10 @@
     <item type="url" title="Menuitem 2" published="1" />
     <item type="url" title="Menuitem 3" published="1" />
     <item type="url" title="Menuitem 4" published="1" />
-    <item type="heading" title="Heading" published="0">
-      <item type="url" title="Submenuitem 1" published="0" />
-      <item type="url" title="Submenuitem 2" published="0" />
-      <item type="url" title="Submenuitem 3" published="0" />
+    <item type="heading" title="Heading" published="1">
+      <item type="url" title="Submenuitem 1" published="1" />
+      <item type="url" title="Submenuitem 2" published="1" />
+      <item type="url" title="Submenuitem 3" published="1" />
     </item>
   </menuBootstrap>
   <!-- Module params -->
