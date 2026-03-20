@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.8
+ * @since       0.0.9
  */
 
 \defined('_JEXEC') or die;
@@ -77,6 +77,7 @@ $pageWrapperClass = CopyMyPageHelper::selectorToToken((string) $this->params->ge
 $navbarClass      = CopyMyPageHelper::selectorToToken((string) $this->params->get('navbarSelector'));
 $mobileMenuClass  = CopyMyPageHelper::selectorToToken((string) $this->params->get('mobileMenuSelector'));
 $backToTopID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopSelector'));
+$preloaderID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('preloaderSelector'));
 $mainContentID    = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopTargetSelector'));
 $headerOffset     = (int) $this->params->get('headerOffset', 80);
 
@@ -156,7 +157,7 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                         overflow: auto !important;
                     }
 
-                    #cmp-preloader {
+                    #<?php echo htmlspecialchars($preloaderID, ENT_QUOTES, 'UTF-8'); ?> {
                         display: none !important;
                     }
                 </style>
@@ -168,7 +169,7 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
         <?php if ($preloaderEnabled) : ?>
             <!-- Preloader -->
             <div
-                id="cmp-preloader"
+                id="<?php echo htmlspecialchars($preloaderID, ENT_QUOTES, 'UTF-8'); ?>"
                 class="cmp-preloader cmp-preloader--<?php echo htmlspecialchars($preloaderType, ENT_QUOTES, 'UTF-8'); ?>"
                 data-cmp-preloader-type="<?php echo htmlspecialchars($preloaderType, ENT_QUOTES, 'UTF-8'); ?>"
                 aria-hidden="true"

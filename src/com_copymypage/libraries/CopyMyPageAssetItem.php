@@ -4,7 +4,7 @@
  * @subpackage  WebAssetItem
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.9
  * @see         https://docs.joomla.org/J4.x:Web_Assets and CoreAssetItem.php
  */
 
@@ -277,6 +277,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         Text::script('TPL_COPYMYPAGE_JS_ERROR_INIT_SKIPPED');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_INVALID_PARAMS');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED');
+        Text::script('TPL_COPYMYPAGE_JS_ERROR_PRELOADER_NOT_FOUND');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_SELECTOR');
     }
 

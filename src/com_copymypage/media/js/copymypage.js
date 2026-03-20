@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.8
+ * @since       0.0.9
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -28,6 +28,8 @@ window.CopyMyPage = window.CopyMyPage || {};
         'is-desktop',
         'is-narrow',
     ]);
+
+    const ONEPAGE_NAVBAR_SELECTOR = '#navbar[uk-scrollspy-nav] .cmp-navbar-nav';
 
     /**
      * CopyMyPage Class
@@ -211,14 +213,16 @@ window.CopyMyPage = window.CopyMyPage || {};
          * Private method: Fades out and removes the initial page preloader.
          */
         _preloader() {
-            const preloader = document.getElementById('cmp-preloader');
+            const tmpl = this.tmpl || {};
 
             if (!document.body) {
                 return;
             }
 
+            const preloader = this._select(tmpl.preloaderSelector || '#cmp-preloader');
             if (!preloader) {
                 document.body.classList.remove('cmp-preloader-active');
+                this.logError('TPL_COPYMYPAGE_JS_ERROR_PRELOADER_NOT_FOUND');
                 return;
             }
 
@@ -381,6 +385,16 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
+         * Resolve the onepage navbar container used by the Scrollspy state sync.
+         *
+         * @returns {HTMLElement|null}
+         */
+        _getOnepageNavbar() {
+            const navbar = document.querySelector(ONEPAGE_NAVBAR_SELECTOR);
+            return navbar instanceof HTMLElement ? navbar : null;
+        }
+
+        /**
          * Watches ScrollspyNav class mutations so the top-state correction can run immediately.
          */
         _bindOnepageNavbarStateObserver() {
@@ -388,9 +402,9 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            const navbar = document.querySelector('#navbar[uk-scrollspy-nav] .cmp-navbar-nav');
+            const navbar = this._getOnepageNavbar();
 
-            if (!(navbar instanceof HTMLElement)) {
+            if (!navbar) {
                 return;
             }
 
@@ -424,7 +438,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            const navbar = document.querySelector('#navbar[uk-scrollspy-nav] .cmp-navbar-nav');
+            const navbar = this._getOnepageNavbar();
 
             if (!navbar) {
                 return;
@@ -701,7 +715,7 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             // Escape the ID for use in querySelector (in case it contains special characters).
             const escapedOffcanvasId = window.CSS?.escape ? window.CSS.escape(navOffcanvasId) : navOffcanvasId;
-            const offcanvas = document.querySelector(`#${escapedOffcanvasId}`);
+            const offcanvas = this._select(`#${escapedOffcanvasId}`);
 
             if (!offcanvas) {
                 return;
