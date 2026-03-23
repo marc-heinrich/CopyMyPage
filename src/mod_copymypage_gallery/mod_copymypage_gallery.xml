@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="module" client="site" method="upgrade">
+  <name>mod_copymypage_gallery</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2026-03</creationDate>
+  <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
+  <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.9</version>
+  <description>MOD_COPYMYPAGE_GALLERY_XML_DESCRIPTION</description>
+  <scriptfile>script.php</scriptfile>
+  <namespace path="src">Joomla\Module\CopyMyPage\Gallery</namespace>
+  <files>
+    <folder module="mod_copymypage_gallery">services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+    <folder>language</folder>
+  </files>
+  <config>
+    <fields name="params">
+      <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
+        <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_DESC" default="default">
+          <option value="default">JDEFAULT</option>
+          <option value="gallery_sigplus">MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_GALLERY</option>
+        </field>
+        <field name="moduleclass_sfx" type="text" label="JFIELD_MODULECLASS_SFX_LABEL" description="JFIELD_MODULECLASS_SFX_DESC" filter="STRING"/>
+      </fieldset>
+    </fields>
+  </config>
+</extension>

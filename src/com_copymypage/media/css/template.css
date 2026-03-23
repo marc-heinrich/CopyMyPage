@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.8
+ * @since       0.0.9
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -43,6 +43,7 @@
     --cmp-color: #04cbd0;
     --cmp-color-strong: #00979c;
     --cmp-color-soft: #c4f4f5;
+    --cmp-color-link-external: var(--cmp-color-strong);
     --cmp-color-logo-dark: #061225;
     --cmp-color-logo-light: #ffffff;
     --cmp-color-surface: #f5f7fb;
@@ -1187,6 +1188,55 @@ body.is-small .cmp-uikit-dialog .cmp-uikit-dialog__header {
 }
 
 /* ==========================================================================
+   COMPONENTS - Alerts
+   ========================================================================== */
+
+.cmp-warning-notice .cmp-alert + .cmp-alert {
+    margin-block-start: 1rem;
+}
+
+.cmp-link-external {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.08rem;
+    color: var(--cmp-color-link-external);
+    vertical-align: baseline;
+    line-height: inherit;
+    border-radius: 0.2rem;
+}
+
+.cmp-link-external .cmp-link-external-icon {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    transform: translateY(0.04em);
+}
+
+.cmp-link-external .cmp-link-external-icon,
+.cmp-link-external .cmp-link-external-icon svg {
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+}
+
+.cmp-link-external:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.cmp-link-external:hover,
+.cmp-link-external:focus-visible {
+    text-decoration: none;
+}
+
+.cmp-alert .cmp-link-external {
+    margin-inline-start: 0.4375rem;
+    margin-inline-end: 0;
+    padding-block: 0.03rem;
+    padding-inline-start: 0.05rem;
+    padding-inline-end: 0.01rem;
+}
+
+/* ==========================================================================
    ACCESSIBILITY - Reduced motion
    ========================================================================== */
 
@@ -1198,11 +1248,3 @@ body.is-small .cmp-uikit-dialog .cmp-uikit-dialog__header {
         animation-iteration-count: 1 !important;
     }
 }
-
-
-
-
-
-
-
-

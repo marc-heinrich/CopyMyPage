@@ -54,6 +54,7 @@ $buildAbsolutePath = static function (string $publicPath): string {
     return \JPATH_ROOT . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, ltrim($publicPath, '/'));
 };
 ?>
+<!-- Hero Module Template: Desktop UIkit Framework (https://getuikit.com/docs/slideshow) -->
 <div class="<?php echo $moduleClass; ?>">
     <div class="uk-position-relative uk-visible-toggle uk-light" tabindex="-1"
         uk-slideshow="<?php echo htmlspecialchars($slideshowOptions, ENT_QUOTES, 'UTF-8'); ?>">
