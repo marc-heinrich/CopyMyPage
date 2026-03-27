@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.9
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Service;
@@ -36,6 +36,10 @@ class Router extends RouterView
     {
         // Register the views we want to be routable.
         $this->registerView(new RouterViewConfiguration('onepage'));
+
+        $gallery = new RouterViewConfiguration('gallery');
+        $gallery->setKey('id');
+        $this->registerView($gallery);
 
         parent::__construct($app, $menu);
 

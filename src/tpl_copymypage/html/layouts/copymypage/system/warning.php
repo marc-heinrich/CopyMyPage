@@ -9,27 +9,27 @@
 
 \defined('_JEXEC') or die;
 
-$warnings = $displayData['warnings'] ?? [];
+$messages = $displayData['messages'] ?? [];
 
-if (!is_array($warnings) || $warnings === []) {
+if (!is_array($messages) || $messages === []) {
     return;
 }
 ?>
-<!-- Alert Template: Desktop UIkit Framework (https://getuikit.com/docs/alert) -->
+<!-- Alert Template: UIkit Framework @see https://getuikit.com/docs/alert -->
 <div class="uk-container cmp-warning-notice">
-    <?php foreach ($warnings as $warning) : ?>
+    <?php foreach ($messages as $message) : ?>
         <div class="uk-alert-warning cmp-alert cmp-alert--warning" uk-alert>
             <a class="uk-alert-close" uk-close></a>
 
-            <?php if (!empty($warning['info'])) : ?>
+            <?php if (!empty($message['info'])) : ?>
                 <h3 class="uk-margin-small-bottom cmp-alert__title">
-                    <?php echo $warning['info']; ?>
+                    <?php echo $message['info']; ?>
                 </h3>
             <?php endif; ?>
 
-            <?php if (!empty($warning['desc'])) : ?>
+            <?php if (!empty($message['desc'])) : ?>
                 <p class="uk-margin-remove-bottom cmp-alert__body">
-                    <?php echo $warning['desc']; ?>
+                    <?php echo $message['desc']; ?>
                 </p>
             <?php endif; ?>
         </div>

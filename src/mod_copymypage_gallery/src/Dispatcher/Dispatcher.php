@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.1
+ * @since       0.0.9
  */
 
 namespace Joomla\Module\CopyMyPage\Gallery\Site\Dispatcher;
@@ -17,6 +17,9 @@ use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
 use Joomla\CMS\Helper\HelperFactoryAwareInterface;
 use Joomla\CMS\Helper\HelperFactoryAwareTrait;
 use Joomla\CMS\Helper\ModuleHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Layout\LayoutHelper;
+use Joomla\CMS\Router\Route;
 
 /**
  * Dispatcher class for mod_copymypage_gallery.
@@ -24,6 +27,27 @@ use Joomla\CMS\Helper\ModuleHelper;
 class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareInterface
 {
     use HelperFactoryAwareTrait;
+
+    /**
+     * Collected warning messages for the current module render cycle.
+     *
+     * @var array<int, array<string, string>>
+     */
+    protected array $warnings = [];
+
+    /**
+     * Fixed layout prefix for this system slot.
+     *
+     * @var string
+     */
+    protected string $layoutPrefix = 'gallery';
+
+    /**
+     * Base layout used as safe fallback.
+     *
+     * @var string
+     */
+    protected string $baseLayout = 'gallery_sigplus_preview';
 
     /**
      * Runs the dispatcher.
@@ -40,19 +64,10 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             return;
         }
 
-        $baseLayout    = 'gallery';
-        $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? 'default')));
-        $layout        = $baseLayout;
+        $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? $this->baseLayout)));
+        $layout        = $this->resolveLayout($layoutVariant);
 
-        if (
-            $layoutVariant !== ''
-            && $layoutVariant !== 'default'
-            && str_starts_with($layoutVariant, $baseLayout . '_')
-        ) {
-            $layout = $layoutVariant;
-        }
-
-        $loader = static function (array $displayData, string $layout, string $fallbackLayout): void {
+        $loader = static function (array $displayData, string $layout): void {
             if (!\array_key_exists('displayData', $displayData)) {
                 extract($displayData);
                 unset($displayData);
@@ -66,20 +81,40 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
              * @var \stdClass                 $module
              * @var \Joomla\Registry\Registry $params
              * @var array<string, mixed>      $cfg
-             * @var string                    $helloMessage
-             * @var string                    $moduleclass_sfx
+             * @var array<int, object>        $list
+             * @var array<int, string>        $filters
+             * @var string                    $warning
+             * @var string                    $hint
              */
 
-            $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_gallery', $layout);
-
-            if (!is_file($layoutPath)) {
-                $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_gallery', $fallbackLayout);
-            }
-
-            require $layoutPath;
+            require ModuleHelper::getLayoutPath('mod_copymypage_gallery', $layout);
         };
 
-        $loader($displayData, $layout, $baseLayout);
+        $loader($displayData, $layout);
+    }
+
+    /**
+     * Resolves the requested layout variant to an existing gallery layout.
+     *
+     * @param   string  $layoutVariant  Requested layout variant from module params.
+     *
+     * @return  string
+     */
+    protected function resolveLayout(string $layoutVariant): string
+    {
+        $layoutPrefix = strtolower(trim($this->layoutPrefix));
+
+        if ($layoutVariant === '' || ($layoutPrefix !== '' && !str_starts_with($layoutVariant, $layoutPrefix . '_'))) {
+            return $this->baseLayout;
+        }
+
+        $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_gallery', $layoutVariant);
+
+        if (!is_file($layoutPath) || basename($layoutPath, '.php') !== $layoutVariant) {
+            return $this->baseLayout;
+        }
+
+        return $layoutVariant;
     }
 
     /**
@@ -95,12 +130,52 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['cfg'] = ($data['params'] instanceof \Joomla\Registry\Registry)
             ? $data['params']->toArray()
             : [];
-        $data['helloMessage'] = $helper->getHelloMessage($data['module'], $data['params']);
-        $data['moduleclass_sfx'] = htmlspecialchars(
-            (string) $data['params']->get('moduleclass_sfx', ''),
-            ENT_COMPAT,
-            'UTF-8'
-        );
+
+        $sigplusPlugin   = $helper->getSigplusPlugin();
+        $data['list']    = [];
+        $data['filters'] = [];
+
+        if ($sigplusPlugin === null) {
+            $this->warnings[] = [
+                'info' => Text::_('MOD_COPYMYPAGE_GALLERY_MSG_NOSIGPLUS_INFO'),
+                'desc' => Text::_('MOD_COPYMYPAGE_GALLERY_MSG_NOSIGPLUS_DESC'),
+            ];
+        } elseif (!$helper->isSigplusAvailable($sigplusPlugin)) {
+            $pluginLink = Route::link(
+                'administrator',
+                'index.php?option=com_plugins&task=plugin.edit&extension_id=' . (int) $sigplusPlugin->id
+            );
+
+            $this->warnings[] = [
+                'info' => Text::_('MOD_COPYMYPAGE_GALLERY_MSG_SIGPLUS_DISABLED_INFO'),
+                'desc' => Text::sprintf('MOD_COPYMYPAGE_GALLERY_MSG_SIGPLUS_DISABLED_DESC', $pluginLink),
+            ];
+        } else {
+            $data['list']    = $helper->getSigplusModules();
+            $data['filters'] = $helper->listUnique($data['list']);
+        }
+
+        $data['warning'] = '';
+        $data['hint']    = '';
+
+        if (!empty($this->warnings)) {
+            $data['warning'] = LayoutHelper::render(
+                'copymypage.system.warning',
+                ['messages' => $this->warnings]
+            );
+        } elseif ($data['list'] === []) {
+            $data['hint'] = LayoutHelper::render(
+                'copymypage.system.hint',
+                [
+                    'messages' => [
+                        [
+                            'info' => Text::_('MOD_COPYMYPAGE_GALLERY_HINT_INFO'),
+                            'desc' => Text::_('MOD_COPYMYPAGE_GALLERY_HINT_DESC'),
+                        ],
+                    ],
+                ]
+            );
+        }
 
         return $data;
     }

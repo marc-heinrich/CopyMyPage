@@ -4,31 +4,285 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.1
+ * @since       0.0.9
  */
 
 namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
 
 \defined('_JEXEC') or die;
 
-use Joomla\CMS\Language\Text;
+use Joomla\Database\DatabaseAwareInterface;
+use Joomla\Database\DatabaseAwareTrait;
+use Joomla\Database\ParameterType;
 use Joomla\Registry\Registry;
 
 /**
  * Helper class for the CopyMyPage Gallery module.
  */
-final class GalleryHelper
+final class GalleryHelper implements DatabaseAwareInterface
 {
+    use DatabaseAwareTrait;
+
     /**
-     * Returns the placeholder message for the initial scaffold.
+     * Loads all published Sigplus site modules from #__modules.
      *
-     * @param  object    $module  The module object.
-     * @param  Registry  $params  The module parameters.
+     * The module rows are enriched with decoded params and normalized gallery metadata
+     * so later layouts can work with a prepared list instead of reparsing module params.
+     *
+     * @return array<int, object>
+     */
+    public function getSigplusModules(): array
+    {
+        $db  = $this->getDatabase();
+
+        $module   = 'mod_sigplus';
+        $clientId = 0;
+
+        $query = $db->getQuery(true)
+            ->select(
+                [
+                    $db->quoteName('m.id'),
+                    $db->quoteName('m.title'),
+                    $db->quoteName('m.module'),
+                    $db->quoteName('m.position'),
+                    $db->quoteName('m.content'),
+                    $db->quoteName('m.showtitle'),
+                    $db->quoteName('m.params'),
+                    $db->quoteName('m.ordering'),
+                ]
+            )
+            ->from($db->quoteName('#__modules', 'm'))
+            ->where(
+                [
+                    $db->quoteName('m.published') . ' = 1',
+                    $db->quoteName('m.module') . ' = :module',
+                    $db->quoteName('m.client_id') . ' = :clientId',
+                ]
+            )
+            ->order($db->quoteName('m.ordering') . ' ASC')
+            ->order($db->quoteName('m.id') . ' ASC')
+            ->bind(':module', $module, ParameterType::STRING)
+            ->bind(':clientId', $clientId, ParameterType::INTEGER);
+
+        $modules = $db->setQuery($query)->loadObjectList();
+
+        if (!\is_array($modules) || $modules === []) {
+            return [];
+        }
+
+        foreach ($modules as $index => $moduleRow) {
+            if (!\is_object($moduleRow)) {
+                unset($modules[$index]);
+
+                continue;
+            }
+
+            $modules[$index] = $this->hydrateSigplusModule($moduleRow);
+        }
+
+        return array_values($modules);
+    }
+
+    /**
+     * Loads the Sigplus content plugin row from #__extensions.
+     *
+     * @return object|null
+     */
+    public function getSigplusPlugin(): ?object
+    {
+        $db = $this->getDatabase();
+
+        $folder  = 'content';
+        $element = 'sigplus';
+        $type    = 'plugin';
+
+        $query = $db->getQuery(true)
+            ->select(
+                [
+                    $db->quoteName('extension_id', 'id'),
+                    $db->quoteName('enabled'),
+                ]
+            )
+            ->from($db->quoteName('#__extensions'))
+            ->where(
+                [
+                    $db->quoteName('folder') . ' = :folder',
+                    $db->quoteName('element') . ' = :element',
+                    $db->quoteName('type') . ' = :type',
+                ]
+            )
+            ->bind(':folder', $folder, ParameterType::STRING)
+            ->bind(':element', $element, ParameterType::STRING)
+            ->bind(':type', $type, ParameterType::STRING);
+
+        $plugin = $db->setQuery($query)->loadObject();
+
+        return \is_object($plugin) ? $plugin : null;
+    }
+
+    /**
+     * Checks whether the Sigplus content plugin exists and is enabled.
+     *
+     * @return bool
+     */
+    public function isSigplusAvailable(?object $sigplusPlugin = null): bool
+    {
+        $sigplusPlugin ??= $this->getSigplusPlugin();
+
+        return $sigplusPlugin !== null && (int) ($sigplusPlugin->enabled ?? 0) === 1;
+    }
+
+    /**
+     * Counts image files directly inside a Sigplus gallery directory.
+     *
+     * @param  string  $moduleSource  Relative gallery source from the Sigplus module params.
+     *
+     * @return object|null
+     */
+    public function countImagesInDirectory(string $moduleSource): ?object
+    {
+        $moduleSource = $this->normalizeSource($moduleSource);
+
+        if ($moduleSource === '') {
+            return null;
+        }
+
+        $galleryPath = JPATH_ROOT . '/images/' . str_replace('/', DIRECTORY_SEPARATOR, $moduleSource);
+
+        if (!is_dir($galleryPath)) {
+            return (object) ['image_count' => 0];
+        }
+
+        try {
+            $iterator = new \FilesystemIterator($galleryPath, \FilesystemIterator::SKIP_DOTS);
+        } catch (\UnexpectedValueException) {
+            return (object) ['image_count' => 0];
+        }
+
+        $imageCount = 0;
+
+        foreach ($iterator as $fileInfo) {
+            if (!$fileInfo->isFile()) {
+                continue;
+            }
+
+            if (!\in_array(strtolower($fileInfo->getExtension()), ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'], true)) {
+                continue;
+            }
+
+            $imageCount++;
+        }
+
+        return (object) ['image_count' => $imageCount];
+    }
+
+    /**
+     * Returns the unique filter labels for the current Sigplus module list.
+     *
+     * @param  array<int, object>  $list
+     *
+     * @return array<int, string>
+     */
+    public function listUnique(array $list): array
+    {
+        $filters = [];
+
+        foreach ($list as $item) {
+            if (!\is_object($item)) {
+                continue;
+            }
+
+            $filter = trim((string) ($item->filter_label ?? ''));
+
+            if ($filter === '') {
+                continue;
+            }
+
+            $filters[] = $filter;
+        }
+
+        return array_values(array_unique($filters));
+    }
+
+    /**
+     * Adds normalized gallery metadata to one Sigplus module row.
+     *
+     * @param  object  $moduleRow
+     *
+     * @return object
+     */
+    private function hydrateSigplusModule(object $moduleRow): object
+    {
+        $moduleParams = new Registry((string) ($moduleRow->params ?? ''));
+        $source       = $this->normalizeSource((string) $moduleParams->get('source', ''));
+        $filterSeed   = (string) ($moduleParams->get('id') ?: ($moduleRow->title ?? ''));
+
+        $moduleRow->params_registry = $moduleParams;
+        $moduleRow->params_array    = $moduleParams->toArray();
+        $moduleRow->gallery_source  = $source;
+        $moduleRow->gallery_image   = trim((string) $moduleParams->get('settings', ''));
+        $moduleRow->gallery_id      = trim((string) $moduleParams->get('id', ''));
+        $moduleRow->filter_label    = self::getTitle($filterSeed);
+        $moduleRow->filter_class    = self::getFilterClass($filterSeed);
+        $moduleRow->sigplus_data    = $this->countImagesInDirectory($source);
+        $moduleRow->image_count     = (int) (($moduleRow->sigplus_data->image_count ?? 0));
+
+        return $moduleRow;
+    }
+
+    /**
+     * Builds a normalized filter class from a gallery label.
+     *
+     * @param  string  $filter
      *
      * @return string
      */
-    public function getHelloMessage(object $module, Registry $params): string
+    public static function getFilterClass(string $filter): string
     {
-        return Text::_('MOD_COPYMYPAGE_GALLERY_HELLO_WORLD');
+        $filter = self::getTitle($filter);
+        $filter = preg_replace('/\s+/', '', strtolower($filter)) ?? '';
+
+        return 'filter-' . $filter;
+    }
+
+    /**
+     * Extracts the display title from a filter seed.
+     *
+     * If a Sigplus ID follows the legacy "Group-Detail" shape, only the first part
+     * is used for grouping/filtering.
+     *
+     * @param  string  $title
+     *
+     * @return string
+     */
+    public static function getTitle(string $title): string
+    {
+        $title = trim($title);
+
+        if ($title === '') {
+            return '';
+        }
+
+        if (str_contains($title, '-')) {
+            $parts = explode('-', $title, 2);
+
+            return trim((string) ($parts[0] ?? ''));
+        }
+
+        return $title;
+    }
+
+    /**
+     * Normalizes a Sigplus source path for DB matching.
+     *
+     * @param  string  $source
+     *
+     * @return string
+     */
+    private function normalizeSource(string $source): string
+    {
+        $source = str_replace('\\', '/', trim($source));
+
+        return trim($source, '/');
     }
 }

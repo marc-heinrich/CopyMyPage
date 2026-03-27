@@ -20,11 +20,9 @@
   <config>
     <fields name="params">
       <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
-        <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_DESC" default="default">
-          <option value="default">JDEFAULT</option>
-          <option value="gallery_sigplus">MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_GALLERY</option>
+        <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_DESC" default="gallery_sigplus_preview">
+          <option value="gallery_sigplus_preview">MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_GALLERY_SIGPLUS_PREVIEW</option>
         </field>
-        <field name="moduleclass_sfx" type="text" label="JFIELD_MODULECLASS_SFX_LABEL" description="JFIELD_MODULECLASS_SFX_DESC" filter="STRING"/>
       </fieldset>
     </fields>
   </config>
