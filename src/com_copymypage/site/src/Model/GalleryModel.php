@@ -13,6 +13,8 @@ namespace Joomla\Component\CopyMyPage\Site\Model;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\Database\ParameterType;
 
 /**
@@ -29,8 +31,10 @@ class GalleryModel extends BaseDatabaseModel
      */
     public function getItem($id = null): ?object
     {
-        $app = Factory::getApplication();
-        $id  = (int) ($id ?? $this->getState('item.id'));
+        $app      = Factory::getApplication();
+        $id       = (int) ($id ?? $this->getState('item.id'));
+        $module   = 'mod_sigplus';
+        $clientId = 0;
 
         if ($id <= 0) {
             return null;
@@ -55,8 +59,8 @@ class GalleryModel extends BaseDatabaseModel
                     $db->quoteName('id') . ' = :id',
                 ]
             )
-            ->bind(':module', 'mod_sigplus', ParameterType::STRING)
-            ->bind(':clientId', 0, ParameterType::INTEGER)
+            ->bind(':module', $module, ParameterType::STRING)
+            ->bind(':clientId', $clientId, ParameterType::INTEGER)
             ->bind(':id', $id, ParameterType::INTEGER);
 
         try {
@@ -77,30 +81,33 @@ class GalleryModel extends BaseDatabaseModel
      */
     public function getSigplusPlugin(): ?object
     {
-        $db = $this->getDatabase();
+        return $this->getSigplusHelper()->getPlugin();
+    }
 
-        $query = $db->getQuery(true)
-            ->select(
-                [
-                    $db->quoteName('extension_id', 'id'),
-                    $db->quoteName('enabled'),
-                ]
-            )
-            ->from($db->quoteName('#__extensions'))
-            ->where(
-                [
-                    $db->quoteName('folder') . ' = :folder',
-                    $db->quoteName('element') . ' = :element',
-                    $db->quoteName('type') . ' = :type',
-                ]
-            )
-            ->bind(':folder', 'content', ParameterType::STRING)
-            ->bind(':element', 'sigplus', ParameterType::STRING)
-            ->bind(':type', 'plugin', ParameterType::STRING);
+    /**
+     * Resolves the shared Sigplus helper via the CopyMyPage registry.
+     *
+     * @return  SigplusHelper
+     */
+    private function getSigplusHelper(): SigplusHelper
+    {
+        $container = Factory::getContainer();
+        $registry  = $container->has(CopyMyPageRegistry::class)
+            ? $container->get(CopyMyPageRegistry::class)
+            : new CopyMyPageRegistry();
+        $handler   = $registry->getService('sigplus');
 
-        $plugin = $db->setQuery($query)->loadObject();
+        if (\is_string($handler)) {
+            $handler = new $handler();
+        }
 
-        return \is_object($plugin) ? $plugin : null;
+        if (!$handler instanceof SigplusHelper) {
+            throw new \RuntimeException('The CopyMyPage sigplus helper is not available.');
+        }
+
+        $handler->setDatabase($this->getDatabase());
+
+        return $handler;
     }
 
     /**

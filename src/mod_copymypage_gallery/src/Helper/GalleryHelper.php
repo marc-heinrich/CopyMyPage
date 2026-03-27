@@ -11,6 +11,9 @@ namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\Database\DatabaseAwareInterface;
 use Joomla\Database\DatabaseAwareTrait;
 use Joomla\Database\ParameterType;
@@ -90,34 +93,7 @@ final class GalleryHelper implements DatabaseAwareInterface
      */
     public function getSigplusPlugin(): ?object
     {
-        $db = $this->getDatabase();
-
-        $folder  = 'content';
-        $element = 'sigplus';
-        $type    = 'plugin';
-
-        $query = $db->getQuery(true)
-            ->select(
-                [
-                    $db->quoteName('extension_id', 'id'),
-                    $db->quoteName('enabled'),
-                ]
-            )
-            ->from($db->quoteName('#__extensions'))
-            ->where(
-                [
-                    $db->quoteName('folder') . ' = :folder',
-                    $db->quoteName('element') . ' = :element',
-                    $db->quoteName('type') . ' = :type',
-                ]
-            )
-            ->bind(':folder', $folder, ParameterType::STRING)
-            ->bind(':element', $element, ParameterType::STRING)
-            ->bind(':type', $type, ParameterType::STRING);
-
-        $plugin = $db->setQuery($query)->loadObject();
-
-        return \is_object($plugin) ? $plugin : null;
+        return $this->getSigplusHelper()->getPlugin();
     }
 
     /**
@@ -127,9 +103,7 @@ final class GalleryHelper implements DatabaseAwareInterface
      */
     public function isSigplusAvailable(?object $sigplusPlugin = null): bool
     {
-        $sigplusPlugin ??= $this->getSigplusPlugin();
-
-        return $sigplusPlugin !== null && (int) ($sigplusPlugin->enabled ?? 0) === 1;
+        return $this->getSigplusHelper()->isAvailable($sigplusPlugin);
     }
 
     /**
@@ -284,5 +258,31 @@ final class GalleryHelper implements DatabaseAwareInterface
         $source = str_replace('\\', '/', trim($source));
 
         return trim($source, '/');
+    }
+
+    /**
+     * Resolves the shared Sigplus helper via the CopyMyPage registry.
+     *
+     * @return  SigplusHelper
+     */
+    private function getSigplusHelper(): SigplusHelper
+    {
+        $container = Factory::getContainer();
+        $registry  = $container->has(CopyMyPageRegistry::class)
+            ? $container->get(CopyMyPageRegistry::class)
+            : new CopyMyPageRegistry();
+        $handler   = $registry->getService('sigplus');
+
+        if (\is_string($handler)) {
+            $handler = new $handler();
+        }
+
+        if (!$handler instanceof SigplusHelper) {
+            throw new \RuntimeException('The CopyMyPage sigplus helper is not available.');
+        }
+
+        $handler->setDatabase($this->getDatabase());
+
+        return $handler;
     }
 }
