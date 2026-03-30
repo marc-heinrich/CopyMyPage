@@ -18,6 +18,7 @@ use Joomla\CMS\Component\Router\Rules\MenuRules;
 use Joomla\CMS\Component\Router\Rules\NomenuRules;
 use Joomla\CMS\Component\Router\Rules\StandardRules;
 use Joomla\CMS\Menu\AbstractMenu;
+use Joomla\Component\CopyMyPage\Administrator\Router\Rules\CopyMyPageRules;
 
 /**
  * Minimal routing class for com_copymypage.
@@ -47,5 +48,6 @@ class Router extends RouterView
         $this->attachRule(new MenuRules($this));
         $this->attachRule(new StandardRules($this));
         $this->attachRule(new NomenuRules($this));
+        $this->attachRule(new CopyMyPageRules($this));
     }
 }
