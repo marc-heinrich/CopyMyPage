@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.7
+ * @since       0.0.9
  */
 
 \defined('_JEXEC') or die;
@@ -20,7 +20,7 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  * -----------------
  * @var bool  $isOnepage
  *
- * @var array<string, mixed> $cfg  Normalized/typed module configuration (from helper).
+ * @var array<string, mixed> $cfg Normalized/typed module configuration (from helper).
  *                                Document only the keys used in this layout:
  *                                - logo: string
  *                                - navOffcanvasId: string
@@ -33,6 +33,7 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  * @var array<int, int>    $path
  * @var object             $active
  * @var int                $active_id
+ * @var string             $activeSlot
  */
 
 // Read only the config keys used by this layout.
@@ -44,6 +45,7 @@ $basketOffcanvasId      = (string) ($cfg['basketOffcanvasId'] ?? '');
 $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userDropdownSelectorRoot'] ?? '');
 $onepageBase            = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
 $logoHref               = $isOnepage ? '#top' : $onepageBase;
+$activeSlot             = strtolower(trim((string) ($activeSlot ?? '')));
 ?>
 <!-- Navbar Module Template: Desktop UIkit Framework (https://getuikit.com/docs/navbar) -->
 <div class="cmp-module <?php echo htmlspecialchars($userDropdownRootClass, ENT_QUOTES, 'UTF-8'); ?>">
@@ -112,6 +114,33 @@ $logoHref               = $isOnepage ? '#top' : $onepageBase;
                             $escape = static function (string $value): string {
                                 return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
                             };
+
+                            $matchesActiveSlot = static function (object $menuItem) use ($activeSlot): bool {
+                                if ($activeSlot === '' || (string) ($menuItem->type ?? '') !== 'url') {
+                                    return false;
+                                }
+
+                                $candidates = [
+                                    (string) ($menuItem->link ?? ''),
+                                    (string) ($menuItem->flink ?? ''),
+                                ];
+
+                                foreach ($candidates as $candidate) {
+                                    if (CopyMyPageHelper::extractHashToken($candidate) === $activeSlot) {
+                                        return true;
+                                    }
+                                }
+
+                                return false;
+                            };
+
+                            $hasForcedActiveSlot = $activeSlot !== ''
+                                && !empty(array_filter(
+                                    $list,
+                                    static function ($menuItem) use ($matchesActiveSlot): bool {
+                                        return \is_object($menuItem) && $matchesActiveSlot($menuItem);
+                                    }
+                                ));
 
                             // Convert flat Joomla menu items into a level-based tree.
                             $buildMenuTree = static function (array $items): array {
@@ -251,7 +280,9 @@ $logoHref               = $isOnepage ? '#top' : $onepageBase;
                                 $renderNavbarLink,
                                 $escape,
                                 $activeId,
-                                $trailIds
+                                $trailIds,
+                                $hasForcedActiveSlot,
+                                $matchesActiveSlot
                             ): string {
                                 $html = '';
 
@@ -282,8 +313,11 @@ $logoHref               = $isOnepage ? '#top' : $onepageBase;
                                         continue;
                                     }
 
-                                    $id       = (int) ($item->id ?? 0);
-                                    $isActive = ($id === $activeId) || \in_array($id, $trailIds, true);
+                                    $id         = (int) ($item->id ?? 0);
+                                    $slotActive = $matchesActiveSlot($item);
+                                    $isActive   = $hasForcedActiveSlot
+                                        ? $slotActive
+                                        : (($id === $activeId) || \in_array($id, $trailIds, true));
 
                                     $liClasses = [];
 
@@ -332,9 +366,10 @@ $logoHref               = $isOnepage ? '#top' : $onepageBase;
                                     continue;
                                 }
 
-                                $id       = (int) ($item->id ?? 0);
-                                $isTrail  = \in_array($id, $trailIds, true);
-                                $isActive = ($id === $activeId);
+                                $id         = (int) ($item->id ?? 0);
+                                $slotActive = $matchesActiveSlot($item);
+                                $isTrail    = !$hasForcedActiveSlot && \in_array($id, $trailIds, true);
+                                $isActive   = $hasForcedActiveSlot ? $slotActive : ($id === $activeId);
                                 // Keep only real child columns and skip separator pseudo items.
                                 $children = array_values(array_filter(
                                     $node['children'] ?? [],

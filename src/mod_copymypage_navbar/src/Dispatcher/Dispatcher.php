@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.9
  */
 
 namespace Joomla\Module\CopyMyPage\Navbar\Site\Dispatcher;
@@ -134,6 +134,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $option = $data['input']->getCmd('option', '');
         $view   = $data['input']->getCmd('view', '');
         $data['isOnepage'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::isOnepage($option, $view);
+        $data['activeSlot'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::resolveActiveSlot($option, $view);
 
         // Prepare menu parameters for mod_menu MenuHelper (dev defaults from helper).
         $menuParams = $helper->getMenuParams();

@@ -340,8 +340,8 @@ body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-p
     transform: translateX(-50%) scaleX(1);
 }
 
-/* Onepage active state keeps underline visible. */
-body.is-onepage .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after {
+/* Active state keeps underline visible on onepage and dedicated detail views like gallery. */
+body:is(.is-onepage, .no-onepage) .cmp-navbar-container .uk-navbar-nav > li.uk-active > a.cmp-navbar-link:not([href="#"][role="button"])::after {
     transform: translateX(-50%) scaleX(1);
 }
 

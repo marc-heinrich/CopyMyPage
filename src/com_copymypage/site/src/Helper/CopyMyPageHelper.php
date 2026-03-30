@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.9
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper;
@@ -27,6 +27,50 @@ abstract class CopyMyPageHelper
     public static function isOnepage(string $option = '', string $view = ''): bool
     {
         return $option === 'com_copymypage' && $view === 'onepage';
+    }
+
+    /**
+     * Resolve the fixed CopyMyPage slot that should be treated as active for the current view.
+     *
+     * @param   string  $option  The component option (e.g. 'com_copymypage').
+     * @param   string  $view    The view name (e.g. 'gallery').
+     *
+     * @return  string  The active slot token (for example 'gallery'), or an empty string.
+     */
+    public static function resolveActiveSlot(string $option = '', string $view = ''): string
+    {
+        return match (true) {
+            $option === 'com_copymypage' && $view === 'gallery' => 'gallery',
+            default => '',
+        };
+    }
+
+    /**
+     * Extract a normalized hash token from a menu link.
+     *
+     * Supports plain hash links like "#gallery" and routed URLs like "/de/#gallery".
+     *
+     * @param   string  $link  The menu link to inspect.
+     *
+     * @return  string  The normalized hash token without the leading "#".
+     */
+    public static function extractHashToken(string $link): string
+    {
+        $link = trim($link);
+
+        if ($link === '') {
+            return '';
+        }
+
+        $hashPosition = strpos($link, '#');
+
+        if ($hashPosition === false) {
+            return '';
+        }
+
+        $token = substr($link, $hashPosition + 1);
+
+        return strtolower(trim($token, " \t\n\r\0\x0B/"));
     }
 
     /**

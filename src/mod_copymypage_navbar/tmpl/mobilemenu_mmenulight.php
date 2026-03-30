@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.9
  */
 
 \defined('_JEXEC') or die;
@@ -49,12 +49,40 @@ $activeId = (int) ($active_id ?? 0);
 
 // Prefer active item tree, fallback to $path.
 $trailIds = [];
+$activeSlot = strtolower(trim((string) ($activeSlot ?? '')));
 
 if (isset($active) && isset($active->tree) && \is_array($active->tree)) {
     $trailIds = array_map('intval', $active->tree);
 } elseif (isset($path) && \is_array($path)) {
     $trailIds = array_map('intval', $path);
 }
+
+$matchesActiveSlot = static function (object $item) use ($activeSlot): bool {
+    if ($activeSlot === '' || (string) ($item->type ?? '') !== 'url') {
+        return false;
+    }
+
+    $candidates = [
+        (string) ($item->link ?? ''),
+        (string) ($item->flink ?? ''),
+    ];
+
+    foreach ($candidates as $candidate) {
+        if (CopyMyPageHelper::extractHashToken($candidate) === $activeSlot) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+$hasForcedActiveSlot = $activeSlot !== ''
+    && !empty(array_filter(
+        $list,
+        static function ($menuItem) use ($matchesActiveSlot): bool {
+            return \is_object($menuItem) && $matchesActiveSlot($menuItem);
+        }
+    ));
 
 // Build links aligned with desktop navbar behavior.
 $buildUrl = static function ($item) use ($isOnepage): string {
@@ -98,8 +126,9 @@ $buildUrl = static function ($item) use ($isOnepage): string {
                 $level = (int) ($item->level ?? 1);
                 $id    = (int) ($item->id ?? 0);
 
-                $isTrail  = \in_array($id, $trailIds, true);
-                $isActive = ($id === $activeId);
+                $slotActive = $matchesActiveSlot($item);
+                $isTrail    = !$hasForcedActiveSlot && \in_array($id, $trailIds, true);
+                $isActive   = $hasForcedActiveSlot ? $slotActive : ($id === $activeId);
 
                 // Mmenu-light expects the selected class on <li>.
                 $liClasses = [];
