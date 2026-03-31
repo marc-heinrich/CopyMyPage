@@ -48,13 +48,15 @@ window.CopyMyPage = window.CopyMyPage || {};
             // Cached bound handlers (avoid creating a new function on every event).
             this._onScroll = this._debouncedScroll.bind(this);
             this._onViewportChange = this._handleViewportChange.bind(this);
-            this._onOnepageNavStateChange = this._scheduleOnepageNavbarTopStateSync.bind(this);
+            this._onOnepageNavStateChange = this._handleOnepageNavStateChange.bind(this);
 
             // Internal timers/state.
             this._scrollTimeout = null;
             this._mmenuRestoreTimeout = null;
             this._preloaderRemovalTimeout = null;
             this._onepageNavSyncFrame = null;
+            this._onepageHashScrollFixFrame = null;
+            this._onepageHashRecoveryTimeouts = [];
             this._mmenuLinksHandlerBound = false;
             this._initialized = false;
             this._viewportListenerBound = false;
@@ -111,7 +113,9 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._scheduleOnepageNavbarTopStateSync();
             this._bindViewportListeners();
             this._addMmenuLinksHandler();
+            this._handleOnepageNavStateChange();
             this._listen(window, 'load', this._onOnepageNavStateChange);
+            this._listen(window, 'pageshow', this._onOnepageNavStateChange);
             this._listen(window, 'hashchange', this._onOnepageNavStateChange);
 
             if (window.CopyMyPageDialog && typeof window.CopyMyPageDialog.initSystemMessages === 'function') {
@@ -128,10 +132,13 @@ window.CopyMyPage = window.CopyMyPage || {};
             window.clearTimeout(this._mmenuRestoreTimeout);
             window.clearTimeout(this._preloaderRemovalTimeout);
             window.cancelAnimationFrame(this._onepageNavSyncFrame);
+            window.cancelAnimationFrame(this._onepageHashScrollFixFrame);
+            this._clearOnepageHashRecoveryTimeouts();
             this._scrollTimeout = null;
             this._mmenuRestoreTimeout = null;
             this._preloaderRemovalTimeout = null;
             this._onepageNavSyncFrame = null;
+            this._onepageHashScrollFixFrame = null;
 
             this._teardownDesktopUserDropdownHoldOpen();
 
@@ -371,6 +378,60 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
+         * React to onepage hash/load state changes by restoring the anchor landing position
+         * when the browser keeps the page at the top and by re-syncing the navbar state.
+         *
+         * Browsers do not resolve cross-document hash landings at exactly the same point in
+         * the lifecycle. Running a short recovery sequence keeps the onepage stable across
+         * engines such as Chromium and Firefox.
+         */
+        _handleOnepageNavStateChange() {
+            this._scheduleOnepageHashRecoverySequence();
+        }
+
+        /**
+         * Clears pending delayed onepage recovery checks.
+         */
+        _clearOnepageHashRecoveryTimeouts() {
+            while (this._onepageHashRecoveryTimeouts.length > 0) {
+                window.clearTimeout(this._onepageHashRecoveryTimeouts.pop());
+            }
+        }
+
+        /**
+         * Re-runs hash scroll restoration and navbar sync over a short settle window so
+         * browser-specific anchor timing differences do not decide the final section state.
+         */
+        _scheduleOnepageHashRecoverySequence() {
+            const recoveryDelays = [0, 16, 64, 160, 320, 640, 1200];
+
+            this._clearOnepageHashRecoveryTimeouts();
+
+            recoveryDelays.forEach((delay) => {
+                const timeoutId = window.setTimeout(() => {
+                    this._scheduleOnepageHashScrollRestore();
+                    this._scheduleOnepageNavbarTopStateSync();
+                }, delay);
+
+                this._onepageHashRecoveryTimeouts.push(timeoutId);
+            });
+        }
+
+        /**
+         * Coalesces onepage hash scroll recovery to one frame.
+         */
+        _scheduleOnepageHashScrollRestore() {
+            if (this._onepageHashScrollFixFrame !== null) {
+                return;
+            }
+
+            this._onepageHashScrollFixFrame = window.requestAnimationFrame(() => {
+                this._onepageHashScrollFixFrame = null;
+                this._restoreOnepageHashScroll();
+            });
+        }
+
+        /**
          * Coalesces onepage navbar state syncs so rapid Scrollspy mutations settle in one frame.
          */
         _scheduleOnepageNavbarTopStateSync() {
@@ -502,6 +563,81 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
+            const hashLink = this._getOnepageHashLink(scrollLinks);
+
+            if (hashLink instanceof HTMLElement) {
+                const hashItem = hashLink.closest('li');
+                const hashIndex = scrollLinks.indexOf(hashLink);
+                const hashTargetSelector = this._normalizeHash(hashLink.getAttribute('href'));
+                const hashTarget = hashTargetSelector ? document.querySelector(hashTargetSelector) : null;
+                const hashTargetTop = hashTarget instanceof HTMLElement
+                    ? hashTarget.getBoundingClientRect().top
+                    : null;
+                const nextHashLink = hashIndex >= 0 ? (scrollLinks[hashIndex + 1] || null) : null;
+                const nextHashTargetSelector = this._normalizeHash(nextHashLink?.getAttribute('href'));
+                const nextHashTarget = nextHashTargetSelector
+                    ? document.querySelector(nextHashTargetSelector)
+                    : null;
+                const nextHashTargetTop = nextHashTarget instanceof HTMLElement
+                    ? nextHashTarget.getBoundingClientRect().top
+                    : null;
+                const hashPinUpperBound = Math.max((stickyOffset * 2) + 8, stickyOffset + 48);
+                const hasOtherActiveHashItem = scrollLinks.some((link) => {
+                    if (link === hashLink) {
+                        return false;
+                    }
+
+                    const item = link.closest('li');
+                    return item instanceof HTMLElement && item.classList.contains('uk-active');
+                });
+                const shouldPinHashLink = hashItem instanceof HTMLElement
+                    && hashTargetTop !== null
+                    && hashTargetTop >= -8
+                    && hashTargetTop <= hashPinUpperBound
+                    && (nextHashTargetTop === null || nextHashTargetTop > stickyOffset + 1);
+
+                if (shouldPinHashLink) {
+                    scrollLinks.forEach((link) => {
+                        if (link === hashLink) {
+                            return;
+                        }
+
+                        const item = link.closest('li');
+
+                        if (item instanceof HTMLElement) {
+                            item.classList.remove('uk-active');
+                        }
+
+                        if (link.getAttribute('aria-current') === 'page') {
+                            link.removeAttribute('aria-current');
+                        }
+                    });
+
+                    hashItem.classList.add('uk-active');
+
+                    if (hashLink.dataset.cmpHashActive !== '1') {
+                        hashLink.dataset.cmpHashActive = '1';
+                    }
+
+                    if (hashLink.getAttribute('aria-current') !== 'page') {
+                        hashLink.setAttribute('aria-current', 'page');
+                        hashLink.dataset.cmpHashAriaCurrent = '1';
+                    }
+
+                    return;
+                }
+
+                if (hashLink.dataset.cmpHashActive === '1' && hasOtherActiveHashItem) {
+                    hashItem.classList.remove('uk-active');
+                    delete hashLink.dataset.cmpHashActive;
+                }
+
+                if (hashLink.dataset.cmpHashAriaCurrent === '1' && hasOtherActiveHashItem) {
+                    hashLink.removeAttribute('aria-current');
+                    delete hashLink.dataset.cmpHashAriaCurrent;
+                }
+            }
+
             if (firstLink.dataset.cmpTopActive === '1' && hasOtherActiveItem) {
                 firstItem.classList.remove('uk-active');
                 delete firstLink.dataset.cmpTopActive;
@@ -514,6 +650,43 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         /**
+         * Restores a hash landing scroll on the onepage when the browser updates the URL
+         * but leaves the viewport at the top during a cross-document navigation.
+         */
+        _restoreOnepageHashScroll() {
+            if (!document.body || !document.body.classList.contains('is-onepage')) {
+                return;
+            }
+
+            const targetHash = this._normalizeHash(window.location.hash);
+
+            if (!targetHash || targetHash === '#top') {
+                return;
+            }
+
+            const target = document.querySelector(targetHash);
+
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            const rootStyles = getComputedStyle(document.documentElement);
+            const stickyOffset = Number.parseFloat(rootStyles.getPropertyValue('--cmp-header-offset')) || 0;
+            const scrollY = window.pageYOffset || document.documentElement.scrollTop || 0;
+            const targetTop = target.getBoundingClientRect().top;
+            const expectedAnchorBand = Math.max((stickyOffset * 2) + 8, stickyOffset + 48);
+            const shouldRestoreScroll = scrollY <= stickyOffset + 1
+                && targetTop > expectedAnchorBand;
+
+            if (!shouldRestoreScroll) {
+                return;
+            }
+
+            target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            this._scheduleOnepageNavbarTopStateSync();
+        }
+
+        /**
          * Normalize URL path names so "/de" and "/de/" are treated equally.
          *
          * @param {string} path - Pathname to normalize.
@@ -522,6 +695,46 @@ window.CopyMyPage = window.CopyMyPage || {};
         _normalizePath(path) {
             const trimmed = String(path || '').replace(/\/+$/, '');
             return trimmed || '/';
+        }
+
+        /**
+         * Normalize hash targets so absolute URLs and plain anchors can be compared safely.
+         *
+         * @param {string} href - Hash or URL value.
+         * @returns {string}
+         */
+        _normalizeHash(href) {
+            const value = String(href || '').trim();
+
+            if (!value) {
+                return '';
+            }
+
+            if (value.startsWith('#')) {
+                return value;
+            }
+
+            try {
+                return new URL(value, window.location.href).hash || '';
+            } catch (e) {
+                return '';
+            }
+        }
+
+        /**
+         * Resolve the current onepage hash to the matching top-level navbar link.
+         *
+         * @param {HTMLElement[]} scrollLinks - Top-level onepage navbar links.
+         * @returns {HTMLElement|null}
+         */
+        _getOnepageHashLink(scrollLinks) {
+            const currentHash = this._normalizeHash(window.location.hash);
+
+            if (!currentHash) {
+                return null;
+            }
+
+            return scrollLinks.find((link) => this._normalizeHash(link.getAttribute('href')) === currentHash) || null;
         }
 
         /**
