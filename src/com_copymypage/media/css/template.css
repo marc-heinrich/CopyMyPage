@@ -982,6 +982,11 @@ body.no-onepage .cmp-section--component {
     min-inline-size: 0;
 }
 
+.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__item.uk-scrollspy-inview:not([class*="uk-animation-"]) {
+    opacity: 1 !important;
+    transform: none !important;
+}
+
 .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__card {
     position: relative;
     display: block;
@@ -1186,6 +1191,9 @@ body.no-onepage .cmp-section--component {
 .cmp-gallery-view__header {
     max-inline-size: 54rem;
     margin: 0 auto clamp(1.75rem, 4vw, 3rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
 }
 
@@ -1193,22 +1201,26 @@ body.no-onepage .cmp-section--component {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    min-block-size: 2.65rem;
-    padding-inline: 1rem 1.15rem;
-    margin-block-end: 1.2rem;
-    border-radius: 999px;
+    min-block-size: 2.45rem;
+    padding-inline: 1.2rem;
+    margin-block-start: clamp(1rem, 2.2vw, 1.3rem);
+    border: none;
+    border-radius: var(--cmp-border-radius);
     background: rgba(var(--cmp-color-surface-rgb), 0.95);
     color: var(--cmp-color-logo-dark);
-    font-size: var(--cmp-font-size-sm);
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 500;
+    letter-spacing: 0;
     text-decoration: none;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    text-transform: none;
+    box-shadow: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .cmp-gallery-view__back:hover,
 .cmp-gallery-view__back:focus-visible {
-    color: var(--cmp-color-logo-dark);
+    background: var(--cmp-color-strong);
+    color: var(--cmp-color-logo-light);
     text-decoration: none;
 }
 
@@ -1219,22 +1231,45 @@ body.no-onepage .cmp-section--component {
     line-height: 1.15;
 }
 
-.cmp-gallery-view__lead {
-    max-inline-size: 42rem;
+.cmp-gallery-view__divider {
+    inline-size: min(100%, 7rem);
     margin: clamp(0.85rem, 2vw, 1.1rem) auto 0;
-    color: var(--cmp-color-text-muted);
-    font-family: var(--cmp-font-family-body-alt);
-    font-size: var(--cmp-font-size-lg);
-    line-height: 1.65;
 }
 
-.cmp-gallery-view__meta {
-    margin: 0.9rem 0 0;
-    color: rgba(var(--cmp-color-logo-dark-rgb), 0.82);
-    font-size: var(--cmp-font-size-sm);
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+.cmp-gallery-view__date {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    max-inline-size: 42rem;
+    margin: clamp(0.65rem, 1.6vw, 0.9rem) auto 0;
+    color: var(--cmp-color-text-muted);
+    font-family: var(--cmp-font-family-body-alt);
+    font-size: clamp(1rem, 1.8vw, var(--cmp-font-size-lg));
+    line-height: 1.5;
+}
+
+.cmp-gallery-view__back:focus-visible {
+    outline: 2px solid var(--cmp-color-strong);
+    outline-offset: 3px;
+}
+
+.cmp-gallery-view__date-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--cmp-color-text-default);
+}
+
+.cmp-gallery-view__date-icon,
+.cmp-gallery-view__date-icon svg {
+    inline-size: 1.3rem;
+    block-size: 1.3rem;
+}
+
+.cmp-gallery-view__date-icon svg * {
+    stroke-width: 2.2;
 }
 
 .cmp-gallery-view__content {
