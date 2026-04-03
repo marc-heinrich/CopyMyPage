@@ -27,7 +27,7 @@ use Joomla\Registry\Registry;
 final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBehaviorInterface
 {
     /**
-     * Attach script options and inline initializers for CopyMyPage.
+     * Attach script options and the CopyMyPage initializer.
      *
      * @param  Document  $doc  The document instance.
      */
@@ -51,32 +51,32 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         // Expose options via Joomla.getOptions('copymypage.params').
         $doc->addScriptOptions('copymypage.params', $options, false);
 
-        // Encode options for the inline initializer.
-        $jsonParams = json_encode($options) ?: '{}';
-
-        // Encode navbar options for mmenu-light initialization.
-        $jsonNavbarParams = json_encode($navbarParams) ?: '{}';
-
-        // Attach a DOMContentLoaded initializer.
+        // Initialize immediately when possible, otherwise wait for DOM readiness.
         $doc->addScriptDeclaration("
-            document.addEventListener('DOMContentLoaded', function() {
-                // Initialize CopyMyPage and MmenuLight.
-                {$this->getCopyMyPageJS($jsonParams)}
-                {$this->getMmenuLightJS($jsonNavbarParams)}
-            });
+            (function () {
+                const initCopyMyPage = function () {
+                    {$this->getCopyMyPageJS()}
+                };
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initCopyMyPage, { once: true });
+                    return;
+                }
+
+                initCopyMyPage();
+            })();
         ");
     }
 
     /**
      * Get the JavaScript initialization code for CopyMyPage.
      *
-     * @param   string  $jsonParams The JSON-encoded parameters for CopyMyPage.
      * @return  string  The JavaScript code for initializing CopyMyPage.
      */
-    private function getCopyMyPageJS(string $jsonParams): string
+    private function getCopyMyPageJS(): string
     {
         return "
-            if (typeof window.CopyMyPage !== 'undefined') {
+            if (typeof window.CopyMyPage !== 'undefined' && typeof window.CopyMyPage.createRuntime === 'function') {
                 const destroyCopyMyPage = function() {
                     if (window.__copyMyPageInstance && typeof window.__copyMyPageInstance.destroy === 'function') {
                         window.__copyMyPageInstance.destroy();
@@ -86,7 +86,7 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
                 // Ensure re-inits (e.g. partial page updates) do not leak listeners.
                 destroyCopyMyPage();
 
-                const copyMyPage = new window.CopyMyPage($jsonParams);
+                const copyMyPage = window.CopyMyPage.createRuntime();
                 copyMyPage.init();
                 window.__copyMyPageInstance = copyMyPage;
 
@@ -100,170 +100,8 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
                     window.__copyMyPageLifecycleBound = true;
                 }
             } else {
-                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'CopyMyPage'));
+                console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'CopyMyPage.createRuntime'));
             }
-        ";
-    }
-
-    /**
-     * Build the MmenuLight initialization script.
-     *
-     * @param   string  $jsonNavbarParams  JSON-encoded navbar module parameters.
-     *
-     * @return  string  JavaScript initializer snippet.
-     */
-    private function getMmenuLightJS(string $jsonNavbarParams): string
-    {
-        return "
-            (function () {
-                if (typeof window.MmenuLight === 'undefined') {
-                    console.error(Joomla.Text._('TPL_COPYMYPAGE_JS_ERROR_NOT_DEFINED').replace('%s', 'MmenuLight'));
-                    return;
-                }
-
-                const cfg = $jsonNavbarParams || {};
-
-                const mediaQuery        = cfg.mmenuLightMediaQuery || 'all';
-                const theme             = cfg.mmenuLightTheme || 'light';
-                const selected          = cfg.mmenuLightSelectedClass || '';
-                const closeOnClick      = !!cfg.mmenuLightCloseOnClick;
-                const slidingSubmenus   = (cfg.mmenuLightSlidingSubmenus !== undefined)
-                    ? !!cfg.mmenuLightSlidingSubmenus
-                    : true;
-
-                const menus = [
-                    {
-                        id: cfg.navOffcanvasId,
-                        title: cfg.mmenuLightNavTitle,
-                        position: cfg.mmenuLightNavPosition || 'left'
-                    },
-                    {
-                        id: cfg.userOffcanvasId,
-                        title: cfg.mmenuLightUserTitle,
-                        position: cfg.mmenuLightUserPosition || 'right'
-                    },
-                    {
-                        id: cfg.basketOffcanvasId,
-                        title: cfg.mmenuLightBasketTitle,
-                        position: cfg.mmenuLightBasketPosition || 'right'
-                    }
-                ].filter((m) => !!(m && m.id));
-
-                const drawers = [];
-
-                const closeAllExcept = (keep) => {
-                    drawers.forEach((d) => {
-                        if (d !== keep && d && typeof d.close === 'function') {
-                            d.close();
-                        }
-                    });
-                };
-
-                menus.forEach((m) => {
-                    const nav = document.getElementById(m.id);
-
-                    // Skip if the source node is missing or already initialized.
-                    if (!nav || nav.dataset.cmpMmenulightInit === '1') {
-                        return;
-                    }
-
-                    nav.dataset.cmpMmenulightInit = '1';
-
-                    const menu = new window.MmenuLight(nav, mediaQuery);
-
-                    menu.navigation({
-                        theme: theme,
-                        selected: selected || undefined,
-                        slidingSubmenus: slidingSubmenus,
-                        title: (m.title && String(m.title).trim()) ? String(m.title).trim() : undefined
-                    });
-
-                    const drawer = menu.offcanvas({
-                        position: (m.position === 'right') ? 'right' : 'left'
-                    });
-
-                    drawers.push(drawer);
-
-                    const openers = Array.from(
-                        document.querySelectorAll('[data-cmp-mmenulight-open=\"#' + m.id + '\"]')
-                    );
-
-                    const setOpenersState = (isOpen) => {
-                        openers.forEach((opener) => {
-                            opener.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-
-                            if (typeof opener.state !== 'undefined') {
-                                opener.state = isOpen ? 'cross' : 'bars';
-                            }
-                        });
-                    };
-
-                    const open = () => {
-                        closeAllExcept(drawer);
-
-                        if (drawer && typeof drawer.open === 'function') {
-                            drawer.open();
-                        }
-                    };
-
-                    if (drawer && drawer.wrapper instanceof Element) {
-                        const syncState = () => {
-                            setOpenersState(drawer.wrapper.classList.contains('mm-ocd--open'));
-                        };
-
-                        const observer = new MutationObserver((mutations) => {
-                            mutations.forEach((mutation) => {
-                                if (mutation.attributeName === 'class') {
-                                    syncState();
-                                }
-                            });
-                        });
-
-                        observer.observe(drawer.wrapper, {
-                            attributes: true,
-                            attributeFilter: ['class']
-                        });
-
-                        syncState();
-                    } else {
-                        setOpenersState(false);
-                    }
-
-                    // Bind all openers pointing to this menu id.
-                    openers.forEach((opener) => {
-                        opener.addEventListener('click', (ev) => {
-                            ev.preventDefault();
-                            open();
-                        });
-
-                        opener.addEventListener('keyup', (ev) => {
-                            if (ev.key === 'Enter' || ev.key === ' ') {
-                                ev.preventDefault();
-                                open();
-                            }
-                        });
-                    });
-
-                    // Optional: close drawer when a real link inside the menu is clicked.
-                    if (closeOnClick) {
-                        nav.addEventListener('click', (ev) => {
-                            const a = ev.target.closest('a');
-                            if (!a) {
-                                return;
-                            }
-
-                            const href = a.getAttribute('href') || '';
-                            if (!href || href === '#') {
-                                return;
-                            }
-
-                            if (drawer && typeof drawer.close === 'function') {
-                                drawer.close();
-                            }
-                        });
-                    }
-                });
-            })();
         ";
     }
 
@@ -272,6 +110,18 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
      */
     private function addLanguageStrings(): void
     {
+        // Core strings used by CopyMyPage dialog and form helpers.
+        Text::script('ERROR');
+        Text::script('MESSAGE');
+        Text::script('NOTICE');
+        Text::script('WARNING');
+        Text::script('JNOTICE');
+        Text::script('JOK');
+        Text::script('JYES');
+        Text::script('JNO');
+        Text::script('JGLOBAL_VALIDATION_FORM_FAILED');
+
+        // Template-specific runtime error messages.
         Text::script('TPL_COPYMYPAGE_JS_ERROR_BACKTOTOP_NOT_FOUND');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_ELEMENT_NOT_FOUND');
         Text::script('TPL_COPYMYPAGE_JS_ERROR_INIT_SKIPPED');

@@ -40,11 +40,74 @@
         "uikit",
         "uikit.icons",
         "mmenu.light",
-        "mburger"
+        "mburger",
+        "copymypage.base",
+        "copymypage.behavior",
+        "copymypage.onepage",
+        "copymypage.dropdown",
+        "copymypage.mmenu.navigation"
       ],
       "attributes": {
         "defer": true
       }      
+    },
+    {
+      "name": "copymypage.base",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-base.min.js",
+      "version": "0.0.9",
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.behavior",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-behavior.min.js",
+      "version": "0.0.9",
+      "dependencies": [
+        "copymypage.base"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.onepage",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-onepage.min.js",
+      "version": "0.0.9",
+      "dependencies": [
+        "copymypage.base"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.dropdown",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-dropdown.min.js",
+      "version": "0.0.9",
+      "dependencies": [
+        "uikit",
+        "copymypage.base"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.mmenu.navigation",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-mmenu-navigation.min.js",
+      "version": "0.0.9",
+      "dependencies": [
+        "copymypage.base"
+      ],
+      "attributes": {
+        "defer": true
+      }
     },
     {
       "name": "copymypage.modal.dialog",
@@ -182,7 +245,9 @@
       "type": "script",
       "uri": "com_copymypage/mmenu-light/mmenu-light.min.js",
       "version": "3.2.2",
+      "class": "MmenuLightAssetItem",
       "dependencies": [
+        "core",
         "mmenu.light.polyfills"
       ],
       "attributes": {

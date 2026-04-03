@@ -30,6 +30,7 @@
   <!-- Libraries files -->
   <files folder="libraries">
     <filename destination="libraries/src/WebAsset/AssetItem">CopyMyPageAssetItem.php</filename>
+    <filename destination="libraries/src/WebAsset/AssetItem">MmenuLightAssetItem.php</filename>
   </files>
   <!-- Admin area -->
   <administration>
