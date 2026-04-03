@@ -62,6 +62,20 @@ if ($this->getTitle() === '') {
 $this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
     ->setMetaData('robots', 'index, follow');
 
+// Provide global Open Graph defaults unless a view has already defined them.
+$siteName = trim((string) $app->get('sitename'));
+$locale   = str_replace('-', '_', $app->getLanguage()->getTag());
+
+CopyMyPageHelper::addMetaPropertyIfMissing($this, 'og:type', 'website');
+
+if ($siteName !== '') {
+    CopyMyPageHelper::addMetaPropertyIfMissing($this, 'og:site_name', $siteName);
+}
+
+if ($locale !== '') {
+    CopyMyPageHelper::addMetaPropertyIfMissing($this, 'og:locale', $locale);
+}
+
 // Detect basic context (for body classes, CSS, JS hooks).
 $option = $input->getCmd('option', '');
 $view   = $input->getCmd('view', '');

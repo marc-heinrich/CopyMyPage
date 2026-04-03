@@ -15,6 +15,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Router\Route;
+use Joomla\CMS\Uri\Uri;
 use Joomla\Registry\Registry;
 
 /**
@@ -105,12 +106,12 @@ class HtmlView extends BaseHtmlView
             throw new GenericDataException(Text::_('COM_COPYMYPAGE_VIEW_GALLERY_ERROR_NOT_FOUND'), 404);
         }
 
-        $this->params = $this->resolveParams();
+        $this->params     = $this->resolveParams();
         $this->itemParams = new Registry((string) ($this->item->params ?? ''));
         $this->imageCount = $this->resolveImageCount();
-        $this->headline = $this->resolveHeadline();
-        $this->summary = trim((string) $this->itemParams->get('caption_summary_template', ''));
-        $this->backUrl = Route::link('site', 'index.php?option=com_copymypage&view=onepage') . '#gallery';
+        $this->headline   = $this->resolveHeadline();
+        $this->summary    = trim((string) $this->itemParams->get('caption_summary_template', ''));
+        $this->backUrl    = Route::link('site', 'index.php?option=com_copymypage&view=onepage') . '#gallery';
 
         $sigplusPlugin = null;
         $model = $this->getModel();
@@ -155,17 +156,74 @@ class HtmlView extends BaseHtmlView
     {
         $document = $this->document;
         $title = $this->headline !== '' ? $this->headline : Text::_('COM_COPYMYPAGE_VIEW_GALLERY_TITLE');
+        $description = $this->resolveMetaDescription();
 
         $document->setTitle($title);
+        $document->setDescription($description);
 
+        $this->addOpenGraphMetaData($title, $description);
+        $this->addTwitterCardMetaData($title, $description);
+    }
+
+    /**
+     * Resolves the gallery description used for classic and Open Graph meta tags.
+     *
+     * @return  string
+     */
+    private function resolveMetaDescription(): string
+    {
         if ($this->summary !== '') {
-            $document->setDescription($this->summary);
-
-            return;
+            return $this->summary;
         }
 
-        $document->setDescription(
-            Text::sprintf('COM_COPYMYPAGE_VIEW_GALLERY_META_DESCRIPTION', $this->imageCount)
+        return Text::sprintf('COM_COPYMYPAGE_VIEW_GALLERY_META_DESCRIPTION', $this->imageCount);
+    }
+
+    /**
+     * Adds page-specific Open Graph meta tags for the gallery detail view.
+     *
+     * @param   string  $title        The resolved page title.
+     * @param   string  $description  The resolved page description.
+     *
+     * @return  void
+     */
+    private function addOpenGraphMetaData(string $title, string $description): void
+    {
+        $document = $this->document;
+        $uri = Uri::getInstance();
+
+        $document->addCustomTag(
+            '<meta property="og:title" content="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '" />'
+        );
+        $document->addCustomTag(
+            '<meta property="og:description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '" />'
+        );
+        $document->addCustomTag(
+            '<meta property="og:url" content="' . htmlspecialchars($uri->toString(), ENT_QUOTES, 'UTF-8') . '" />'
+        );
+    }
+
+    /**
+     * Adds page-specific Twitter Card tags for the gallery detail view.
+     *
+     * Keep the image selection delegated to existing Open Graph tags so Sigplus
+     * can continue to control the representative gallery image.
+     *
+     * @param   string  $title        The resolved page title.
+     * @param   string  $description  The resolved page description.
+     *
+     * @return  void
+     */
+    private function addTwitterCardMetaData(string $title, string $description): void
+    {
+        $document = $this->document;
+
+        $document->addCustomTag('<meta name="twitter:card" content="summary_large_image" />');
+        $document->addCustomTag(
+            '<meta name="twitter:title" content="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '" />'
+        );
+        $document->addCustomTag(
+            '<meta name="twitter:description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '" />'
         );
     }
 

@@ -11,6 +11,8 @@ namespace Joomla\Component\CopyMyPage\Site\Helper;
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Document\HtmlDocument;
+
 /**
  * Static helper for CopyMyPage view related utilities.
  */
@@ -95,6 +97,38 @@ abstract class CopyMyPageHelper
         $token = preg_replace('/[^A-Za-z0-9_-]/', '', $token) ?? '';
 
         return $token;
+    }
+
+    /**
+     * Add a custom meta tag with a property attribute if no matching property exists yet.
+     *
+     * @param   HtmlDocument  $document  The target HTML document.
+     * @param   string        $property  The meta property name (for example "og:type").
+     * @param   string        $content   The meta content value.
+     *
+     * @return  void
+     */
+    public static function addMetaPropertyIfMissing(HtmlDocument $document, string $property, string $content): void
+    {
+        $property = trim($property);
+        $content  = trim($content);
+
+        if ($property === '' || $content === '') {
+            return;
+        }
+
+        $headData = $document->getHeadData();
+
+        foreach (($headData['custom'] ?? []) as $tag) {
+            if (preg_match('/^<meta\b.*\bproperty="' . preg_quote($property, '/') . '".*>$/', $tag)) {
+                return;
+            }
+        }
+
+        $document->addCustomTag(
+            '<meta property="' . htmlspecialchars($property, ENT_QUOTES, 'UTF-8')
+            . '" content="' . htmlspecialchars($content, ENT_QUOTES, 'UTF-8') . '" />'
+        );
     }
 
     /**
