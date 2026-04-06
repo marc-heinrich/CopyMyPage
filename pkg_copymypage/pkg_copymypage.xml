@@ -20,6 +20,7 @@
     <file id="copymypage" type="template" client="site">tpl_copymypage.zip</file>
     <file id="mod_copymypage_dev" type="module" client="site">mod_copymypage_dev.zip</file>
     <file id="mod_copymypage_hero" type="module" client="site">mod_copymypage_hero.zip</file>
+    <file id="mod_copymypage_gallery" type="module" client="site">mod_copymypage_gallery.zip</file>
     <file id="mod_copymypage_navbar" type="module" client="site">mod_copymypage_navbar.zip</file>
     <file id="copymypage" type="plugin" group="system">plg_system_copymypage.zip</file>
   </files>

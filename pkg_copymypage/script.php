@@ -4,9 +4,7 @@
  * @subpackage  Package.CopyMyPage
  * @copyright   (C) 2025 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.1
- *
- * @note        Slogan: CopyMyPage – Your website. Just copy it.
+ * @since       0.0.10
  */
 
 \defined('_JEXEC') or die;
@@ -107,10 +105,13 @@ return new class () implements ServiceProviderInterface
                 }
 
                 /**
-                 * Runs on update (log only; visible box in postflight()).
+                 * Runs on update.
                  */
                 public function update(InstallerAdapter $adapter): bool
                 {
+                    // Create any newly introduced image folder structure on package updates.
+                    $this->createImageFolders($adapter);
+
                     if ($this->oldVersion && $this->newVersion) {
                         $this->softLog(sprintf(
                             'CopyMyPage updated from %s to %s.',
