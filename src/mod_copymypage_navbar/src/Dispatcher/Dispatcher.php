@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 namespace Joomla\Module\CopyMyPage\Navbar\Site\Dispatcher;
@@ -17,12 +17,14 @@ use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
 use Joomla\CMS\Helper\HelperFactoryAwareInterface;
 use Joomla\CMS\Helper\HelperFactoryAwareTrait;
 use Joomla\CMS\Helper\ModuleHelper;
-use Joomla\Registry\Registry;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Layout\LayoutHelper;
+use Joomla\CMS\Router\Route;
 
 /**
  * Dispatcher class for mod_copymypage_navbar.
  *
- * Selects the layout automatically based on the module position and a single variant field.
+ * Selects the layout automatically based on the module position and the selected layout variant.
  * While the module is in development, all runtime defaults come from the module helper.
  */
 class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareInterface
@@ -30,58 +32,60 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     use HelperFactoryAwareTrait;
 
     /**
-     * Runs the dispatcher.
+     * Collected warning messages for the current module render cycle.
      *
-     * Uses a core-like loader pattern and resolves the layout based on:
-     * - module position (navbar/mobilemenu)
-     * - a single variant field
+     * @var array<int, array<string, string>>
+     */
+    protected array $warnings = [];
+
+    /**
+     * Supported slot-to-layout mappings for this module.
+     *
+     * @var array<string, array{layoutPrefix: string, baseLayout: string}>
+     */
+    protected array $slotLayouts = [
+        'navbar' => [
+            'layoutPrefix' => 'navbar',
+            'baseLayout'   => 'navbar_uikit',
+        ],
+        'mobilemenu' => [
+            'layoutPrefix' => 'mobilemenu',
+            'baseLayout'   => 'mobilemenu_mmenulight',
+        ],
+    ];
+
+    /**
+     * Runs the dispatcher.
      *
      * @return void
      */
     public function dispatch(): void
     {
-        // Load the module language.
         $this->loadLanguage();
 
         $displayData = $this->getLayoutData();
 
-        // Bail out if no data is available.
         if ($displayData === false) {
             return;
         }
 
-        // Get the module position for layout resolution.
-        $position = strtolower((string) ($displayData['module']->position ?? ''));
+        $slotLayout = $this->resolveSlotLayout($displayData);
 
-        // Resolve the base layout by module position.
-        $baseLayout = match ($position) {
-            'navbar'     => 'navbar',
-            'mobilemenu' => 'mobilemenu',
-            default      => 'default',
-        };
+        if ($slotLayout === null) {
+            echo $this->renderWarnings();
 
-        // Read a single variant value (e.g. "navbar_uikit", "mobilemenu_mmenulight", "default").
-        $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? 'default')));
-
-        // Build the final layout name.
-        if ($baseLayout === 'default') {
-            $layout = 'default';
-        } else {
-            $expectedPrefix = $baseLayout . '_';
-
-            if (
-                $layoutVariant !== ''
-                && $layoutVariant !== 'default'
-                && str_starts_with($layoutVariant, $expectedPrefix)
-            ) {
-                $layout = $layoutVariant;
-            } else {
-                $layout = $baseLayout;
-            }
+            return;
         }
 
-        // Execute the layout without the module context (core pattern).
-        $loader = static function (array $displayData, string $layout, string $fallbackLayout): void {
+        $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? $slotLayout['baseLayout'])));
+        $layout = $this->resolveLayout(
+            $layoutVariant,
+            $slotLayout['layoutPrefix'],
+            $slotLayout['baseLayout']
+        );
+        $displayData['warning'] = $this->renderWarnings();
+
+        $loader = static function (array $displayData, string $layout): void {
             if (!\array_key_exists('displayData', $displayData)) {
                 extract($displayData);
                 unset($displayData);
@@ -89,22 +93,122 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
                 extract($displayData);
             }
 
-            // Resolve the layout path.
-            $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_navbar', $layout);
-
-            // Fallback to base layout if the specific variant does not exist.
-            if (!is_file($layoutPath)) {
-                $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_navbar', $fallbackLayout);
-            }
-
-            require $layoutPath;
+            /**
+             * Extracted variables
+             * -----------------
+             * @var \stdClass                                      $module
+             * @var \Joomla\Registry\Registry                      $params
+             * @var \Joomla\CMS\Application\CMSApplicationInterface $app
+             * @var array<string, mixed>                           $cfg
+             * @var object|null                                    $base
+             * @var object|null                                    $active
+             * @var object|null                                    $default
+             * @var int                                            $active_id
+             * @var int                                            $default_id
+             * @var array<int, int>                                $path
+             * @var int                                            $showAll
+             * @var array<int, object>                             $list
+             * @var array<int, object>                             $navItems
+             * @var array<int, object>                             $userItems
+             * @var array<int, object>                             $basketItems
+             * @var bool                                           $isOnepage
+             * @var string                                         $activeSlot
+             * @var string                                         $warning
+             */
+            require ModuleHelper::getLayoutPath('mod_copymypage_navbar', $layout);
         };
 
-        // Determine the fallback layout.
-        $fallbackLayout = ($baseLayout === 'default') ? 'default' : $baseLayout;
+        $loader($displayData, $layout);
+    }
 
-        // Run the loader.
-        $loader($displayData, $layout, $fallbackLayout);
+    /**
+     * Resolves the slot layout context for the current module position.
+     *
+     * @param   array<string, mixed>  $displayData  Prepared display data.
+     *
+     * @return  array{layoutPrefix: string, baseLayout: string}|null
+     */
+    protected function resolveSlotLayout(array $displayData): ?array
+    {
+        $slot = strtolower(trim((string) ($displayData['module']->position ?? '')));
+
+        if (!isset($this->slotLayouts[$slot])) {
+            $this->queueInvalidLayoutWarning();
+
+            return null;
+        }
+
+        return $this->slotLayouts[$slot];
+    }
+
+    /**
+     * Resolves the requested layout variant to an existing navbar/mobilemenu layout.
+     *
+     * @param   string  $layoutVariant  Requested layout variant from module params.
+     * @param   string  $layoutPrefix   Layout prefix for the current system slot.
+     * @param   string  $baseLayout     Existing fallback layout for this module instance.
+     *
+     * @return  string
+     */
+    protected function resolveLayout(string $layoutVariant, string $layoutPrefix, string $baseLayout): string
+    {
+        $layoutPrefix = strtolower(trim($layoutPrefix));
+
+        if ($layoutVariant === '' || $layoutVariant === 'default') {
+            return $baseLayout;
+        }
+
+        if ($layoutPrefix !== '' && !str_starts_with($layoutVariant, $layoutPrefix . '_')) {
+            $this->queueInvalidLayoutWarning();
+
+            return $baseLayout;
+        }
+
+        $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_navbar', $layoutVariant);
+
+        if (!is_file($layoutPath) || basename($layoutPath, '.php') !== $layoutVariant) {
+            $this->queueInvalidLayoutWarning();
+
+            return $baseLayout;
+        }
+
+        return $layoutVariant;
+    }
+
+    /**
+     * Renders collected warnings via the shared system layout.
+     *
+     * @return  string
+     */
+    protected function renderWarnings(): string
+    {
+        if ($this->warnings === []) {
+            return '';
+        }
+
+        return LayoutHelper::render(
+            'copymypage.system.warning',
+            ['messages' => $this->warnings]
+        );
+    }
+
+    /**
+     * Adds the navbar layout warning once per render cycle.
+     *
+     * @return  void
+     */
+    protected function queueInvalidLayoutWarning(): void
+    {
+        if ($this->warnings !== []) {
+            return;
+        }
+
+        $modulesUrl = Route::link('administrator', 'index.php?option=com_modules&view=modules');
+
+        $this->warnings[] = [
+            'info' => Text::_('MOD_COPYMYPAGE_NAVBAR'),
+            'desc' => Text::sprintf('MOD_COPYMYPAGE_NAVBAR_ALERT_INVALID_POSITION', $modulesUrl),
+        ];
     }
 
     /**
@@ -158,6 +262,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['navItems']    = $data['list'];
         $data['userItems']   = $helper->getUserItems($data['params'], $data['app']);
         $data['basketItems'] = $helper->getBasketItems($data['params'], $data['app']);
+        $data['warning']     = '';
 
         return $data;
     }

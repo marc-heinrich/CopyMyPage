@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 \defined('_JEXEC') or die;
@@ -12,6 +12,12 @@
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
+
+/** @var string $warning */
+
+if (!empty($warning)) {
+    echo $warning;
+}
 
 // Read layout-specific configuration keys.
 $navOffcanvasId    = (string) ($cfg['navOffcanvasId'] ?? '');

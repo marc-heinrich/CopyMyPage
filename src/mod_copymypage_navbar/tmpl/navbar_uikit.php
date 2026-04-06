@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 \defined('_JEXEC') or die;
@@ -34,6 +34,7 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  * @var object             $active
  * @var int                $active_id
  * @var string             $activeSlot
+ * @var string             $warning
  */
 
 // Read only the config keys used by this layout.
@@ -46,6 +47,10 @@ $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userD
 $onepageBase            = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
 $logoHref               = $isOnepage ? '#top' : $onepageBase;
 $activeSlot             = strtolower(trim((string) ($activeSlot ?? '')));
+
+if (!empty($warning)) {
+    echo $warning;
+}
 ?>
 <!-- Navbar Module Template: Desktop UIkit Framework (https://getuikit.com/docs/navbar) -->
 <div class="cmp-module <?php echo htmlspecialchars($userDropdownRootClass, ENT_QUOTES, 'UTF-8'); ?>">

@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 namespace Joomla\Module\CopyMyPage\Gallery\Site\Dispatcher;
@@ -64,8 +64,9 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             return;
         }
 
-        $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? $this->baseLayout)));
-        $layout        = $this->resolveLayout($layoutVariant);
+        $baseLayout    = $this->resolveBaseLayout($displayData);
+        $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? $baseLayout)));
+        $layout        = $this->resolveLayout($layoutVariant, $baseLayout);
 
         $loader = static function (array $displayData, string $layout): void {
             if (!\array_key_exists('displayData', $displayData)) {
@@ -94,24 +95,41 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     }
 
     /**
-     * Resolves the requested layout variant to an existing gallery layout.
+     * Resolves the base layout for this module instance.
      *
-     * @param   string  $layoutVariant  Requested layout variant from module params.
+     * @param   array<string, mixed>  $displayData  Prepared display data.
      *
      * @return  string
      */
-    protected function resolveLayout(string $layoutVariant): string
+    protected function resolveBaseLayout(array $displayData): string
+    {
+        return $this->baseLayout;
+    }
+
+    /**
+     * Resolves the requested layout variant to an existing gallery layout.
+     *
+     * @param   string  $layoutVariant  Requested layout variant from module params.
+     * @param   string  $baseLayout     Existing fallback layout for this module instance.
+     *
+     * @return  string
+     */
+    protected function resolveLayout(string $layoutVariant, string $baseLayout): string
     {
         $layoutPrefix = strtolower(trim($this->layoutPrefix));
 
-        if ($layoutVariant === '' || ($layoutPrefix !== '' && !str_starts_with($layoutVariant, $layoutPrefix . '_'))) {
-            return $this->baseLayout;
+        if ($layoutVariant === '' || $layoutVariant === 'default') {
+            return $baseLayout;
+        }
+
+        if ($layoutPrefix !== '' && !str_starts_with($layoutVariant, $layoutPrefix . '_')) {
+            return $baseLayout;
         }
 
         $layoutPath = ModuleHelper::getLayoutPath('mod_copymypage_gallery', $layoutVariant);
 
         if (!is_file($layoutPath) || basename($layoutPath, '.php') !== $layoutVariant) {
-            return $this->baseLayout;
+            return $baseLayout;
         }
 
         return $layoutVariant;
