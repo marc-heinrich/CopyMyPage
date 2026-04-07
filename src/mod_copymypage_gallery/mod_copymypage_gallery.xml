@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.9</version>
+  <version>0.0.10</version>
   <description>MOD_COPYMYPAGE_GALLERY_XML_DESCRIPTION</description>
   <scriptfile>script.php</scriptfile>
   <namespace path="src">Joomla\Module\CopyMyPage\Gallery</namespace>
@@ -23,6 +23,31 @@
         <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_DESC" default="gallery_sigplus_preview">
           <option value="gallery_sigplus_preview">MOD_COPYMYPAGE_GALLERY_LAYOUT_VARIANT_GALLERY_SIGPLUS_PREVIEW</option>
         </field>
+        <field
+          name="gallery_sigplus_preview_showFilters"
+          type="radio"
+          label="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_SHOW_FILTERS_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_SHOW_FILTERS_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:gallery_sigplus_preview">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="gallery_sigplus_preview_headline"
+          type="text"
+          label="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_HEADLINE_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_HEADLINE_DESC"
+          showon="layoutVariant:gallery_sigplus_preview" />
+        <field
+          name="gallery_sigplus_preview_lead"
+          type="textarea"
+          label="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_LEAD_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_LEAD_DESC"
+          rows="4"
+          filter="safehtml"
+          showon="layoutVariant:gallery_sigplus_preview" />
       </fieldset>
     </fields>
   </config>

@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
@@ -12,6 +12,7 @@ namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\Database\DatabaseAwareInterface;
@@ -179,6 +180,57 @@ final class GalleryHelper implements DatabaseAwareInterface
     }
 
     /**
+     * Extract the layout-specific parameter subset from the flat module config.
+     *
+     * Example:
+     * layout "gallery_sigplus_preview" turns
+     * "gallery_sigplus_preview_showFilters" into "showFilters".
+     *
+     * @param   array<string, mixed>  $cfg     Flat module config array.
+     * @param   string                $layout  Validated layout key.
+     *
+     * @return  array<string, mixed>
+     */
+    public static function getLayoutConfig(array $cfg, string $layout): array
+    {
+        $layout = strtolower(trim($layout));
+
+        if ($layout === '') {
+            return [];
+        }
+
+        return self::extractPrefixedConfig($cfg, $layout . '_');
+    }
+
+    /**
+     * Typed array getter (bool) for template-side layout config usage.
+     *
+     * @param   array<string, mixed>  $cfg      Config bucket.
+     * @param   string                $key      Array key.
+     * @param   bool                  $default  Default value.
+     *
+     * @return  bool
+     */
+    public static function cfgBool(array $cfg, string $key, bool $default = false): bool
+    {
+        return CopyMyPageHelper::cfgBool($cfg, $key, $default);
+    }
+
+    /**
+     * Typed array getter (string) for template-side layout config usage.
+     *
+     * @param   array<string, mixed>  $cfg      Config bucket.
+     * @param   string                $key      Array key.
+     * @param   string                $default  Default value.
+     *
+     * @return  string
+     */
+    public static function cfgString(array $cfg, string $key, string $default = ''): string
+    {
+        return CopyMyPageHelper::cfgString($cfg, $key, $default);
+    }
+
+    /**
      * Adds normalized gallery metadata to one Sigplus module row.
      *
      * @param  object  $moduleRow
@@ -247,6 +299,42 @@ final class GalleryHelper implements DatabaseAwareInterface
     }
 
     /**
+     * Extract a prefixed subset from a flat config array.
+     *
+     * @param   array<string, mixed>  $cfg          Flat config array.
+     * @param   string                $prefix       Prefix to match.
+     * @param   bool                  $stripPrefix  Remove the prefix from returned keys.
+     *
+     * @return  array<string, mixed>
+     */
+    private static function extractPrefixedConfig(array $cfg, string $prefix, bool $stripPrefix = true): array
+    {
+        $prefix = trim($prefix);
+
+        if ($prefix === '') {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($cfg as $key => $value) {
+            if (!\is_string($key) || !str_starts_with($key, $prefix)) {
+                continue;
+            }
+
+            $targetKey = $stripPrefix ? substr($key, strlen($prefix)) : $key;
+
+            if (!\is_string($targetKey) || $targetKey === '') {
+                continue;
+            }
+
+            $result[$targetKey] = $value;
+        }
+
+        return $result;
+    }
+
+    /**
      * Normalizes a Sigplus source path for DB matching.
      *
      * @param  string  $source
@@ -271,7 +359,7 @@ final class GalleryHelper implements DatabaseAwareInterface
         $registry  = $container->has(CopyMyPageRegistry::class)
             ? $container->get(CopyMyPageRegistry::class)
             : new CopyMyPageRegistry();
-        $handler   = $registry->getService('sigplus');
+        $handler = $registry->getService('sigplus');
 
         if (\is_string($handler)) {
             $handler = new $handler();

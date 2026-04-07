@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 \defined('_JEXEC') or die;
@@ -19,11 +19,37 @@ use Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper;
 /** @var string             $warning */
 /** @var string             $hint */
 
-$moduleClass  = 'cmp-module cmp-module--gallery cmp-module--gallery-sigplus-preview';
-$list         = \is_array($list ?? null) ? $list : [];
-$filters      = \is_array($filters ?? null) ? $filters : [];
-$imagesLabel  = Text::_('MOD_COPYMYPAGE_GALLERY_IMAGES');
-$galleryLabel = Text::_('MOD_COPYMYPAGE_GALLERY_TO_GALLERY');
+// Normalize the raw inputs received from the dispatcher.
+$cfg     = \is_array($cfg ?? null) ? $cfg : [];
+$layout  = strtolower(trim((string) ($layout ?? '')));
+$list    = \is_array($list ?? null) ? $list : [];
+$filters = \is_array($filters ?? null) ? $filters : [];
+
+// Extract the layout-specific parameter subset for the active template.
+$layoutConfig = GalleryHelper::getLayoutConfig($cfg, $layout);
+
+// Keep template defaults together so fallback behavior stays easy to scan.
+$moduleClass     = 'cmp-module cmp-module--gallery cmp-module--gallery-sigplus-preview';
+$defaultHeadline = Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE');
+$defaultLead     = Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_DESC');
+
+// Apply layout overrides on top of the template defaults.
+$headline    = trim(GalleryHelper::cfgString($layoutConfig, 'headline', $defaultHeadline));
+$lead        = trim(GalleryHelper::cfgString($layoutConfig, 'lead', $defaultLead));
+$showFilters = GalleryHelper::cfgBool($layoutConfig, 'showFilters', true) && \count($filters) > 1;
+
+// Collect the static UI labels used by the rendered markup.
+$filterAllLabel = Text::_('MOD_COPYMYPAGE_GALLERY_FILTER_ALL');
+$imagesLabel    = Text::_('MOD_COPYMYPAGE_GALLERY_IMAGES');
+$galleryLabel   = Text::_('MOD_COPYMYPAGE_GALLERY_TO_GALLERY');
+
+if ($headline === '') {
+    $headline = $defaultHeadline;
+}
+
+if ($lead === '') {
+    $lead = $defaultLead;
+}
 ?>
 <div class="<?php echo $moduleClass; ?>">
     <?php if (!empty($warning)) : ?>
@@ -32,19 +58,19 @@ $galleryLabel = Text::_('MOD_COPYMYPAGE_GALLERY_TO_GALLERY');
         <div class="uk-container">
             <div class="cmp-gallery-preview__header">
                 <h2 class="cmp-gallery-preview__headline">
-                    <?php echo htmlspecialchars(Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE'), ENT_QUOTES, 'UTF-8'); ?>
+                    <?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?>
                 </h2>
                 <p class="cmp-gallery-preview__lead">
-                    <?php echo htmlspecialchars(Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_DESC'), ENT_QUOTES, 'UTF-8'); ?>
+                    <?php echo htmlspecialchars($lead, ENT_QUOTES, 'UTF-8'); ?>
                 </p>
             </div>
 
             <div class="cmp-gallery-preview__browser" uk-filter="target: .cmp-gallery-preview__grid; duration: 350" animation="slide">
-                <?php if (\count($filters) > 1) : ?>
+                <?php if ($showFilters) : ?>
                     <ul class="cmp-gallery-preview__filters uk-subnav uk-flex-center uk-margin-medium-bottom">
                         <li class="uk-active" uk-filter-control>
                             <a href="#">
-                                <?php echo htmlspecialchars(Text::_('MOD_COPYMYPAGE_GALLERY_FILTER_ALL'), ENT_QUOTES, 'UTF-8'); ?>
+                                <?php echo htmlspecialchars($filterAllLabel, ENT_QUOTES, 'UTF-8'); ?>
                             </a>
                         </li>
                         <?php foreach ($filters as $filter) : ?>
