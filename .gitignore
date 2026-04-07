@@ -22,6 +22,7 @@ cache/
 
 # Local-only media & design drafts
 media_local/
+blueprints/
 
 # Third-party extensions (local only, never commit)
 src/_vendor_extensions/
