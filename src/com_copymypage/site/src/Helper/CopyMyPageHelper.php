@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper;
@@ -12,12 +12,28 @@ namespace Joomla\Component\CopyMyPage\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Document\HtmlDocument;
+use Joomla\CMS\Language\Language;
 
 /**
  * Static helper for CopyMyPage view related utilities.
  */
 abstract class CopyMyPageHelper
 {
+    /**
+     * Load additional language packs used by shared CopyMyPage UI elements.
+     *
+     * @param   Language  $language  The active site language object.
+     *
+     * @return  void
+     */
+    public static function loadSharedUiLanguages(Language $language): void
+    {
+        $language->load('com_users', JPATH_SITE, null, true);
+        $language->load('com_users', JPATH_ADMINISTRATOR, null, true);
+        $language->load('com_contact', JPATH_SITE, null, true);
+        $language->load('com_contact', JPATH_ADMINISTRATOR, null, true);
+    }
+
     /**
      * Check whether the current request targets the CopyMyPage onepage view.
      *
@@ -312,4 +328,5 @@ abstract class CopyMyPageHelper
     {
         return self::toCssLength($cfg[$key] ?? null, $default, $allowPercent);
     }
+
 }

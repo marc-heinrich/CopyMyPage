@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.4
+ * @since       0.0.10
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Dispatcher;
@@ -16,6 +16,7 @@ use Joomla\CMS\Application\CMSApplicationInterface;
 use Joomla\CMS\Dispatcher\ComponentDispatcher;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Input\Input;
 
 /**
@@ -50,7 +51,7 @@ final class Dispatcher extends ComponentDispatcher
      *
      * @return  void
      *
-     * @since   0.0.4
+     * @since   0.0.10
      */
     protected function loadLanguage(): void
     {
@@ -60,11 +61,7 @@ final class Dispatcher extends ComponentDispatcher
         $lang->load('com_copymypage', JPATH_SITE, null, true);
         $lang->load('com_copymypage', JPATH_ADMINISTRATOR, null, true);
 
-        // Load language files from other components used by shared UI.
-        $lang->load('com_users', JPATH_SITE, null, true);
-        $lang->load('com_users', JPATH_ADMINISTRATOR, null, true);
-        $lang->load('com_contact', JPATH_SITE, null, true);
-        $lang->load('com_contact', JPATH_ADMINISTRATOR, null, true);
+        CopyMyPageHelper::loadSharedUiLanguages($lang);
 
         parent::loadLanguage();
     }

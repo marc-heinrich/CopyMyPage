@@ -20,6 +20,7 @@ use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /**
  * Dispatcher class for mod_copymypage_gallery.
@@ -105,6 +106,18 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         };
 
         $loader($displayData, $layout);
+    }
+
+    /**
+     * Load module and shared CopyMyPage UI languages.
+     *
+     * @return  void
+     */
+    protected function loadLanguage(): void
+    {
+        parent::loadLanguage();
+
+        CopyMyPageHelper::loadSharedUiLanguages($this->app->getLanguage());
     }
 
     /**
@@ -287,8 +300,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     protected function populateGalleryData(array &$displayData): void
     {
         $helper = $this->getHelperFactory()->getHelper('GalleryHelper');
-
-        $sigplusPlugin   = $helper->getSigplusPlugin();
+        $sigplusPlugin = $helper->getSigplusPlugin();
 
         if ($sigplusPlugin === null) {
             $this->warnings[] = [

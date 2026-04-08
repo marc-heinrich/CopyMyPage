@@ -17,6 +17,7 @@ use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
 use Joomla\CMS\Helper\HelperFactoryAwareInterface;
 use Joomla\CMS\Helper\HelperFactoryAwareTrait;
 use Joomla\CMS\Helper\ModuleHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /**
  * Dispatcher class for mod_copymypage_hero.
@@ -91,6 +92,18 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         };
 
         $loader($displayData, $layout);
+    }
+
+    /**
+     * Load module and shared CopyMyPage UI languages.
+     *
+     * @return  void
+     */
+    protected function loadLanguage(): void
+    {
+        parent::loadLanguage();
+
+        CopyMyPageHelper::loadSharedUiLanguages($this->app->getLanguage());
     }
 
     /**
