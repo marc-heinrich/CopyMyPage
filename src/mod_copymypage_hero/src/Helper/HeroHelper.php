@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.7
+ * @since       0.0.10
  */
 
 namespace Joomla\Module\CopyMyPage\Hero\Site\Helper;
@@ -12,31 +12,138 @@ namespace Joomla\Module\CopyMyPage\Hero\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Uri\Uri;
-use Joomla\Registry\Registry;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /**
  * Helper class to prepare hero data for the CopyMyPage Hero module.
- *
- * The module is conceptually a hero module for the start page. The current
- * first layout variant is a slideshow, but more hero variants can be added later.
  */
 final class HeroHelper
 {
     /**
      * Get the slideshow items for the current hero output.
      *
-     * @param  object    $module  The module object.
-     * @param  Registry  $params  The module parameters.
+     * Default slide content stays in the module so the template can render a full
+     * fallback hero even before custom layout params are introduced.
      *
-     * @return array<int, object>
+     * @param   array<string, mixed>  $cfg     Flat module config array.
+     * @param   string                $layout  Validated layout key.
+     *
+     * @return  array<int, object>
      */
-    public function getSlides(object $module, Registry $params): array
+    public function getSlides(array $cfg, string $layout): array
     {
-        $basePath = rtrim(Uri::root(true), '/') . '/modules/mod_copymypage_hero/images';
+        $layoutConfig = self::getLayoutConfig($cfg, $layout);
+        $basePath     = rtrim(Uri::root(true), '/') . '/modules/mod_copymypage_hero/images';
+        $imageRoot    = JPATH_ROOT . '/modules/mod_copymypage_hero/images';
+        $slides       = [];
 
+        foreach ($this->getDefaultSlides() as $index => $slide) {
+            $slideNumber  = $index + 1;
+            $filename     = trim((string) ($slide['file'] ?? ''));
+            $absolutePath = $imageRoot . '/' . $filename;
+
+            if ($filename === '' || !is_file($absolutePath)) {
+                continue;
+            }
+
+            $slides[] = (object) [
+                'src'           => $basePath . '/' . $filename,
+                'alt'           => trim(self::cfgString($layoutConfig, 'slide_' . $slideNumber . '_alt', (string) ($slide['alt'] ?? ''))),
+                'headline'      => trim(self::cfgString($layoutConfig, 'slide_' . $slideNumber . '_headline', (string) ($slide['headline'] ?? ''))),
+                'subline'       => trim(self::cfgString($layoutConfig, 'slide_' . $slideNumber . '_subline', (string) ($slide['subline'] ?? ''))),
+                'isLazy'        => (bool) ($slide['isLazy'] ?? true),
+                'fetchPriority' => trim((string) ($slide['fetchPriority'] ?? 'low')),
+                'width'         => (int) ($slide['width'] ?? 0),
+                'height'        => (int) ($slide['height'] ?? 0),
+            ];
+        }
+
+        return $slides;
+    }
+
+    /**
+     * Get the UIkit slideshow options for the current hero layout.
+     *
+     * @param   array<string, mixed>  $cfg     Flat module config array.
+     * @param   string                $layout  Validated layout key.
+     *
+     * @return  string
+     */
+    public function getSlideshowOptions(array $cfg, string $layout): string
+    {
+        $layoutConfig = self::getLayoutConfig($cfg, $layout);
+        $animation    = strtolower(trim(self::cfgString($layoutConfig, 'animation', 'fade')));
+        $autoplay     = self::cfgBool($layoutConfig, 'autoplay', true) ? 'true' : 'false';
+        $draggable    = self::cfgBool($layoutConfig, 'draggable', true) ? 'true' : 'false';
+
+        if (!\in_array($animation, ['fade', 'slide', 'push', 'pull'], true)) {
+            $animation = 'fade';
+        }
+
+        return 'ratio: false; animation: ' . $animation . '; autoplay: ' . $autoplay . '; draggable: ' . $draggable;
+    }
+
+    /**
+     * Extract the layout-specific parameter subset from the flat module config.
+     *
+     * Example:
+     * layout "hero_slideshow" turns
+     * "hero_slideshow_autoplay" into "autoplay".
+     *
+     * @param   array<string, mixed>  $cfg     Flat module config array.
+     * @param   string                $layout  Validated layout key.
+     *
+     * @return  array<string, mixed>
+     */
+    public static function getLayoutConfig(array $cfg, string $layout): array
+    {
+        $layout = strtolower(trim($layout));
+
+        if ($layout === '') {
+            return [];
+        }
+
+        return self::extractPrefixedConfig($cfg, $layout . '_');
+    }
+
+    /**
+     * Typed array getter (bool) for template-side layout config usage.
+     *
+     * @param   array<string, mixed>  $cfg      Config bucket.
+     * @param   string                $key      Array key.
+     * @param   bool                  $default  Default value.
+     *
+     * @return  bool
+     */
+    public static function cfgBool(array $cfg, string $key, bool $default = false): bool
+    {
+        return CopyMyPageHelper::cfgBool($cfg, $key, $default);
+    }
+
+    /**
+     * Typed array getter (string) for template-side layout config usage.
+     *
+     * @param   array<string, mixed>  $cfg      Config bucket.
+     * @param   string                $key      Array key.
+     * @param   string                $default  Default value.
+     *
+     * @return  string
+     */
+    public static function cfgString(array $cfg, string $key, string $default = ''): string
+    {
+        return CopyMyPageHelper::cfgString($cfg, $key, $default);
+    }
+
+    /**
+     * Default slide dataset for the initial hero slideshow layout.
+     *
+     * @return  array<int, array<string, mixed>>
+     */
+    private function getDefaultSlides(): array
+    {
         return [
-            (object) [
-                'src'           => $basePath . '/slide_1.jpg',
+            [
+                'file'          => 'slide_1.jpg',
                 'alt'           => 'CopyMyPage hero image 1',
                 'headline'      => 'Fernbreitenbach Helau',
                 'subline'       => 'Willkommen auf der Website des Fernbreiterbacher Carneval-Vereins',
@@ -45,21 +152,21 @@ final class HeroHelper
                 'width'         => 1920,
                 'height'        => 1280,
             ],
-            (object) [
-                'src'           => $basePath . '/slide_2.jpg',
+            [
+                'file'          => 'slide_2.jpg',
                 'alt'           => 'CopyMyPage hero image 2',
-                'headline'      => 'Feiern, lachen, leben – Carneval verbindet!',
-                'subline'       => 'ohne',
+                'headline'      => 'Feiern, lachen, leben - Carneval verbindet!',
+                'subline'       => '',
                 'isLazy'        => true,
                 'fetchPriority' => 'low',
                 'width'         => 1920,
                 'height'        => 1280,
             ],
-            (object) [
-                'src'           => $basePath . '/slide_3.jpg',
+            [
+                'file'          => 'slide_3.jpg',
                 'alt'           => 'CopyMyPage hero image 3',
-                'headline'      => 'Junge Jecken, großer Spaß – Wir machen den Carneval von morgen!',
-                'subline'       => 'ohne',
+                'headline'      => 'Junge Jecken, grosser Spass - Wir machen den Carneval von morgen!',
+                'subline'       => '',
                 'isLazy'        => true,
                 'fetchPriority' => 'low',
                 'width'         => 1920,
@@ -69,15 +176,38 @@ final class HeroHelper
     }
 
     /**
-     * Get the slideshow options for the current hero slideshow variant.
+     * Extract a prefixed subset from a flat config array.
      *
-     * @param  object    $module  The module object.
-     * @param  Registry  $params  The module parameters.
+     * @param   array<string, mixed>  $cfg          Flat config array.
+     * @param   string                $prefix       Prefix to match.
+     * @param   bool                  $stripPrefix  Remove the prefix from returned keys.
      *
-     * @return string
+     * @return  array<string, mixed>
      */
-    public function getSlideshowOptions(object $module, Registry $params): string
+    private static function extractPrefixedConfig(array $cfg, string $prefix, bool $stripPrefix = true): array
     {
-        return 'ratio: false; animation: fade; autoplay: true; draggable: true';
+        $prefix = trim($prefix);
+
+        if ($prefix === '') {
+            return [];
+        }
+
+        $result = [];
+
+        foreach ($cfg as $key => $value) {
+            if (!\is_string($key) || !str_starts_with($key, $prefix)) {
+                continue;
+            }
+
+            $targetKey = $stripPrefix ? substr($key, strlen($prefix)) : $key;
+
+            if (!\is_string($targetKey) || $targetKey === '') {
+                continue;
+            }
+
+            $result[$targetKey] = $value;
+        }
+
+        return $result;
     }
 }

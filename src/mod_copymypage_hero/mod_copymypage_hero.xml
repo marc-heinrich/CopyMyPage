@@ -8,12 +8,9 @@
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
   <version>0.0.10</version>
-  <!-- Short description via language constant -->
   <description>MOD_COPYMYPAGE_HERO_XML_DESCRIPTION</description>
   <scriptfile>script.php</scriptfile>
-  <!-- Joomla 6 namespace mapping for the module -->
   <namespace path="src">Joomla\Module\CopyMyPage\Hero</namespace>
-  <!-- Module files -->
   <files>
     <folder module="mod_copymypage_hero">services</folder>
     <folder>src</folder>
@@ -21,14 +18,68 @@
     <folder>language</folder>
     <folder>images</folder>
   </files>
-  <!-- Basic module params -->
   <config>
     <fields name="params">
       <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
         <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_HERO_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_HERO_LAYOUT_VARIANT_DESC" default="hero_slideshow">
           <option value="hero_slideshow">MOD_COPYMYPAGE_HERO_LAYOUT_VARIANT_SLIDESHOW</option>
         </field>
-        <field name="moduleclass_sfx" type="text" label="JFIELD_MODULECLASS_SFX_LABEL" description="JFIELD_MODULECLASS_SFX_DESC" filter="STRING"/>
+        <field
+          name="hero_slideshow_animation"
+          type="list"
+          label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_ANIMATION_LABEL"
+          description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_ANIMATION_DESC"
+          default="fade"
+          showon="layoutVariant:hero_slideshow">
+          <option value="fade">MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_ANIMATION_FADE</option>
+          <option value="slide">MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_ANIMATION_SLIDE</option>
+          <option value="push">MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_ANIMATION_PUSH</option>
+          <option value="pull">MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_ANIMATION_PULL</option>
+        </field>
+        <field
+          name="hero_slideshow_autoplay"
+          type="radio"
+          label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_AUTOPLAY_LABEL"
+          description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_AUTOPLAY_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:hero_slideshow">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="hero_slideshow_draggable"
+          type="radio"
+          label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_DRAGGABLE_LABEL"
+          description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_DRAGGABLE_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:hero_slideshow">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="hero_slideshow_showSlidenav"
+          type="radio"
+          label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SHOW_SLIDENAV_LABEL"
+          description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SHOW_SLIDENAV_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:hero_slideshow">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="hero_slideshow_showDotnav"
+          type="radio"
+          label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SHOW_DOTNAV_LABEL"
+          description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SHOW_DOTNAV_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:hero_slideshow">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
       </fieldset>
     </fields>
   </config>
