@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "assets": [
@@ -20,7 +20,6 @@
       "version": "0.0.9",
       "dependencies": [
         "uikit",
-        "mmenu.light",
         "template.fonts"
       ]
     },
@@ -39,13 +38,9 @@
         "core",
         "uikit",
         "uikit.icons",
-        "mmenu.light",
-        "mburger",
         "copymypage.base",
         "copymypage.behavior",
-        "copymypage.onepage",
-        "copymypage.dropdown",
-        "copymypage.mmenu.navigation"
+        "copymypage.onepage"
       ],
       "attributes": {
         "defer": true
@@ -88,7 +83,7 @@
       "name": "copymypage.dropdown",
       "type": "script",
       "uri": "com_copymypage/copymypage-dropdown.min.js",
-      "version": "0.0.9",
+      "version": "0.0.10",
       "dependencies": [
         "uikit",
         "copymypage.base"
@@ -101,7 +96,7 @@
       "name": "copymypage.mmenu.navigation",
       "type": "script",
       "uri": "com_copymypage/copymypage-mmenu-navigation.min.js",
-      "version": "0.0.9",
+      "version": "0.0.10",
       "dependencies": [
         "copymypage.base"
       ],

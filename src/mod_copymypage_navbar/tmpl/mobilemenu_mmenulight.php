@@ -13,13 +13,33 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
-/** @var string $warning */
+/**
+ * Extracted variables
+ * -----------------
+ * @var bool  $isOnepage
+ *
+ * @var array<string, mixed> $cfg Normalized/typed module configuration (from helper).
+ *                                Document only the keys used in this layout:
+ *                                - navOffcanvasId: string
+ *                                - userOffcanvasId: string
+ *                                - basketOffcanvasId: string
+ *                                - mmenuLightSelectedClass: string
+ *                                - mmenuLightItemHeight: int
+ *                                - mmenuLightOcdWidth: int
+ *                                - mmenuLightOcdMinWidth: int
+ *                                - mmenuLightOcdMaxWidth: int
+ *
+ * @var \stdClass                                      $module
+ * @var \Joomla\CMS\Application\CMSApplicationInterface $app
+ * @var array<int, object>                             $list
+ * @var array<int, object>                             $userItems
+ * @var string                                         $warning
+ * @var array<string, mixed>                           $navigationState
+ * @var \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper $navbarHelper
+ */
 
-if (!empty($warning)) {
-    echo $warning;
-}
-
-// Read layout-specific configuration keys.
+// Read only the config keys used by this layout.
+// For type normalization (boolean or integer), use the component helper class CopyMyPage.
 $navOffcanvasId    = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId   = (string) ($cfg['userOffcanvasId'] ?? '');
 $basketOffcanvasId = (string) ($cfg['basketOffcanvasId'] ?? '');
@@ -27,19 +47,27 @@ $basketOffcanvasId = (string) ($cfg['basketOffcanvasId'] ?? '');
 // Mmenu-light expects a "selected" class on the <li>.
 $selectedClass = (string) ($cfg['mmenuLightSelectedClass'] ?? 'current');
 
+$itemHeight  = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightItemHeight', 50, 0) . 'px';
+$ocdWidth    = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdWidth', 80, 0) . '%';
+$ocdMinWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMinWidth', 200, 0) . 'px';
+$ocdMaxWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMaxWidth', 440, 0) . 'px';
+$navigationState = is_array($navigationState ?? null) ? $navigationState : [];
+$onepageBase     = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
+
+if (!isset($navbarHelper) || !$navbarHelper instanceof \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper) {
+    return;
+}
+
 // Cannot render the mmenu root without an offcanvas id.
 if ($navOffcanvasId === '') {
     return;
 }
 
-// Register mmenu-light sizing CSS variables.
-$itemHeight  = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightItemHeight', 50, 0) . 'px';
-$ocdWidth    = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdWidth', 80, 0) . '%';
-$ocdMinWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMinWidth', 200, 0) . 'px';
-$ocdMaxWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMaxWidth', 440, 0) . 'px';
-
 /** @var Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $app->getDocument()->getWebAssetManager();
+$wa->useStyle('mmenu.light');
+$wa->useScript('mmenu.light');
+$wa->useScript('copymypage.mmenu.navigation');
 $wa->addInlineStyle(
     ":root {\n"
     . "    /* mmenu-light tokens */\n"
@@ -51,74 +79,9 @@ $wa->addInlineStyle(
     ['name' => 'mod-copymypage-navbar-mmenu-light-widths-' . (int) ($module->id ?? 0)]
 );
 
-$activeId = (int) ($active_id ?? 0);
-
-// Prefer active item tree, fallback to $path.
-$trailIds = [];
-$activeSlot = strtolower(trim((string) ($activeSlot ?? '')));
-
-if (isset($active) && isset($active->tree) && \is_array($active->tree)) {
-    $trailIds = array_map('intval', $active->tree);
-} elseif (isset($path) && \is_array($path)) {
-    $trailIds = array_map('intval', $path);
+if (!empty($warning)) {
+    echo $warning;
 }
-
-$matchesActiveSlot = static function (object $item) use ($activeSlot): bool {
-    if ($activeSlot === '' || (string) ($item->type ?? '') !== 'url') {
-        return false;
-    }
-
-    $candidates = [
-        (string) ($item->link ?? ''),
-        (string) ($item->flink ?? ''),
-    ];
-
-    foreach ($candidates as $candidate) {
-        if (CopyMyPageHelper::extractHashToken($candidate) === $activeSlot) {
-            return true;
-        }
-    }
-
-    return false;
-};
-
-$hasForcedActiveSlot = $activeSlot !== ''
-    && !empty(array_filter(
-        $list,
-        static function ($menuItem) use ($matchesActiveSlot): bool {
-            return \is_object($menuItem) && $matchesActiveSlot($menuItem);
-        }
-    ));
-
-// Build links aligned with desktop navbar behavior.
-$buildUrl = static function ($item) use ($isOnepage): string {
-    $url = (string) ($item->flink ?? '');
-
-    // Keep hash links unchanged on onepage view.
-    if (
-        $isOnepage
-        && ($item->type ?? '') === 'url'
-        && !empty($item->link)
-        && \is_string($item->link)
-        && str_starts_with($item->link, '#')
-    ) {
-        return (string) $item->link;
-    }
-
-    // On non-onepage views, route top-level hash links to onepage + anchor.
-    if (
-        !$isOnepage
-        && (int) ($item->level ?? 0) === 1
-        && ($item->type ?? '') === 'url'
-        && !empty($item->link)
-        && \is_string($item->link)
-        && str_starts_with($item->link, '#')
-    ) {
-        return Route::link('site', 'index.php?option=com_copymypage&view=onepage') . (string) $item->link;
-    }
-
-    return $url;
-};
 ?>
 
 <!-- Navbar Module Template: Mmenu Light JS-Plugin (https://mmenujs.com/mmenu-light) -->
@@ -129,12 +92,8 @@ $buildUrl = static function ($item) use ($isOnepage): string {
         <ul>
             <?php foreach ($list as $item) : ?>
                 <?php
-                $level = (int) ($item->level ?? 1);
-                $id    = (int) ($item->id ?? 0);
-
-                $slotActive = $matchesActiveSlot($item);
-                $isTrail    = !$hasForcedActiveSlot && \in_array($id, $trailIds, true);
-                $isActive   = $hasForcedActiveSlot ? $slotActive : ($id === $activeId);
+                $isActive = $navbarHelper->isMenuItemCurrent($item, $navigationState, false);
+                $isTrail  = $navbarHelper->isMenuItemCurrent($item, $navigationState, true) && !$isActive;
 
                 // Mmenu-light expects the selected class on <li>.
                 $liClasses = [];
@@ -149,7 +108,7 @@ $buildUrl = static function ($item) use ($isOnepage): string {
                     continue;
                 }
 
-                $url = $buildUrl($item);
+                $url = $navbarHelper->resolveMenuItemUrl($item, $isOnepage, $onepageBase);
                 $title = (string) ($item->title ?? '');
 
                 // Headings: prefer <span> like the mmenu-light demo, so they open submenus without navigation.

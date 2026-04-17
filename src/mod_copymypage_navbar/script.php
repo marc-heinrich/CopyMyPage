@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.7
+ * @since       0.0.10
  */
 
 \defined('_JEXEC') or die;
@@ -603,7 +603,7 @@ return new class () implements ServiceProviderInterface
                     $module = 'mod_copymypage_navbar';
 
                     $query = $db->getQuery(true)
-                        ->select([$db->quoteName('id'), $db->quoteName('params')])
+                        ->select([$db->quoteName('id'), $db->quoteName('position'), $db->quoteName('params')])
                         ->from($db->quoteName('#__modules'))
                         ->where($db->quoteName('module') . ' = :module')
                         ->bind(':module', $module, ParameterType::STRING);
@@ -618,13 +618,17 @@ return new class () implements ServiceProviderInterface
                             $params = [];
                         }
 
+                        $slot = strtolower(trim((string) ($row->position ?? '')));
                         $normalized = $params;
-                        $normalized['layoutVariant']          = $this->normalizeLayoutVariant($params['layoutVariant'] ?? null);
-                        $normalized['mmenuLightItemHeight']   = $this->extractNumericParam($params['mmenuLightItemHeight'] ?? null, 50);
-                        $normalized['mmenuLightOcdWidth']     = $this->extractNumericParam($params['mmenuLightOcdWidth'] ?? null, 80);
-                        $normalized['mmenuLightOcdMinWidth']  = $this->extractNumericParam($params['mmenuLightOcdMinWidth'] ?? null, 200);
-                        $normalized['mmenuLightOcdMaxWidth']  = $this->extractNumericParam($params['mmenuLightOcdMaxWidth'] ?? null, 440);
-                        $normalized['userDropdownCloseDelay'] = $this->extractNumericParam($params['userDropdownCloseDelay'] ?? null, 180);
+                        $normalized['layoutVariant'] = $this->normalizeLayoutVariant($params['layoutVariant'] ?? null);
+
+                        if ($slot === 'navbar') {
+                            $this->migrateNavbarSlotParams($normalized, $params);
+                            $this->removeLegacyNavbarParams($normalized);
+                        } elseif ($slot === 'mobilemenu') {
+                            $this->migrateMobilemenuSlotParams($normalized, $params);
+                            $this->removeLegacyNavbarParams($normalized);
+                        }
 
                         if ($normalized === $params) {
                             continue;
@@ -659,11 +663,328 @@ return new class () implements ServiceProviderInterface
                     return match ($variant) {
                         'navbar_bootstrap' => 'navbar_uikit',
                         'navbar_uikit',
-                        'mobilemenu_mmenulight',
-                        'mobilemenu_uikit',
+                        'mobilemenu_mmenulight' => $variant,
+                        'mobilemenu_uikit' => 'mobilemenu_mmenulight',
                         'default' => $variant,
                         default => 'default',
                     };
+                }
+
+                /**
+                 * Migrate the navbar slot params to the new layout-prefixed naming scheme.
+                 *
+                 * @param   array<string, mixed>  $normalized  Normalized params (by reference).
+                 * @param   array<string, mixed>  $params       Raw params.
+                 *
+                 * @return  void
+                 */
+                private function migrateNavbarSlotParams(array &$normalized, array $params): void
+                {
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_logo',
+                        'media/com_copymypage/images/logo/logo-cmp.png',
+                        'logo'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_userDropdownHoldOpenEnabled',
+                        '1',
+                        'userDropdownHoldOpenEnabled'
+                    );
+                    $this->migrateNumericParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_userDropdownCloseDelay',
+                        180,
+                        'userDropdownCloseDelay'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_userDropdownCloseOnNavClick',
+                        '1',
+                        'userDropdownCloseOnNavClick'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_userDropdownSelectorRoot',
+                        '.cmp-module--navbar',
+                        'userDropdownSelectorRoot'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_userDropdownSelectorUser',
+                        '.cmp-navbar-user',
+                        'userDropdownSelectorUser'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_userDropdownSelectorToggle',
+                        'a.cmp-navbar-icon',
+                        'userDropdownSelectorToggle'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_userDropdownSelectorDropdown',
+                        '.cmp-navbar-user .uk-navbar-dropdown',
+                        'userDropdownSelectorDropdown'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'navbar_uikit_userDropdownSelectorNavbarDropdown',
+                        '.cmp-navbar .uk-navbar-dropdown',
+                        'userDropdownSelectorNavbarDropdown'
+                    );
+                }
+
+                /**
+                 * Migrate the mobilemenu slot params to the new layout-prefixed naming scheme.
+                 *
+                 * @param   array<string, mixed>  $normalized  Normalized params (by reference).
+                 * @param   array<string, mixed>  $params       Raw params.
+                 *
+                 * @return  void
+                 */
+                private function migrateMobilemenuSlotParams(array &$normalized, array $params): void
+                {
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_navOffcanvasId',
+                        'cmp-mobilemenu-nav',
+                        'navOffcanvasId'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_userOffcanvasId',
+                        'cmp-mobilemenu-user',
+                        'userOffcanvasId'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_basketOffcanvasId',
+                        'cmp-mobilemenu-basket',
+                        'basketOffcanvasId'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_mediaQuery',
+                        'all',
+                        'mmenuLightMediaQuery'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_selectedClass',
+                        'Selected',
+                        'mmenuLightSelectedClass'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_slidingSubmenus',
+                        '1',
+                        'mmenuLightSlidingSubmenus'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_theme',
+                        'dark',
+                        'mmenuLightTheme'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_closeOnClick',
+                        '1',
+                        'mmenuLightCloseOnClick'
+                    );
+                    $this->migrateNumericParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_itemHeight',
+                        50,
+                        'mmenuLightItemHeight'
+                    );
+                    $this->migrateNumericParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_ocdWidth',
+                        80,
+                        'mmenuLightOcdWidth'
+                    );
+                    $this->migrateNumericParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_ocdMinWidth',
+                        200,
+                        'mmenuLightOcdMinWidth'
+                    );
+                    $this->migrateNumericParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_ocdMaxWidth',
+                        440,
+                        'mmenuLightOcdMaxWidth'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_navTitle',
+                        'Menu',
+                        'mmenuLightNavTitle'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_navPosition',
+                        'left',
+                        'mmenuLightNavPosition'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_userTitle',
+                        'User',
+                        'mmenuLightUserTitle'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_userPosition',
+                        'right',
+                        'mmenuLightUserPosition'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_basketTitle',
+                        'Basket',
+                        'mmenuLightBasketTitle'
+                    );
+                    $this->migrateScalarParam(
+                        $normalized,
+                        $params,
+                        'mobilemenu_mmenulight_basketPosition',
+                        'right',
+                        'mmenuLightBasketPosition'
+                    );
+                }
+
+                /**
+                 * Copy a scalar param into its prefixed target key.
+                 *
+                 * @param   array<string, mixed>  $normalized  Normalized params (by reference).
+                 * @param   array<string, mixed>  $params       Raw params.
+                 * @param   string                $targetKey    New prefixed key.
+                 * @param   mixed                 $default      Safe fallback value.
+                 * @param   string|null           $legacyKey    Legacy flat key.
+                 *
+                 * @return  void
+                 */
+                private function migrateScalarParam(
+                    array &$normalized,
+                    array $params,
+                    string $targetKey,
+                    mixed $default,
+                    ?string $legacyKey = null
+                ): void {
+                    if (array_key_exists($targetKey, $params)) {
+                        $normalized[$targetKey] = $params[$targetKey];
+
+                        return;
+                    }
+
+                    if ($legacyKey !== null && array_key_exists($legacyKey, $params)) {
+                        $normalized[$targetKey] = $params[$legacyKey];
+
+                        return;
+                    }
+
+                    $normalized[$targetKey] = $default;
+                }
+
+                /**
+                 * Copy an integer-like param into its prefixed target key.
+                 *
+                 * @param   array<string, mixed>  $normalized  Normalized params (by reference).
+                 * @param   array<string, mixed>  $params       Raw params.
+                 * @param   string                $targetKey    New prefixed key.
+                 * @param   int                   $default      Safe fallback value.
+                 * @param   string|null           $legacyKey    Legacy flat key.
+                 *
+                 * @return  void
+                 */
+                private function migrateNumericParam(
+                    array &$normalized,
+                    array $params,
+                    string $targetKey,
+                    int $default,
+                    ?string $legacyKey = null
+                ): void {
+                    if (array_key_exists($targetKey, $params)) {
+                        $value = $params[$targetKey];
+                    } elseif ($legacyKey !== null && array_key_exists($legacyKey, $params)) {
+                        $value = $params[$legacyKey];
+                    } else {
+                        $value = null;
+                    }
+
+                    $normalized[$targetKey] = $this->extractNumericParam($value, $default);
+                }
+
+                /**
+                 * Remove obsolete flat navbar param keys after migration.
+                 *
+                 * @param   array<string, mixed>  $normalized  Normalized params (by reference).
+                 *
+                 * @return  void
+                 */
+                private function removeLegacyNavbarParams(array &$normalized): void
+                {
+                    foreach ([
+                        'logo',
+                        'navOffcanvasId',
+                        'userOffcanvasId',
+                        'basketOffcanvasId',
+                        'mmenuLightMediaQuery',
+                        'mmenuLightSelectedClass',
+                        'mmenuLightSlidingSubmenus',
+                        'mmenuLightTheme',
+                        'mmenuLightCloseOnClick',
+                        'mmenuLightItemHeight',
+                        'mmenuLightOcdWidth',
+                        'mmenuLightOcdMinWidth',
+                        'mmenuLightOcdMaxWidth',
+                        'mmenuLightNavTitle',
+                        'mmenuLightNavPosition',
+                        'mmenuLightUserTitle',
+                        'mmenuLightUserPosition',
+                        'mmenuLightBasketTitle',
+                        'mmenuLightBasketPosition',
+                        'userDropdownHoldOpenEnabled',
+                        'userDropdownCloseDelay',
+                        'userDropdownCloseOnNavClick',
+                        'userDropdownSelectorRoot',
+                        'userDropdownSelectorUser',
+                        'userDropdownSelectorToggle',
+                        'userDropdownSelectorDropdown',
+                        'userDropdownSelectorNavbarDropdown',
+                    ] as $legacyKey) {
+                        unset($normalized[$legacyKey]);
+                    }
                 }
 
                 /**

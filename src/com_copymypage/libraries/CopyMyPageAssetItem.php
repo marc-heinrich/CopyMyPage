@@ -4,7 +4,7 @@
  * @subpackage  WebAssetItem
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  * @see         https://docs.joomla.org/J4.x:Web_Assets and CoreAssetItem.php
  */
 
@@ -17,8 +17,6 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\WebAsset\WebAssetAttachBehaviorInterface;
 use Joomla\CMS\WebAsset\WebAssetItem;
-use Joomla\Component\CopyMyPage\Site\Helper\Helpers\NavbarParamsHelper as CopyMyPageNavbarParamsHelper;
-use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\Registry\Registry;
 
 /**
@@ -44,9 +42,10 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
         $options = [
             'tmpl'  => $templateParams,
             'mod'   => [
-                'navbar' => $navbarParams,
+                'navbar'      => $navbarParams['shared'] ?? [],
+                'navbarSlots' => $navbarParams['slots'] ?? [],
             ],
-        ];      
+        ];
 
         // Expose options via Joomla.getOptions('copymypage.params').
         $doc->addScriptOptions('copymypage.params', $options, false);
@@ -163,47 +162,32 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
      */
     private function getNavbarModuleParams(): array
     {
-        $helper = $this->getNavbarParamsHelper();
+        $helper = $this->getNavbarModuleHelper();
 
-        if ($helper === null || !method_exists($helper, 'getModuleParams')) {
+        if ($helper === null || !method_exists($helper, 'getClientConfig')) {
             return [];
         }
 
-        $params = $helper->getModuleParams();
+        $params = $helper->getClientConfig();
 
         return is_array($params) ? $params : [];
     }
 
     /**
-     * Resolve the navbar parameters helper from the CopyMyPage registry.
-     *
-     * Falls back to direct helper instantiation when the registry service is unavailable.
+     * Resolve the navbar module helper via module bootstrapping.
      */
-    private function getNavbarParamsHelper(): ?object
+    private function getNavbarModuleHelper(): ?object
     {
-        $container = Factory::getContainer();
+        $app = Factory::getApplication();
 
-        if ($container->has(CopyMyPageRegistry::class)) {
-            /** @var CopyMyPageRegistry $registry */
-            $registry = $container->get(CopyMyPageRegistry::class);
-
-            if ($registry->hasService('navbar')) {
-                $handler = $registry->getService('navbar');
-
-                if (is_string($handler) && class_exists($handler)) {
-                    $handler = new $handler();
-                }
-
-                if (is_object($handler)) {
-                    return $handler;
-                }
-            }
+        if (!method_exists($app, 'bootModule')) {
+            return null;
         }
 
-        if (class_exists(CopyMyPageNavbarParamsHelper::class)) {
-            return new CopyMyPageNavbarParamsHelper();
+        try {
+            return $app->bootModule('mod_copymypage_navbar', 'site')->getHelper('NavbarHelper');
+        } catch (\Throwable) {
+            return null;
         }
-
-        return null;
     }
 }

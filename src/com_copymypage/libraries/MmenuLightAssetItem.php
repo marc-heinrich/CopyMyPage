@@ -4,7 +4,7 @@
  * @subpackage  WebAssetItem
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 namespace Joomla\CMS\WebAsset\AssetItem;
@@ -60,7 +60,7 @@ final class MmenuLightAssetItem extends WebAssetItem implements WebAssetAttachBe
             }
 
             const options = Joomla.getOptions('copymypage.params', {}) || {};
-            const cfg = options.mod?.navbar || {};
+            const cfg = options.mod?.navbarSlots?.mobilemenu || options.mod?.navbar || {};
 
             const mediaQuery = cfg.mmenuLightMediaQuery || 'all';
             const theme = cfg.mmenuLightTheme || 'light';

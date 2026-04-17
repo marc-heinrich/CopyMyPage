@@ -40,20 +40,13 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     protected array $warnings = [];
 
     /**
-     * Supported slot-to-layout mappings for this module.
+     * Active slot for the current module instance.
      *
-     * @var array<string, array{layoutPrefix: string, baseLayout: string}>
+     * The slot token is also the layout prefix.
+     *
+     * @var string
      */
-    protected array $slotLayouts = [
-        'navbar' => [
-            'layoutPrefix' => 'navbar',
-            'baseLayout'   => 'navbar_uikit',
-        ],
-        'mobilemenu' => [
-            'layoutPrefix' => 'mobilemenu',
-            'baseLayout'   => 'mobilemenu_mmenulight',
-        ],
-    ];
+    protected string $slot = '';
 
     /**
      * Runs the dispatcher.
@@ -64,26 +57,24 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     {
         $this->loadLanguage();
 
-        $displayData = $this->getLayoutData();
+        $displayData = $this->getBaseLayoutData();
 
         if ($displayData === false) {
             return;
         }
 
-        $slotLayout = $this->resolveSlotLayout($displayData);
-
-        if ($slotLayout === null) {
+        if (!$this->hasValidSlotPosition($displayData)) {
             echo $this->renderWarnings();
 
             return;
         }
 
-        $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? $slotLayout['baseLayout'])));
-        $layout = $this->resolveLayout(
-            $layoutVariant,
-            $slotLayout['layoutPrefix'],
-            $slotLayout['baseLayout']
-        );
+        $baseLayout    = $this->resolveBaseLayout();
+        $layoutVariant = strtolower(trim((string) ($displayData['rawCfg']['layoutVariant'] ?? $baseLayout)));
+        $layout        = $this->resolveLayout($layoutVariant, $baseLayout);
+
+        $this->populateNavbarData($displayData, $layout);
+
         $displayData['warning'] = $this->renderWarnings();
 
         $loader = static function (array $displayData, string $layout): void {
@@ -114,7 +105,10 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
              * @var array<int, object>                             $basketItems
              * @var bool                                           $isOnepage
              * @var string                                         $activeSlot
+             * @var string                                         $slot
              * @var string                                         $warning
+             * @var array<string, mixed>                           $navigationState
+             * @var \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper $navbarHelper
              */
             require ModuleHelper::getLayoutPath('mod_copymypage_navbar', $layout);
         };
@@ -135,37 +129,26 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     }
 
     /**
-     * Resolves the slot layout context for the current module position.
+     * Resolves the base layout for the active slot.
      *
-     * @param   array<string, mixed>  $displayData  Prepared display data.
-     *
-     * @return  array{layoutPrefix: string, baseLayout: string}|null
+     * @return  string
      */
-    protected function resolveSlotLayout(array $displayData): ?array
+    protected function resolveBaseLayout(): string
     {
-        $slot = strtolower(trim((string) ($displayData['module']->position ?? '')));
-
-        if (!isset($this->slotLayouts[$slot])) {
-            $this->queueInvalidLayoutWarning();
-
-            return null;
-        }
-
-        return $this->slotLayouts[$slot];
+        return $this->getHelperFactory()->getHelper('NavbarHelper')->resolveBaseLayout($this->slot);
     }
 
     /**
      * Resolves the requested layout variant to an existing navbar/mobilemenu layout.
      *
      * @param   string  $layoutVariant  Requested layout variant from module params.
-     * @param   string  $layoutPrefix   Layout prefix for the current system slot.
      * @param   string  $baseLayout     Existing fallback layout for this module instance.
      *
      * @return  string
      */
-    protected function resolveLayout(string $layoutVariant, string $layoutPrefix, string $baseLayout): string
+    protected function resolveLayout(string $layoutVariant, string $baseLayout): string
     {
-        $layoutPrefix = strtolower(trim($layoutPrefix));
+        $layoutPrefix = strtolower(trim($this->slot));
 
         if ($layoutVariant === '' || $layoutVariant === 'default') {
             return $baseLayout;
@@ -186,6 +169,28 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         }
 
         return $layoutVariant;
+    }
+
+    /**
+     * Check whether the current module instance is published in a supported system slot.
+     *
+     * @param   array<string, mixed>  $displayData  Prepared display data.
+     *
+     * @return  bool
+     */
+    protected function hasValidSlotPosition(array $displayData): bool
+    {
+        $slot = strtolower(trim((string) ($displayData['module']->position ?? '')));
+
+        if (!$this->getHelperFactory()->getHelper('NavbarHelper')->isSupportedSlot($slot)) {
+            $this->queueInvalidLayoutWarning();
+
+            return false;
+        }
+
+        $this->slot = $slot;
+
+        return true;
     }
 
     /**
@@ -225,58 +230,86 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     }
 
     /**
-     * Build the layout payload for this module instance.
+     * Prepare the raw display data before slot and layout validation.
      *
-     * Exposes raw, DB-backed module params as `$cfg` (layouts cast what they need) and
-     * computes `$isOnepage` from the current request to adjust anchor/link output.
-     * Reuses Joomla core `mod_menu` MenuHelper to populate active/base/default items,
-     * path/showAll, and the final `$list` (with `$navItems` alias) plus `$userItems`.
-     *
-     * @return array|false  Layout data array, or false to skip rendering.
+     * @return array<string, mixed>|false
      */
-    protected function getLayoutData(): array|false
+    protected function getBaseLayoutData(): array|false
     {
         $data = parent::getLayoutData();
 
-        // Prepare helper instances.
-        $helper     = $this->getHelperFactory()->getHelper('NavbarHelper');
-        $menuHelper = $data['app']->bootModule('mod_menu', 'site')->getHelper('MenuHelper');
+        if ($data === false) {
+            return false;
+        }
 
-        // Expose raw, DB-backed module params to the layout (no helper bridge).
-        $data['cfg'] = ($data['params'] instanceof \Joomla\Registry\Registry)
+        $data['rawCfg'] = ($data['params'] instanceof \Joomla\Registry\Registry)
             ? $data['params']->toArray()
             : [];
+        $data['cfg']             = [];
+        $data['slot']            = '';
+        $data['navigationState'] = [];
+        $data['navbarHelper']    = null;
+        $data['base']            = null;
+        $data['active']          = null;
+        $data['default']         = null;
+        $data['active_id']       = 0;
+        $data['default_id']      = 0;
+        $data['path']            = [];
+        $data['showAll']         = 0;
+        $data['list']            = [];
+        $data['navItems']        = [];
+        $data['userItems']       = [];
+        $data['basketItems']     = [];
+        $data['warning']         = '';
 
-        // Determine if we are in a CopyMyPage onepage view (used by layouts to adjust output).
         $option = $data['input']->getCmd('option', '');
         $view   = $data['input']->getCmd('view', '');
         $data['isOnepage'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::isOnepage($option, $view);
         $data['activeSlot'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::resolveActiveSlot($option, $view);
 
-        // Prepare menu parameters for mod_menu MenuHelper (dev defaults from helper).
-        $menuParams = $helper->getMenuParams();
-
-        // Get menu items and related data via Core MenuHelper.
-        $base    = $menuHelper->getBaseItem($menuParams, $data['app']);
-        $active  = $menuHelper->getActiveItem($data['app']);
-        $default = $menuHelper->getDefaultItem($data['app']);
-
-        // Populate data array with menu info.
-        $data['base']       = $base;
-        $data['active']     = $active;
-        $data['default']    = $default;
-        $data['active_id']  = isset($active->id) ? (int) $active->id : 0;
-        $data['default_id'] = isset($default->id) ? (int) $default->id : 0;
-        $data['path']       = isset($base->tree) && \is_array($base->tree) ? $base->tree : [];
-        $data['showAll']    = (int) $menuParams->get('showAllChildren', 1);
-        $data['list']       = $menuHelper->getItems($menuParams, $data['app']);
-
-        // Provide explicit names for the three mobile menus.
-        $data['navItems']    = $data['list'];
-        $data['userItems']   = $helper->getUserItems($data['params'], $data['app']);
-        $data['basketItems'] = $helper->getBasketItems($data['params'], $data['app']);
-        $data['warning']     = '';
-
         return $data;
+    }
+
+    /**
+     * Populate shared navbar/mobilemenu data after slot and layout validation.
+     *
+     * @param   array<string, mixed>  $displayData  Prepared display data.
+     * @param   string                $layout       Resolved layout key.
+     *
+     * @return  void
+     */
+    protected function populateNavbarData(array &$displayData, string $layout): void
+    {
+        $helper = $this->getHelperFactory()->getHelper('NavbarHelper');
+        $menuHelper = $displayData['app']->bootModule('mod_menu', 'site')->getHelper('MenuHelper');
+        $menuParams = $helper->getMenuParams();
+        $base       = $menuHelper->getBaseItem($menuParams, $displayData['app']);
+        $active     = $menuHelper->getActiveItem($displayData['app']);
+        $default    = $menuHelper->getDefaultItem($displayData['app']);
+        $list       = $menuHelper->getItems($menuParams, $displayData['app']);
+
+        $displayData['slot']         = $this->slot;
+        $displayData['navbarHelper'] = $helper;
+        $displayData['cfg']          = array_replace(
+            $helper->getSharedConfig(),
+            $helper->getLayoutConfig($displayData['params'], $layout)
+        );
+        $displayData['base']       = $base;
+        $displayData['active']     = $active;
+        $displayData['default']    = $default;
+        $displayData['active_id']  = isset($active->id) ? (int) $active->id : 0;
+        $displayData['default_id'] = isset($default->id) ? (int) $default->id : 0;
+        $displayData['path']       = isset($base->tree) && \is_array($base->tree) ? $base->tree : [];
+        $displayData['showAll']    = (int) $menuParams->get('showAllChildren', 1);
+        $displayData['list']       = $list;
+        $displayData['navItems']   = $list;
+        $displayData['userItems']  = $helper->getUserItems($displayData['params'], $displayData['app']);
+        $displayData['basketItems']= $helper->getBasketItems($displayData['params'], $displayData['app']);
+        $displayData['navigationState'] = $helper->getNavigationState(
+            $list,
+            $active,
+            $displayData['path'],
+            (string) ($displayData['activeSlot'] ?? '')
+        );
     }
 }

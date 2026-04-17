@@ -12,7 +12,6 @@
 use Joomla\CMS\Filter\OutputFilter;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Router\Route;
-use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /**
@@ -35,6 +34,8 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  * @var int                $active_id
  * @var string             $activeSlot
  * @var string             $warning
+ * @var array<string, mixed> $navigationState
+ * @var \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper $navbarHelper
  */
 
 // Read only the config keys used by this layout.
@@ -46,7 +47,16 @@ $basketOffcanvasId      = (string) ($cfg['basketOffcanvasId'] ?? '');
 $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userDropdownSelectorRoot'] ?? '');
 $onepageBase            = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
 $logoHref               = $isOnepage ? '#top' : $onepageBase;
-$activeSlot             = strtolower(trim((string) ($activeSlot ?? '')));
+$navigationState        = is_array($navigationState ?? null) ? $navigationState : [];
+
+if (!isset($navbarHelper) || !$navbarHelper instanceof \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper) {
+    return;
+}
+
+/** @var Joomla\CMS\WebAsset\WebAssetManager $wa */
+$wa = $app->getDocument()->getWebAssetManager();
+$wa->useScript('mburger');
+$wa->useScript('copymypage.dropdown');
 
 if (!empty($warning)) {
     echo $warning;
@@ -108,102 +118,9 @@ if (!empty($warning)) {
 
                         <ul class="uk-navbar-nav uk-visible@m cmp-navbar-nav">
                             <?php
-                            $activeId = (int) $active_id;
-                            $trailIds = [];
-                            if (isset($active->tree) && \is_array($active->tree)) {
-                                $trailIds = array_map('intval', $active->tree);
-                            } else {
-                                $trailIds = array_map('intval', $path);
-                            }
                             // Escape plain text for safe HTML output.
                             $escape = static function (string $value): string {
                                 return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-                            };
-
-                            $matchesActiveSlot = static function (object $menuItem) use ($activeSlot): bool {
-                                if ($activeSlot === '' || (string) ($menuItem->type ?? '') !== 'url') {
-                                    return false;
-                                }
-
-                                $candidates = [
-                                    (string) ($menuItem->link ?? ''),
-                                    (string) ($menuItem->flink ?? ''),
-                                ];
-
-                                foreach ($candidates as $candidate) {
-                                    if (CopyMyPageHelper::extractHashToken($candidate) === $activeSlot) {
-                                        return true;
-                                    }
-                                }
-
-                                return false;
-                            };
-
-                            $hasForcedActiveSlot = $activeSlot !== ''
-                                && !empty(array_filter(
-                                    $list,
-                                    static function ($menuItem) use ($matchesActiveSlot): bool {
-                                        return \is_object($menuItem) && $matchesActiveSlot($menuItem);
-                                    }
-                                ));
-
-                            // Convert flat Joomla menu items into a level-based tree.
-                            $buildMenuTree = static function (array $items): array {
-                                $tree  = [];
-                                $stack = [];
-
-                                foreach ($items as $menuItem) {
-                                    if (!\is_object($menuItem)) {
-                                        continue;
-                                    }
-
-                                    $level = max(1, (int) ($menuItem->level ?? 1));
-                                    $node  = [
-                                        'item'     => $menuItem,
-                                        'level'    => $level,
-                                        'children' => [],
-                                    ];
-
-                                    while (\count($stack) >= $level) {
-                                        array_pop($stack);
-                                    }
-
-                                    if ($level === 1 || empty($stack)) {
-                                        $tree[] = $node;
-                                        $rootIndex = array_key_last($tree);
-                                        $stack[] =& $tree[$rootIndex];
-
-                                        continue;
-                                    }
-
-                                    $parentIndex = \count($stack) - 1;
-                                    $parentNode  =& $stack[$parentIndex];
-                                    $parentNode['children'][] = $node;
-
-                                    $childIndex = array_key_last($parentNode['children']);
-                                    $stack[]    =& $parentNode['children'][$childIndex];
-
-                                    unset($parentNode);
-                                }
-
-                                return $tree;
-                            };
-
-                            // Resolve each item URL with onepage anchor handling.
-                            $resolveItemUrl = static function (object $menuItem, int $level) use ($isOnepage, $onepageBase): string {
-                                $url      = (string) ($menuItem->flink ?? '');
-                                $itemType = (string) ($menuItem->type ?? '');
-                                $itemLink = (string) ($menuItem->link ?? '');
-
-                                if ($isOnepage && $itemType === 'url' && $itemLink !== '' && str_starts_with($itemLink, '#')) {
-                                    return $itemLink;
-                                }
-
-                                if (!$isOnepage && $level === 1 && $itemType === 'url' && $itemLink !== '' && str_starts_with($itemLink, '#')) {
-                                    return $onepageBase . $itemLink;
-                                }
-
-                                return $url;
                             };
 
                             // Build shared link attributes for navbar items.
@@ -239,9 +156,9 @@ if (!empty($warning)) {
                                 bool $isActive,
                                 bool $hasChildren,
                                 bool $isTopLevel
-                            ) use ($buildLinkAttribs, $resolveItemUrl, $escape, $isOnepage): string {
+                            ) use ($buildLinkAttribs, $escape, $isOnepage, $onepageBase, $navbarHelper): string {
                                 $itemType = (string) ($menuItem->type ?? '');
-                                $url      = $resolveItemUrl($menuItem, $level);
+                                $url      = $navbarHelper->resolveMenuItemUrl($menuItem, $isOnepage, $onepageBase);
                                 $attribs  = $buildLinkAttribs($menuItem, $isActive);
                                 $linkText = $escape((string) ($menuItem->title ?? ''));
 
@@ -284,10 +201,8 @@ if (!empty($warning)) {
                                 &$renderDropdownNodes,
                                 $renderNavbarLink,
                                 $escape,
-                                $activeId,
-                                $trailIds,
-                                $hasForcedActiveSlot,
-                                $matchesActiveSlot
+                                $navbarHelper,
+                                $navigationState
                             ): string {
                                 $html = '';
 
@@ -318,11 +233,7 @@ if (!empty($warning)) {
                                         continue;
                                     }
 
-                                    $id         = (int) ($item->id ?? 0);
-                                    $slotActive = $matchesActiveSlot($item);
-                                    $isActive   = $hasForcedActiveSlot
-                                        ? $slotActive
-                                        : (($id === $activeId) || \in_array($id, $trailIds, true));
+                                    $isActive = $navbarHelper->isMenuItemCurrent($item, $navigationState, true);
 
                                     $liClasses = [];
 
@@ -350,7 +261,7 @@ if (!empty($warning)) {
                                 return $html;
                             };
 
-                            $tree = $buildMenuTree($list);
+                            $tree = $navbarHelper->buildMenuTree($list);
 
                             foreach ($tree as $node) :
                                 if (!isset($node['item']) || !\is_object($node['item'])) {
@@ -371,10 +282,8 @@ if (!empty($warning)) {
                                     continue;
                                 }
 
-                                $id         = (int) ($item->id ?? 0);
-                                $slotActive = $matchesActiveSlot($item);
-                                $isTrail    = !$hasForcedActiveSlot && \in_array($id, $trailIds, true);
-                                $isActive   = $hasForcedActiveSlot ? $slotActive : ($id === $activeId);
+                                $isActive = $navbarHelper->isMenuItemCurrent($item, $navigationState, false);
+                                $isTrail  = $navbarHelper->isMenuItemCurrent($item, $navigationState, true) && !$isActive;
                                 // Keep only real child columns and skip separator pseudo items.
                                 $children = array_values(array_filter(
                                     $node['children'] ?? [],
@@ -417,11 +326,11 @@ if (!empty($warning)) {
                                             continue;
                                         }
 
-                                        $columnItem       = $columnNode['item'];
-                                        $columnLevel      = (int) ($columnNode['level'] ?? ($columnItem->level ?? 2));
-                                        $columnChildren   = $columnNode['children'] ?? [];
+                                        $columnItem        = $columnNode['item'];
+                                        $columnLevel       = (int) ($columnNode['level'] ?? ($columnItem->level ?? 2));
+                                        $columnChildren    = $columnNode['children'] ?? [];
                                         $columnHasChildren = !empty($columnChildren);
-                                        $columnType       = (string) ($columnItem->type ?? '');
+                                        $columnType        = (string) ($columnItem->type ?? '');
 
                                         if ($columnType === 'separator') {
                                             continue;

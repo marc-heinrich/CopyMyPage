@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -31,7 +31,7 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         sync(viewportState = null) {
-            const options = this.mod.navbar || {};
+            const options = this.mod?.navbarSlots?.navbar || this.mod.navbar || {};
 
             if (!options || !UIkit?.util) {
                 this._teardown();
