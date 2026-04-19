@@ -14,16 +14,42 @@ use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper;
 
-/** @var array<int, object> $list */
-/** @var array<int, string> $filters */
-/** @var string             $warning */
-/** @var string             $hint */
+/**
+ * Extracted variables
+ * -----------------
+ * @var \Joomla\CMS\Application\CMSApplicationInterface $app
+ * @var array<string, mixed>                            $cfg
+ * @var array<int, object>                              $list
+ * @var array<int, string>                              $filters
+ * @var string                                          $warning
+ * @var string                                          $hint
+ * @var \Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper|null $galleryHelper
+ */
 
 // Normalize the raw inputs received from the dispatcher.
 $cfg     = \is_array($cfg ?? null) ? $cfg : [];
 $layout  = strtolower(trim((string) ($layout ?? '')));
 $list    = \is_array($list ?? null) ? $list : [];
 $filters = \is_array($filters ?? null) ? $filters : [];
+$warning = (string) ($warning ?? '');
+$hint    = (string) ($hint ?? '');
+
+if (!isset($galleryHelper) || !$galleryHelper instanceof GalleryHelper) {
+    return;
+}
+
+if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
+    $wa = $app->getDocument()->getWebAssetManager();
+
+    // Activate template-specific assets here when the active layout needs them.
+}
+
+if ($warning !== '') {
+    echo $warning;
+
+    return;
+}
 
 // Extract the layout-specific parameter subset for the active template.
 $layoutConfig = GalleryHelper::getLayoutConfig($cfg, $layout);
@@ -52,9 +78,7 @@ if ($lead === '') {
 }
 ?>
 <div class="<?php echo $moduleClass; ?>">
-    <?php if (!empty($warning)) : ?>
-        <?php echo $warning; ?>
-    <?php elseif ($list !== []) : ?>
+    <?php if ($list !== []) : ?>
         <div class="uk-container">
             <div class="cmp-gallery-preview__header">
                 <h2 class="cmp-gallery-preview__headline">
@@ -178,7 +202,7 @@ if ($lead === '') {
                 </div>
             </div>
         </div>
-    <?php elseif (!empty($hint)) : ?>
+    <?php elseif ($hint !== '') : ?>
         <?php echo $hint; ?>
     <?php endif; ?>
 </div>

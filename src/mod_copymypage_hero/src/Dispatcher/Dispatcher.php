@@ -94,13 +94,15 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             /**
              * Extracted variables
              * -----------------
-             * @var \stdClass                 $module
-             * @var \Joomla\Registry\Registry $params
-             * @var array<string, mixed>      $cfg
-             * @var array<int, object>        $slides
-             * @var string                    $slideshowOptions
-             * @var string                    $warning
-             * @var string                    $hint
+             * @var \stdClass                                      $module
+             * @var \Joomla\Registry\Registry                      $params
+             * @var \Joomla\CMS\Application\CMSApplicationInterface $app
+             * @var array<string, mixed>                           $cfg
+             * @var array<int, object>                             $slides
+             * @var string                                         $slideshowOptions
+             * @var string                                         $warning
+             * @var string                                         $hint
+             * @var \Joomla\Module\CopyMyPage\Hero\Site\Helper\HeroHelper|null $heroHelper
              */
 
             require ModuleHelper::getLayoutPath('mod_copymypage_hero', $layout);
@@ -289,6 +291,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['cfg'] = ($params instanceof \Joomla\Registry\Registry)
             ? $params->toArray()
             : [];
+        $data['heroHelper']       = null;
         $data['slides']           = [];
         $data['slideshowOptions'] = '';
         $data['warning']          = '';
@@ -309,6 +312,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     {
         $helper = $this->getHelperFactory()->getHelper('HeroHelper');
 
+        $displayData['heroHelper']       = $helper;
         $displayData['slides']           = $helper->getSlides($displayData['cfg'], $layout);
         $displayData['slideshowOptions'] = $helper->getSlideshowOptions($displayData['cfg'], $layout);
 

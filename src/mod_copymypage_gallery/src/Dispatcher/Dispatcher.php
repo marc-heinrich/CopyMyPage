@@ -93,13 +93,15 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             /**
              * Extracted variables
              * -----------------
-             * @var \stdClass                 $module
-             * @var \Joomla\Registry\Registry $params
-             * @var array<string, mixed>      $cfg
-             * @var array<int, object>        $list
-             * @var array<int, string>        $filters
-             * @var string                    $warning
-             * @var string                    $hint
+             * @var \stdClass                                      $module
+             * @var \Joomla\Registry\Registry                      $params
+             * @var \Joomla\CMS\Application\CMSApplicationInterface $app
+             * @var array<string, mixed>                           $cfg
+             * @var array<int, object>                             $list
+             * @var array<int, string>                             $filters
+             * @var string                                         $warning
+             * @var string                                         $hint
+             * @var \Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper|null $galleryHelper
              */
 
             require ModuleHelper::getLayoutPath('mod_copymypage_gallery', $layout);
@@ -282,10 +284,11 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['cfg'] = ($data['params'] instanceof \Joomla\Registry\Registry)
             ? $data['params']->toArray()
             : [];
-        $data['list']    = [];
-        $data['filters'] = [];
-        $data['warning'] = '';
-        $data['hint']    = '';
+        $data['galleryHelper'] = null;
+        $data['list']          = [];
+        $data['filters']       = [];
+        $data['warning']       = '';
+        $data['hint']          = '';
 
         return $data;
     }
@@ -300,6 +303,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
     protected function populateGalleryData(array &$displayData): void
     {
         $helper = $this->getHelperFactory()->getHelper('GalleryHelper');
+        $displayData['galleryHelper'] = $helper;
         $sigplusPlugin = $helper->getSigplusPlugin();
 
         if ($sigplusPlugin === null) {

@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.8
+ * @since       0.0.10
  */
 
 \defined('_JEXEC') or die;
@@ -12,20 +12,43 @@
 use Joomla\CMS\Uri\Uri;
 use Joomla\Module\CopyMyPage\Hero\Site\Helper\HeroHelper;
 
-/** @var array<int, object> $slides */
-/** @var array<string, mixed> $cfg */
-/** @var \Joomla\Registry\Registry $params */
-/** @var object $module */
-/** @var string $slideshowOptions */
-/** @var string $warning */
-/** @var string $hint */
+/**
+ * Extracted variables
+ * -----------------
+ * @var \Joomla\CMS\Application\CMSApplicationInterface $app
+ * @var array<string, mixed>                            $cfg
+ * @var array<int, object>                              $slides
+ * @var \Joomla\Registry\Registry                       $params
+ * @var object                                          $module
+ * @var string                                          $slideshowOptions
+ * @var string                                          $warning
+ * @var string                                          $hint
+ * @var \Joomla\Module\CopyMyPage\Hero\Site\Helper\HeroHelper|null $heroHelper
+ */
 
 // Normalize dispatcher input so the template works with predictable value types.
-$cfg           = \is_array($cfg ?? null) ? $cfg : [];
-$layout        = strtolower(trim((string) ($layout ?? '')));
-$slides        = \is_array($slides ?? null) ? $slides : [];
-$warning       = (string) ($warning ?? '');
-$hint          = (string) ($hint ?? '');
+$cfg        = \is_array($cfg ?? null) ? $cfg : [];
+$layout     = strtolower(trim((string) ($layout ?? '')));
+$slides     = \is_array($slides ?? null) ? $slides : [];
+$warning    = (string) ($warning ?? '');
+$hint       = (string) ($hint ?? '');
+
+if (!isset($heroHelper) || !$heroHelper instanceof HeroHelper) {
+    return;
+}
+
+if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
+    $wa = $app->getDocument()->getWebAssetManager();
+
+    // Activate template-specific assets here when the active layout needs them.
+}
+
+if ($warning !== '') {
+    echo $warning;
+
+    return;
+}
 
 // Resolve the layout-specific option bucket for the active hero template.
 $layoutConfig = HeroHelper::getLayoutConfig($cfg, $layout);
@@ -72,9 +95,7 @@ $buildAbsolutePath = static function (string $publicPath): string {
 ?>
 <!-- Hero Module Template: Desktop UIkit Framework (https://getuikit.com/docs/slideshow) -->
 <div class="<?php echo $moduleClass; ?>">
-    <?php if ($warning !== '') : ?>
-        <?php echo $warning; ?>
-    <?php elseif ($slides !== []) : ?>
+    <?php if ($slides !== []) : ?>
         <div class="uk-position-relative uk-visible-toggle uk-light" tabindex="-1"
             uk-slideshow="<?php echo htmlspecialchars($slideshowOptions, ENT_QUOTES, 'UTF-8'); ?>">
             <ul class="uk-slideshow-items">
@@ -93,7 +114,7 @@ $buildAbsolutePath = static function (string $publicPath): string {
                     $extension = strtolower((string) pathinfo($publicSrc !== '' ? $publicSrc : $rawSrc, PATHINFO_EXTENSION));
                     $hasIntrinsicJpgVariant = false;
 
-                    $jpgSrcsetEntries = [];
+                    $jpgSrcsetEntries  = [];
                     $webpSrcsetEntries = [];
                     $avifSrcsetEntries = [];
 
@@ -126,7 +147,7 @@ $buildAbsolutePath = static function (string $publicPath): string {
                         $jpgSrcsetEntries[] = htmlspecialchars($buildPublicUrl($publicSrc), ENT_QUOTES, 'UTF-8') . ' ' . $width . 'w';
                     }
 
-                    $jpgSrcset = implode(', ', array_unique($jpgSrcsetEntries));
+                    $jpgSrcset  = implode(', ', array_unique($jpgSrcsetEntries));
                     $webpSrcset = implode(', ', array_unique($webpSrcsetEntries));
                     $avifSrcset = implode(', ', array_unique($avifSrcsetEntries));
                     $escapedDisplaySrc = htmlspecialchars($defaultDisplaySrc, ENT_QUOTES, 'UTF-8');
