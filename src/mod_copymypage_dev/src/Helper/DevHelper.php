@@ -2,9 +2,9 @@
 /**
  * @package     Joomla.Site
  * @subpackage  Modules.CopyMyPage
- * @copyright   (C) 2025 Open Source Matters, Inc. <https://www.joomla.org>
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.2
+ * @since       0.0.10
  */
 
 namespace Joomla\Module\CopyMyPage\Dev\Site\Helper;
@@ -13,6 +13,7 @@ namespace Joomla\Module\CopyMyPage\Dev\Site\Helper;
 
 use Joomla\CMS\Application\SiteApplication;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\Menu\SiteMenu;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Registry\Registry;
@@ -23,6 +24,37 @@ use stdClass;
  */
 class DevHelper
 {
+    /**
+     * Build Open Graph compatible tag data for a dev-backed onepage slot.
+     *
+     * @param   Registry      $params  The module params.
+     * @param   object|null   $module  The published module row.
+     * @param   string        $slot    The active system slot.
+     *
+     * @return  array<string, string>
+     */
+    public function getOGTags(Registry $params, ?object $module = null, string $slot = ''): array
+    {
+        return match (strtolower(trim($slot))) {
+            'contact' => [
+                'slot'        => 'contact',
+                'label'       => Text::_('MOD_COPYMYPAGE_DEV_OG_TITLE_CONTACT'),
+                'title'       => Text::_('MOD_COPYMYPAGE_DEV_OG_TITLE_CONTACT'),
+                'description' => Text::_('MOD_COPYMYPAGE_DEV_OG_DESCRIPTION_CONTACT'),
+                'image'       => '',
+                'twitterCard' => 'summary',
+            ],
+            default => [
+                'slot'        => 'team',
+                'label'       => Text::_('MOD_COPYMYPAGE_DEV_OG_TITLE_TEAM'),
+                'title'       => Text::_('MOD_COPYMYPAGE_DEV_OG_TITLE_TEAM'),
+                'description' => Text::_('MOD_COPYMYPAGE_DEV_OG_DESCRIPTION_TEAM'),
+                'image'       => '',
+                'twitterCard' => 'summary',
+            ],
+        };
+    }
+
     /**
      * Collects debug data for the current request context.
      *

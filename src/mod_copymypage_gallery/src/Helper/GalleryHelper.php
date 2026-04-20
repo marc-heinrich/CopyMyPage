@@ -12,6 +12,8 @@ namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
@@ -26,6 +28,27 @@ use Joomla\Registry\Registry;
 final class GalleryHelper implements DatabaseAwareInterface
 {
     use DatabaseAwareTrait;
+
+    /**
+     * Build Open Graph compatible tag data for the gallery section.
+     *
+     * @param   Registry      $params  The module params.
+     * @param   object|null   $module  The published module row.
+     * @param   string        $slot    The active system slot.
+     *
+     * @return  array<string, string>
+     */
+    public function getOGTags(Registry $params, ?object $module = null, string $slot = ''): array
+    {
+        return [
+            'slot'        => 'gallery',
+            'label'       => Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE'),
+            'title'       => Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE'),
+            'description' => Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_DESC'),
+            'image'       => rtrim(Uri::root(), '/') . '/images/copymypage/module/mod_copymypage_gallery/2026/kinder/00_start_001.jpg',
+            'twitterCard' => 'summary_large_image',
+        ];
+    }
 
     /**
      * Loads all published Sigplus site modules from #__modules.
@@ -373,4 +396,5 @@ final class GalleryHelper implements DatabaseAwareInterface
 
         return $handler;
     }
+
 }

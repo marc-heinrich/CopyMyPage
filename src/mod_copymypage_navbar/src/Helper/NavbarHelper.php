@@ -43,6 +43,23 @@ class NavbarHelper
     ];
 
     /**
+     * Build Open Graph compatible tag data for navbar-related slots.
+     *
+     * Navbar slots do not contribute onepage section metadata, so this helper
+     * intentionally returns an empty payload while still exposing the shared API.
+     *
+     * @param   Registry      $params  The module params.
+     * @param   object|null   $module  The published module row.
+     * @param   string        $slot    The active system slot.
+     *
+     * @return  array<string, string>
+     */
+    public function getOGTags(Registry $params, ?object $module = null, string $slot = ''): array
+    {
+        return [];
+    }
+
+    /**
      * Build the merged client-side payload for all navbar-related slots.
      *
      * @return array{

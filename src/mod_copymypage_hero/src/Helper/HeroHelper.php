@@ -13,12 +13,34 @@ namespace Joomla\Module\CopyMyPage\Hero\Site\Helper;
 
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
+use Joomla\Registry\Registry;
 
 /**
  * Helper class to prepare hero data for the CopyMyPage Hero module.
  */
 final class HeroHelper
 {
+    /**
+     * Build Open Graph compatible tag data for the hero section.
+     *
+     * @param   Registry      $params  The module params.
+     * @param   object|null   $module  The published module row.
+     * @param   string        $slot    The active system slot.
+     *
+     * @return  array<string, string>
+     */
+    public function getOGTags(Registry $params, ?object $module = null, string $slot = ''): array
+    {
+        return [
+            'slot'        => 'hero',
+            'label'       => 'Hero',
+            'title'       => 'Fernbreitenbach Helau',
+            'description' => 'Willkommen auf der Website des Fernbreiterbacher Carneval-Vereins',
+            'image'       => rtrim(Uri::root(), '/') . '/modules/mod_copymypage_hero/images/slide_1.jpg',
+            'twitterCard' => 'summary_large_image',
+        ];
+    }
+
     /**
      * Get the slideshow items for the current hero output.
      *

@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -23,8 +23,14 @@ window.CopyMyPage = window.CopyMyPage || {};
             super(host);
             this._hashScrollFrame = null;
             this._navbarSyncFrame = null;
+            this._metaSyncFrame = null;
             this._recoveryTimeouts = [];
+            this._sectionObserver = null;
+            this._sections = [];
+            this._defaultMeta = null;
+            this._activeMetaSignature = '';
             this._handleLifecycleChange = this._handleLifecycleChange.bind(this);
+            this._handleSectionChange = this._handleSectionChange.bind(this);
         }
 
         init() {
@@ -33,28 +39,41 @@ window.CopyMyPage = window.CopyMyPage || {};
             }
 
             this._bindNavbarStateObserver();
+            this._initializeMetaState();
+            this._bindSectionObserver();
             this.scheduleNavbarTopStateSync();
+            this.scheduleSectionMetaSync();
             this._handleLifecycleChange();
             this.listen(window, 'load', this._handleLifecycleChange);
             this.listen(window, 'pageshow', this._handleLifecycleChange);
             this.listen(window, 'hashchange', this._handleLifecycleChange);
+            this.listen(document, 'copymypage:onepage-sectionchange', this._handleSectionChange);
         }
 
         destroy() {
             window.cancelAnimationFrame(this._hashScrollFrame);
             window.cancelAnimationFrame(this._navbarSyncFrame);
+            window.cancelAnimationFrame(this._metaSyncFrame);
             this._hashScrollFrame = null;
             this._navbarSyncFrame = null;
+            this._metaSyncFrame = null;
             this._clearRecoveryTimeouts();
+            this._disconnectSectionObserver();
+            this._sections = [];
+            this._defaultMeta = null;
+            this._activeMetaSignature = '';
             super.destroy();
         }
 
         handleScroll() {
             this.scheduleNavbarTopStateSync();
+            this.scheduleSectionMetaSync();
         }
 
         handleViewportChange() {
             this.scheduleNavbarTopStateSync();
+            this._bindSectionObserver();
+            this.scheduleSectionMetaSync();
         }
 
         scheduleNavbarTopStateSync() {
@@ -68,8 +87,32 @@ window.CopyMyPage = window.CopyMyPage || {};
             });
         }
 
+        scheduleSectionMetaSync() {
+            if (this._metaSyncFrame !== null) {
+                return;
+            }
+
+            this._metaSyncFrame = window.requestAnimationFrame(() => {
+                this._metaSyncFrame = null;
+                this._syncSectionMeta();
+            });
+        }
+
         _handleLifecycleChange() {
             this._scheduleHashRecoverySequence();
+            this.scheduleSectionMetaSync();
+        }
+
+        _handleSectionChange(event) {
+            const requestedHash = this.normalizeHash(event?.detail?.hash || '');
+            const requestedSection = this._getSectionByHash(requestedHash);
+
+            if (requestedSection) {
+                this._applySectionMeta(requestedSection);
+            }
+
+            this.scheduleNavbarTopStateSync();
+            this.scheduleSectionMetaSync();
         }
 
         _clearRecoveryTimeouts() {
@@ -89,6 +132,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                 const timeoutId = window.setTimeout(() => {
                     this._scheduleHashScrollRestore();
                     this.scheduleNavbarTopStateSync();
+                    this.scheduleSectionMetaSync();
                 }, delay);
 
                 this._recoveryTimeouts.push(timeoutId);
@@ -104,6 +148,277 @@ window.CopyMyPage = window.CopyMyPage || {};
                 this._hashScrollFrame = null;
                 this._restoreHashScroll();
             });
+        }
+
+        _initializeMetaState() {
+            const metaState = this.view?.onepage?.meta;
+
+            this._sections = [];
+            this._defaultMeta = null;
+            this._activeMetaSignature = '';
+
+            if (!metaState || typeof metaState !== 'object' || Array.isArray(metaState)) {
+                return;
+            }
+
+            this._defaultMeta = this._normalizeMetaPayload(metaState.page || {});
+            const sections = metaState.sections && typeof metaState.sections === 'object'
+                ? Object.values(metaState.sections)
+                : [];
+
+            this._sections = sections
+                .map((entry) => this._hydrateSection(entry))
+                .filter(Boolean);
+        }
+
+        _hydrateSection(entry) {
+            if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+                return null;
+            }
+
+            const normalized = this._normalizeMetaPayload(entry);
+            const token = normalized.token || '';
+            const hash = normalized.hash || this.normalizeHash(`#${token}`);
+            const selector = normalized.selector || hash;
+
+            if (!token || !hash || !selector) {
+                return null;
+            }
+
+            const element = document.querySelector(selector);
+
+            if (!utils.isHTMLElement(element)) {
+                return null;
+            }
+
+            return {
+                ...normalized,
+                token,
+                hash,
+                selector,
+                element,
+                isIntersecting: false,
+                intersectionRatio: 0,
+            };
+        }
+
+        _bindSectionObserver() {
+            this._disconnectSectionObserver();
+
+            if (!('IntersectionObserver' in window) || this._sections.length === 0) {
+                return;
+            }
+
+            const stickyOffset = Math.ceil(utils.getStickyOffset());
+
+            this._sectionObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    const section = this._sections.find((item) => item.element === entry.target);
+
+                    if (!section) {
+                        return;
+                    }
+
+                    section.isIntersecting = entry.isIntersecting;
+                    section.intersectionRatio = entry.intersectionRatio;
+                });
+
+                this.scheduleSectionMetaSync();
+            }, {
+                root: null,
+                rootMargin: `${-stickyOffset}px 0px -45% 0px`,
+                threshold: [0, 0.15, 0.35, 0.6, 0.85, 1],
+            });
+
+            this._sections.forEach((section) => this._sectionObserver.observe(section.element));
+        }
+
+        _disconnectSectionObserver() {
+            if (this._sectionObserver) {
+                this._sectionObserver.disconnect();
+                this._sectionObserver = null;
+            }
+        }
+
+        _syncSectionMeta() {
+            const activeSection = this._resolveActiveSection();
+
+            if (activeSection) {
+                this._applySectionMeta(activeSection);
+                return;
+            }
+
+            if (this._defaultMeta) {
+                this._applySectionMeta(this._defaultMeta);
+            }
+        }
+
+        _resolveActiveSection() {
+            if (this._sections.length === 0) {
+                return null;
+            }
+
+            const hashSection = this._getSectionByHash(window.location.hash);
+
+            if (hashSection && this._isSectionInAnchorBand(hashSection)) {
+                return hashSection;
+            }
+
+            const stickyOffset = utils.getStickyOffset();
+            const anchorBand = utils.getExpectedAnchorBand(stickyOffset);
+            let activeSection = this._sections[0];
+
+            for (const section of this._sections) {
+                const rect = section.element.getBoundingClientRect();
+
+                if (rect.bottom <= stickyOffset + 1) {
+                    activeSection = section;
+                    continue;
+                }
+
+                if (rect.top <= anchorBand) {
+                    activeSection = section;
+                    continue;
+                }
+
+                if (section.isIntersecting || rect.top > anchorBand) {
+                    break;
+                }
+            }
+
+            return activeSection;
+        }
+
+        _isSectionInAnchorBand(section) {
+            const stickyOffset = utils.getStickyOffset();
+            const rect = section.element.getBoundingClientRect();
+            const anchorBand = utils.getExpectedAnchorBand(stickyOffset);
+
+            return rect.top >= -1
+                && rect.top <= anchorBand;
+        }
+
+        _getSectionByHash(hash) {
+            const normalizedHash = this.normalizeHash(hash);
+
+            if (!normalizedHash) {
+                return null;
+            }
+
+            return this._sections.find((section) => section.hash === normalizedHash) || null;
+        }
+
+        _normalizeMetaPayload(entry) {
+            const payload = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry : {};
+
+            return {
+                title: String(payload.title || '').trim(),
+                description: String(payload.description || '').trim(),
+                image: String(payload.image || '').trim(),
+                url: String(payload.url || '').trim(),
+                twitterCard: String(payload.twitterCard || '').trim() || 'summary',
+                token: String(payload.token || '').trim().toLowerCase(),
+                hash: this.normalizeHash(payload.hash || ''),
+                selector: String(payload.selector || '').trim(),
+                label: String(payload.label || '').trim(),
+            };
+        }
+
+        _applySectionMeta(meta) {
+            const resolvedTitle = meta.title || this._defaultMeta?.title || document.title;
+            const resolvedDescription = meta.description || this._defaultMeta?.description || '';
+            const resolvedImage = meta.image || '';
+            const resolvedUrl = meta.url || this._defaultMeta?.url || window.location.href;
+            const resolvedTwitterCard = meta.twitterCard || (resolvedImage ? 'summary_large_image' : 'summary');
+            const signature = [
+                resolvedTitle,
+                resolvedDescription,
+                resolvedImage,
+                resolvedTwitterCard,
+                resolvedUrl,
+            ].join('||');
+
+            if (signature === this._activeMetaSignature) {
+                return;
+            }
+
+            this._activeMetaSignature = signature;
+
+            if (resolvedTitle) {
+                document.title = resolvedTitle;
+            }
+
+            this._syncSectionLocation(resolvedUrl);
+            this._upsertMetaByName('description', resolvedDescription);
+            this._upsertMetaByProperty('og:title', resolvedTitle);
+            this._upsertMetaByProperty('og:description', resolvedDescription);
+            this._upsertMetaByProperty('og:url', resolvedUrl);
+            this._upsertMetaByProperty('og:image', resolvedImage);
+            this._upsertMetaByName('twitter:card', resolvedTwitterCard);
+            this._upsertMetaByName('twitter:title', resolvedTitle);
+            this._upsertMetaByName('twitter:description', resolvedDescription);
+            this._upsertMetaByName('twitter:image', resolvedImage);
+        }
+
+        _syncSectionLocation(url) {
+            if (!url || !window.history || typeof window.history.replaceState !== 'function') {
+                return;
+            }
+
+            try {
+                const targetUrl = new URL(url, window.location.href);
+                const currentUrl = new URL(window.location.href);
+
+                if (targetUrl.origin !== currentUrl.origin) {
+                    return;
+                }
+
+                if (targetUrl.pathname === currentUrl.pathname
+                    && targetUrl.search === currentUrl.search
+                    && targetUrl.hash === currentUrl.hash) {
+                    return;
+                }
+
+                window.history.replaceState(window.history.state, document.title, targetUrl.toString());
+            } catch (error) {
+                // Ignore URL sync failures so meta updates continue to work.
+            }
+        }
+
+        _upsertMetaByName(name, content) {
+            this._upsertMeta(`meta[name="${this._escapeAttributeValue(name)}"]`, 'name', name, content);
+        }
+
+        _upsertMetaByProperty(property, content) {
+            this._upsertMeta(`meta[property="${this._escapeAttributeValue(property)}"]`, 'property', property, content);
+        }
+
+        _upsertMeta(selector, attributeName, attributeValue, content) {
+            const nodes = Array.from(document.head.querySelectorAll(selector));
+            const metaNode = nodes.shift() || document.createElement('meta');
+
+            if (!content) {
+                nodes.forEach((node) => node.remove());
+
+                if (metaNode.isConnected) {
+                    metaNode.remove();
+                }
+
+                return;
+            }
+
+            metaNode.setAttribute(attributeName, attributeValue);
+            metaNode.setAttribute('content', content);
+
+            if (!metaNode.isConnected) {
+                document.head.appendChild(metaNode);
+            }
+
+            nodes.forEach((node) => node.remove());
+        }
+
+        _escapeAttributeValue(value) {
+            return String(value || '').replace(/"/g, '\\"');
         }
 
         _bindNavbarStateObserver() {
@@ -328,6 +643,7 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             target.scrollIntoView({ behavior: 'auto', block: 'start' });
             this.scheduleNavbarTopStateSync();
+            this.scheduleSectionMetaSync();
         }
 
         _getOnepageHashLink(scrollLinks) {

@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 \defined('_JEXEC') or die;
@@ -128,6 +128,10 @@ $wa->usePreset($this->template . '.site')
         . "    /* copymypage tokens */\n"
         . "    --cmp-header-offset: {$headerOffset}px;\n"
         . "}");
+
+if ($isOnepage) {
+    $wa->useScript('copymypage.onepage');
+}
 
 // Enable modal dev harness if in debug mode or URL param is set.
 $enableModalDevHarness = ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmpdev', 0) === 1);

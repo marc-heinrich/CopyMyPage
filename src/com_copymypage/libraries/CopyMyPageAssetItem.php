@@ -45,10 +45,11 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
                 'navbar'      => $navbarParams['shared'] ?? [],
                 'navbarSlots' => $navbarParams['slots'] ?? [],
             ],
+            'view'  => [],
         ];
 
         // Expose options via Joomla.getOptions('copymypage.params').
-        $doc->addScriptOptions('copymypage.params', $options, false);
+        $doc->addScriptOptions('copymypage.params', $options, true);
 
         // Initialize immediately when possible, otherwise wait for DOM readiness.
         $doc->addScriptDeclaration("

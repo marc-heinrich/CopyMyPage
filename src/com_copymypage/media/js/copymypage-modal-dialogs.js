@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.6
  */
 
 window.CopyMyPageDialog = window.CopyMyPageDialog || {};

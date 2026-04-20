@@ -161,8 +161,34 @@ window.CopyMyPage = window.CopyMyPage || {};
                 document.body.classList.remove('mm-ocd-opened');
             }
 
+            this._updateSectionLocation(parsedUrl, targetSelector);
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            this._dispatchSectionChange(targetSelector);
             this._observeTarget(target);
+        }
+
+        _updateSectionLocation(parsedUrl, targetSelector) {
+            const nextUrl = `${parsedUrl.pathname}${parsedUrl.search}${targetSelector}`;
+
+            if (window.location.hash === targetSelector) {
+                return;
+            }
+
+            if (window.history && typeof window.history.pushState === 'function') {
+                window.history.pushState(window.history.state, '', nextUrl);
+                return;
+            }
+
+            window.location.hash = targetSelector;
+        }
+
+        _dispatchSectionChange(targetSelector) {
+            document.dispatchEvent(new window.CustomEvent('copymypage:onepage-sectionchange', {
+                detail: {
+                    hash: targetSelector,
+                    source: 'mobilemenu',
+                },
+            }));
         }
     }
 

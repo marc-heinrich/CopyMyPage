@@ -165,6 +165,10 @@ window.CopyMyPage = window.CopyMyPage || {};
         get mod() {
             return this.host.mod || {};
         }
+
+        get view() {
+            return this.host.view || {};
+        }
     }
 
     CopyMyPage.CleanupBag = CleanupBag;
