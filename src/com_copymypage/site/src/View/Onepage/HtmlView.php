@@ -16,6 +16,7 @@ use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Router\Route;
+use Joomla\Component\CopyMyPage\Site\View\HtmlViewMetaDataTrait;
 use Joomla\Registry\Registry;
 
 /**
@@ -27,6 +28,8 @@ use Joomla\Registry\Registry;
  */
 class HtmlView extends BaseHtmlView
 {
+    use HtmlViewMetaDataTrait;
+
     /**
      * Ordered onepage slots that may contribute section metadata.
      *
@@ -115,8 +118,8 @@ class HtmlView extends BaseHtmlView
             $document->setMetaData('keywords', $metaKeywords);
         }
 
-        $this->addOpenGraphMetaData($activeMeta);
-        $this->addTwitterCardMetaData($activeMeta);
+        $this->addHtmlViewOpenGraphMetaData($activeMeta);
+        $this->addHtmlViewTwitterCardMetaData($activeMeta);
         $document->addScriptOptions(
             'copymypage.params',
             [
@@ -149,13 +152,18 @@ class HtmlView extends BaseHtmlView
      */
     private function buildPageMeta(string $title, string $description): array
     {
-        return [
-            'title'       => trim($title),
-            'description' => trim($description),
-            'url'         => $this->buildOnepageUrl(),
-            'image'       => '',
-            'twitterCard' => 'summary',
-        ];
+        return $this->normalizeHtmlViewMetaPayload(
+            [
+                'title'       => trim($title),
+                'description' => trim($description),
+                'url'         => $this->buildOnepageUrl(),
+                'image'       => '',
+                'imageWidth'  => '',
+                'imageHeight' => '',
+                'imageAlt'    => '',
+                'twitterCard' => 'summary',
+            ]
+        );
     }
 
     /**
@@ -327,11 +335,18 @@ class HtmlView extends BaseHtmlView
             'label'       => $label !== '' ? $label : ucfirst($slot),
             'selector'    => $hash,
             'hash'        => $hash,
-            'url'         => $this->buildOnepageUrl($slot),
-            'title'       => $this->composeSectionTitle($title, $pageMeta['title']),
-            'description' => $description !== '' ? $description : $pageMeta['description'],
-            'image'       => $image,
-            'twitterCard' => trim((string) ($tags['twitterCard'] ?? ($image !== '' ? 'summary_large_image' : 'summary'))),
+            ...$this->normalizeHtmlViewMetaPayload(
+                [
+                    'url'         => $this->buildOnepageUrl($slot),
+                    'title'       => $this->composeSectionTitle($title, $pageMeta['title']),
+                    'description' => $description !== '' ? $description : $pageMeta['description'],
+                    'image'       => $image,
+                    'imageWidth'  => $tags['imageWidth'] ?? '',
+                    'imageHeight' => $tags['imageHeight'] ?? '',
+                    'imageAlt'    => $tags['imageAlt'] ?? '',
+                    'twitterCard' => $tags['twitterCard'] ?? ($image !== '' ? 'summary_large_image' : 'summary'),
+                ]
+            ),
         ];
     }
 
@@ -409,59 +424,4 @@ class HtmlView extends BaseHtmlView
         return $sectionTitle . ' | ' . $pageTitle;
     }
 
-    /**
-     * Add the onepage Open Graph meta tags for the current active section.
-     *
-     * @param   array<string, string>  $meta  The resolved active meta payload.
-     *
-     * @return  void
-     */
-    private function addOpenGraphMetaData(array $meta): void
-    {
-        $document = $this->document;
-
-        $document->addCustomTag(
-            '<meta property="og:title" content="' . htmlspecialchars($meta['title'], ENT_QUOTES, 'UTF-8') . '" />'
-        );
-        $document->addCustomTag(
-            '<meta property="og:description" content="' . htmlspecialchars($meta['description'], ENT_QUOTES, 'UTF-8') . '" />'
-        );
-        $document->addCustomTag(
-            '<meta property="og:url" content="' . htmlspecialchars($meta['url'], ENT_QUOTES, 'UTF-8') . '" />'
-        );
-
-        if (($meta['image'] ?? '') !== '') {
-            $document->addCustomTag(
-                '<meta property="og:image" content="' . htmlspecialchars($meta['image'], ENT_QUOTES, 'UTF-8') . '" />'
-            );
-        }
-    }
-
-    /**
-     * Add the onepage Twitter Card meta tags for the current active section.
-     *
-     * @param   array<string, string>  $meta  The resolved active meta payload.
-     *
-     * @return  void
-     */
-    private function addTwitterCardMetaData(array $meta): void
-    {
-        $document = $this->document;
-
-        $document->addCustomTag(
-            '<meta name="twitter:card" content="' . htmlspecialchars($meta['twitterCard'], ENT_QUOTES, 'UTF-8') . '" />'
-        );
-        $document->addCustomTag(
-            '<meta name="twitter:title" content="' . htmlspecialchars($meta['title'], ENT_QUOTES, 'UTF-8') . '" />'
-        );
-        $document->addCustomTag(
-            '<meta name="twitter:description" content="' . htmlspecialchars($meta['description'], ENT_QUOTES, 'UTF-8') . '" />'
-        );
-
-        if (($meta['image'] ?? '') !== '') {
-            $document->addCustomTag(
-                '<meta name="twitter:image" content="' . htmlspecialchars($meta['image'], ENT_QUOTES, 'UTF-8') . '" />'
-            );
-        }
-    }
 }

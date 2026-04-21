@@ -315,6 +315,9 @@ window.CopyMyPage = window.CopyMyPage || {};
                 title: String(payload.title || '').trim(),
                 description: String(payload.description || '').trim(),
                 image: String(payload.image || '').trim(),
+                imageWidth: String(payload.imageWidth || '').trim(),
+                imageHeight: String(payload.imageHeight || '').trim(),
+                imageAlt: String(payload.imageAlt || '').trim(),
                 url: String(payload.url || '').trim(),
                 twitterCard: String(payload.twitterCard || '').trim() || 'summary',
                 token: String(payload.token || '').trim().toLowerCase(),
@@ -328,12 +331,18 @@ window.CopyMyPage = window.CopyMyPage || {};
             const resolvedTitle = meta.title || this._defaultMeta?.title || document.title;
             const resolvedDescription = meta.description || this._defaultMeta?.description || '';
             const resolvedImage = meta.image || '';
+            const resolvedImageWidth = resolvedImage ? (meta.imageWidth || '') : '';
+            const resolvedImageHeight = resolvedImage ? (meta.imageHeight || '') : '';
+            const resolvedImageAlt = resolvedImage ? (meta.imageAlt || '') : '';
             const resolvedUrl = meta.url || this._defaultMeta?.url || window.location.href;
             const resolvedTwitterCard = meta.twitterCard || (resolvedImage ? 'summary_large_image' : 'summary');
             const signature = [
                 resolvedTitle,
                 resolvedDescription,
                 resolvedImage,
+                resolvedImageWidth,
+                resolvedImageHeight,
+                resolvedImageAlt,
                 resolvedTwitterCard,
                 resolvedUrl,
             ].join('||');
@@ -354,6 +363,9 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._upsertMetaByProperty('og:description', resolvedDescription);
             this._upsertMetaByProperty('og:url', resolvedUrl);
             this._upsertMetaByProperty('og:image', resolvedImage);
+            this._upsertMetaByProperty('og:image:width', resolvedImageWidth);
+            this._upsertMetaByProperty('og:image:height', resolvedImageHeight);
+            this._upsertMetaByProperty('og:image:alt', resolvedImageAlt);
             this._upsertMetaByName('twitter:card', resolvedTwitterCard);
             this._upsertMetaByName('twitter:title', resolvedTitle);
             this._upsertMetaByName('twitter:description', resolvedDescription);

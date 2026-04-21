@@ -21,6 +21,13 @@ use Joomla\Registry\Registry;
 final class HeroHelper
 {
     /**
+     * Default layout variant for the current hero module.
+     *
+     * @var string
+     */
+    private const DEFAULT_LAYOUT = 'hero_slideshow';
+
+    /**
      * Build Open Graph compatible tag data for the hero section.
      *
      * @param   Registry      $params  The module params.
@@ -31,12 +38,20 @@ final class HeroHelper
      */
     public function getOGTags(Registry $params, ?object $module = null, string $slot = ''): array
     {
+        $config      = $params->toArray();
+        $layout      = $this->resolveLayoutVariant($config);
+        $slides      = $this->getSlides($config, $layout);
+        $primaryMeta = $this->resolvePrimarySlideMeta($slides);
+
         return [
             'slot'        => 'hero',
             'label'       => 'Hero',
-            'title'       => 'Fernbreitenbach Helau',
-            'description' => 'Willkommen auf der Website des Fernbreiterbacher Carneval-Vereins',
-            'image'       => rtrim(Uri::root(), '/') . '/modules/mod_copymypage_hero/images/slide_1.jpg',
+            'title'       => $primaryMeta['title'],
+            'description' => $primaryMeta['description'],
+            'image'       => $primaryMeta['image'],
+            'imageWidth'  => $primaryMeta['imageWidth'],
+            'imageHeight' => $primaryMeta['imageHeight'],
+            'imageAlt'    => $primaryMeta['imageAlt'],
             'twitterCard' => 'summary_large_image',
         ];
     }
@@ -195,6 +210,105 @@ final class HeroHelper
                 'height'        => 1280,
             ],
         ];
+    }
+
+    /**
+     * Resolve the validated layout variant for hero metadata and rendering helpers.
+     *
+     * @param   array<string, mixed>  $cfg  Flat module config array.
+     *
+     * @return  string
+     */
+    private function resolveLayoutVariant(array $cfg): string
+    {
+        $layout = strtolower(trim((string) ($cfg['layoutVariant'] ?? self::DEFAULT_LAYOUT)));
+
+        if ($layout === '' || $layout === 'default') {
+            return self::DEFAULT_LAYOUT;
+        }
+
+        if (!str_starts_with($layout, 'hero_')) {
+            return self::DEFAULT_LAYOUT;
+        }
+
+        return $layout;
+    }
+
+    /**
+     * Build a stable metadata payload from the first available hero slide.
+     *
+     * @param   array<int, object>  $slides  Prepared hero slides.
+     *
+     * @return  array<string, string>
+     */
+    private function resolvePrimarySlideMeta(array $slides): array
+    {
+        $defaults = $this->getDefaultSlides()[0] ?? [];
+        $slide    = isset($slides[0]) && \is_object($slides[0]) ? $slides[0] : null;
+        $image    = $this->toAbsoluteUrl(trim((string) ($slide->src ?? '')));
+
+        if ($image === '') {
+            $filename = trim((string) ($defaults['file'] ?? ''));
+
+            if ($filename !== '') {
+                $image = rtrim(Uri::root(), '/') . '/modules/mod_copymypage_hero/images/' . $filename;
+            }
+        }
+
+        $title = trim((string) ($slide->headline ?? ($defaults['headline'] ?? '')));
+        $imageWidth = (int) ($slide->width ?? ($defaults['width'] ?? 0));
+        $imageHeight = (int) ($slide->height ?? ($defaults['height'] ?? 0));
+
+        if ($title === '') {
+            $title = 'Hero';
+        }
+
+        return [
+            'title'       => $title,
+            'description' => trim((string) ($slide->subline ?? ($defaults['subline'] ?? ''))),
+            'image'       => $image,
+            'imageWidth'  => $imageWidth > 0 ? (string) $imageWidth : '',
+            'imageHeight' => $imageHeight > 0 ? (string) $imageHeight : '',
+            'imageAlt'    => trim((string) ($slide->alt ?? ($defaults['alt'] ?? ''))),
+        ];
+    }
+
+    /**
+     * Convert a hero asset path into an absolute URL.
+     *
+     * @param   string  $url  Relative, rooted or absolute URL.
+     *
+     * @return  string
+     */
+    private function toAbsoluteUrl(string $url): string
+    {
+        $url = trim($url);
+
+        if ($url === '') {
+            return '';
+        }
+
+        if (preg_match('#^https?://#i', $url)) {
+            return $url;
+        }
+
+        $root     = rtrim(Uri::root(), '/');
+        $rootPath = rtrim((string) parse_url($root, PHP_URL_PATH), '/');
+        $origin   = $root;
+
+        if ($rootPath !== '' && $rootPath !== '/') {
+            $origin = preg_replace('#' . preg_quote($rootPath, '#') . '$#', '', $root) ?? $root;
+        }
+
+        if (str_starts_with($url, '/')) {
+            if ($rootPath !== '' && str_starts_with($url, $rootPath . '/')) {
+                return rtrim($origin, '/') . $url;
+            }
+
+            return $root . $url;
+        }
+
+        return $root . '/' . ltrim($url, '/');
     }
 
     /**

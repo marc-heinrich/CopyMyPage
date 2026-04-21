@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.10
  */
 
 namespace Joomla\Component\CopyMyPage\Site\View\Gallery;
@@ -16,6 +16,7 @@ use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
+use Joomla\Component\CopyMyPage\Site\View\HtmlViewMetaDataTrait;
 use Joomla\Registry\Registry;
 
 /**
@@ -23,6 +24,8 @@ use Joomla\Registry\Registry;
  */
 class HtmlView extends BaseHtmlView
 {
+    use HtmlViewMetaDataTrait;
+
     /**
      * Active gallery item.
      *
@@ -87,6 +90,13 @@ class HtmlView extends BaseHtmlView
     protected int $imageCount = 0;
 
     /**
+     * Whether the gallery view can rely on Sigplus image-level Open Graph tags.
+     *
+     * @var bool
+     */
+    protected bool $hasSigplusOpenGraphImage = false;
+
+    /**
      * Displays the gallery view.
      *
      * @param   string|null  $tpl  Template name.
@@ -97,6 +107,7 @@ class HtmlView extends BaseHtmlView
     {
         $this->item  = $this->get('Item');
         $this->state = $this->get('State');
+        $this->hasSigplusOpenGraphImage = false;
 
         if (\count($errors = $this->get('Errors'))) {
             throw new GenericDataException(implode("\n", $errors), 500);
@@ -140,6 +151,11 @@ class HtmlView extends BaseHtmlView
                 'info' => Text::_('COM_COPYMYPAGE_VIEW_GALLERY_MSG_NO_SOURCE_INFO'),
                 'desc' => Text::_('COM_COPYMYPAGE_VIEW_GALLERY_MSG_NO_SOURCE_DESC'),
             ];
+        } else {
+            $this->hasSigplusOpenGraphImage = $this->resolveRegistryBool(
+                $this->itemParams->get('open_graph', true),
+                true
+            );
         }
 
         $this->prepareDocument();
@@ -155,14 +171,32 @@ class HtmlView extends BaseHtmlView
     protected function prepareDocument(): void
     {
         $document = $this->document;
+        $meta = $this->buildMetaPayload();
+
+        $document->setTitle($meta['title']);
+        $document->setDescription($meta['description']);
+
+        $this->addHtmlViewOpenGraphMetaData($meta);
+        $this->addHtmlViewTwitterCardMetaData($meta);
+    }
+
+    /**
+     * Builds the normalized metadata payload for the gallery detail view.
+     *
+     * @return  array<string, string>
+     */
+    private function buildMetaPayload(): array
+    {
         $title = $this->headline !== '' ? $this->headline : Text::_('COM_COPYMYPAGE_VIEW_GALLERY_TITLE');
-        $description = $this->resolveMetaDescription();
 
-        $document->setTitle($title);
-        $document->setDescription($description);
-
-        $this->addOpenGraphMetaData($title, $description);
-        $this->addTwitterCardMetaData($title, $description);
+        return $this->normalizeHtmlViewMetaPayload(
+            [
+                'title'       => $title,
+                'description' => $this->resolveMetaDescription(),
+                'url'         => Uri::getInstance()->toString(),
+                'twitterCard' => $this->hasSigplusOpenGraphImage ? 'summary_large_image' : 'summary',
+            ]
+        );
     }
 
     /**
@@ -177,54 +211,6 @@ class HtmlView extends BaseHtmlView
         }
 
         return Text::sprintf('COM_COPYMYPAGE_VIEW_GALLERY_META_DESCRIPTION', $this->imageCount);
-    }
-
-    /**
-     * Adds page-specific Open Graph meta tags for the gallery detail view.
-     *
-     * @param   string  $title        The resolved page title.
-     * @param   string  $description  The resolved page description.
-     *
-     * @return  void
-     */
-    private function addOpenGraphMetaData(string $title, string $description): void
-    {
-        $document = $this->document;
-        $uri = Uri::getInstance();
-
-        $document->addCustomTag(
-            '<meta property="og:title" content="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '" />'
-        );
-        $document->addCustomTag(
-            '<meta property="og:description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '" />'
-        );
-        $document->addCustomTag(
-            '<meta property="og:url" content="' . htmlspecialchars($uri->toString(), ENT_QUOTES, 'UTF-8') . '" />'
-        );
-    }
-
-    /**
-     * Adds page-specific Twitter Card tags for the gallery detail view.
-     *
-     * Keep the image selection delegated to existing Open Graph tags so Sigplus
-     * can continue to control the representative gallery image.
-     *
-     * @param   string  $title        The resolved page title.
-     * @param   string  $description  The resolved page description.
-     *
-     * @return  void
-     */
-    private function addTwitterCardMetaData(string $title, string $description): void
-    {
-        $document = $this->document;
-
-        $document->addCustomTag('<meta name="twitter:card" content="summary_large_image" />');
-        $document->addCustomTag(
-            '<meta name="twitter:title" content="' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '" />'
-        );
-        $document->addCustomTag(
-            '<meta name="twitter:description" content="' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '" />'
-        );
     }
 
     /**
@@ -283,5 +269,36 @@ class HtmlView extends BaseHtmlView
         }
 
         return Text::_('COM_COPYMYPAGE_VIEW_GALLERY_TITLE');
+    }
+
+    /**
+     * Resolve Joomla registry truthy values in a predictable way.
+     *
+     * @param   mixed  $value    Raw registry value.
+     * @param   bool   $default  Default value when nothing explicit is set.
+     *
+     * @return  bool
+     */
+    private function resolveRegistryBool(mixed $value, bool $default = false): bool
+    {
+        if ($value === null || $value === '') {
+            return $default;
+        }
+
+        if (\is_bool($value)) {
+            return $value;
+        }
+
+        if (\is_int($value) || \is_float($value)) {
+            return (int) $value === 1;
+        }
+
+        $normalized = strtolower(trim((string) $value));
+
+        if ($normalized === '') {
+            return $default;
+        }
+
+        return \in_array($normalized, ['1', 'true', 'yes', 'on'], true);
     }
 }
