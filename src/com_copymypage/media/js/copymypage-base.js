@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.12
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -82,6 +82,39 @@ window.CopyMyPage = window.CopyMyPage || {};
     utils.isHTMLElement = utils.isHTMLElement || function isHTMLElement(value) {
         return value instanceof HTMLElement;
     };
+
+    utils.activateLazyStylesheets = utils.activateLazyStylesheets || function activateLazyStylesheets(root = document) {
+        const scope = root && typeof root.querySelectorAll === 'function'
+            ? root
+            : document;
+
+        scope.querySelectorAll('link[rel="lazy-stylesheet"]').forEach((link) => {
+            link.rel = 'stylesheet';
+        });
+    };
+
+    utils.initLazyStylesheets = utils.initLazyStylesheets || function initLazyStylesheets() {
+        if (utils.lazyStylesheetsInitialized) {
+            return;
+        }
+
+        const activate = (event = null) => {
+            window.requestAnimationFrame(() => {
+                utils.activateLazyStylesheets(event?.target || document);
+            });
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', activate, { once: true });
+        } else {
+            activate();
+        }
+
+        document.addEventListener('joomla:updated', activate);
+        utils.lazyStylesheetsInitialized = true;
+    };
+
+    utils.initLazyStylesheets();
 
     class CleanupBag {
         constructor() {

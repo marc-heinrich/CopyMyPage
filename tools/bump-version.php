@@ -10,6 +10,7 @@ declare(strict_types=1);
  *
  * Notes:
  * - Comments in English as requested.
+ * - Preserves manifest formatting by replacing only the first <version> value.
  * - PSR-12 compliant formatting.
  */
 
@@ -46,8 +47,8 @@ final class BumpVersion
 
         $updateXml = $this->root . '/update.xml';
         if (is_file($updateXml)) {
-            $this->touchUpdateXml($updateXml, $this->version);
-            echo "[update] {$updateXml} (no version bump, updated timestamp if applicable)\n";
+            $this->validateUpdateXml($updateXml);
+            echo "[update] {$updateXml} (validated only; formatting untouched)\n";
         }
 
         echo "\nDone. New version: {$this->version}\n";
@@ -60,18 +61,8 @@ final class BumpVersion
     {
         $files = [];
 
-        // src/ sub-extensions
         $src = $this->root . '/src';
         if (is_dir($src)) {
-            $pattern = implode(
-                PATH_SEPARATOR,
-                [
-                    $src . '/*/*.xml',           // com_*/mod_*/tpl_* manifests
-                    $src . '/*/*/*.xml',         // nested (e.g., language xmls, we’ll filter)
-                ]
-            );
-
-            // We’ll filter to typical Joomla manifests only by filename pattern heuristics.
             foreach (glob($src . '/*/*.xml') ?: [] as $file) {
                 if ($this->isLikelyJoomlaManifest($file)) {
                     $files[] = $file;
@@ -79,13 +70,11 @@ final class BumpVersion
             }
         }
 
-        // Package manifest
         $pkg = $this->root . '/pkg_copymypage/pkg_copymypage.xml';
         if (is_file($pkg)) {
             $files[] = $pkg;
         }
 
-        // Optional: templateDetails.xml already covered above via pattern
         return array_values(array_unique($files));
     }
 
@@ -93,22 +82,18 @@ final class BumpVersion
     {
         $basename = basename($file);
 
-        // Components: com_*.xml oder dein spezielles Schema
         if (preg_match('/^com_.*\.xml$/', $basename) === 1) {
             return true;
         }
 
-        // Speziell für CopyMyPage, falls das Manifest "copymypage.xml" heißt
         if ($basename === 'copymypage.xml') {
             return true;
         }
 
-        // Module
         if (preg_match('/^mod_.*\.xml$/', $basename) === 1) {
             return true;
         }
 
-        // Templates
         if ($basename === 'templateDetails.xml') {
             return true;
         }
@@ -118,54 +103,54 @@ final class BumpVersion
 
     private function updateManifestVersion(string $file, string $version): void
     {
-        $dom = new \DOMDocument('1.0', 'UTF-8');
-        $dom->preserveWhiteSpace = false;
-        $dom->formatOutput = true;
+        $xml = file_get_contents($file);
 
-        if (@$dom->load($file) === false) {
-            throw new \RuntimeException("Unable to parse XML: {$file}");
+        if ($xml === false) {
+            throw new \RuntimeException("Unable to read XML: {$file}");
         }
 
-        $versionNodes = $dom->getElementsByTagName('version');
-        if ($versionNodes->length > 0) {
-            $versionNodes->item(0)->nodeValue = $version;
-        } else {
-            // If no <version> exists, create one at root level (conservative fallback).
-            $root = $dom->documentElement;
-            if ($root === null) {
-                throw new \RuntimeException("Invalid XML (no root): {$file}");
-            }
-            $v = $dom->createElement('version', $version);
-            $root->appendChild($v);
+        $this->assertXmlIsParseable($xml, $file);
+
+        $updated = preg_replace_callback(
+            '/(<version\b[^>]*>)([^<]*)(<\/version>)/i',
+            static function (array $matches) use ($version): string {
+                return $matches[1] . $version . $matches[3];
+            },
+            $xml,
+            1,
+            $count
+        );
+
+        if ($updated === null) {
+            throw new \RuntimeException("Failed to update version in XML: {$file}");
         }
 
-        $this->saveDom($dom, $file);
+        if ($count === 0) {
+            throw new \RuntimeException("No <version> tag found in manifest: {$file}");
+        }
+
+        file_put_contents($file, $updated);
     }
 
-    private function touchUpdateXml(string $file, string $version): void
+    private function validateUpdateXml(string $file): void
     {
-        // We typically do not rewrite history in update.xml here.
-        // Optionally, you could inject a new <update> entry programmatically.
-        // For safety, we just normalize formatting and ensure UTF-8.
-        $dom = new \DOMDocument('1.0', 'UTF-8');
-        $dom->preserveWhiteSpace = false;
-        $dom->formatOutput = true;
+        $xml = file_get_contents($file);
 
-        if (@$dom->load($file) === false) {
-            // Not fatal; just return.
+        if ($xml === false) {
             return;
         }
 
-        $this->saveDom($dom, $file);
+        $this->assertXmlIsParseable($xml, $file);
     }
 
-    private function saveDom(\DOMDocument $dom, string $file): void
+    private function assertXmlIsParseable(string $xml, string $file): void
     {
-        $xml = $dom->saveXML();
-        if ($xml === false) {
-            throw new \RuntimeException("Failed to serialize XML: {$file}");
+        $dom = new \DOMDocument();
+        $dom->preserveWhiteSpace = true;
+
+        if (@$dom->loadXML($xml) === false) {
+            throw new \RuntimeException("Unable to parse XML: {$file}");
         }
-        file_put_contents($file, $xml);
     }
 
     private function assertSemver(string $version): void

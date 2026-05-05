@@ -1,10 +1,19 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.10",
+  "version": "0.0.12",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "assets": [
+    {
+      "name": "core",
+      "type": "script",
+      "class": "CoreAssetItem",
+      "uri": "system/core.min.js",
+      "attributes": {
+        "defer": true
+      }
+    },
     {
       "name": "copymypage.site",
       "type": "preset",
@@ -50,7 +59,7 @@
       "name": "copymypage.base",
       "type": "script",
       "uri": "com_copymypage/copymypage-base.min.js",
-      "version": "0.0.9",
+      "version": "0.0.12",
       "attributes": {
         "defer": true
       }
@@ -233,7 +242,10 @@
       "name": "mmenu.light",
       "type": "style",
       "uri": "com_copymypage/mmenu-light/mmenu-light.min.css",
-      "version": "3.2.2"
+      "version": "3.2.2",
+      "attributes": {
+        "rel": "lazy-stylesheet"
+      }
     },
     {
       "name": "mmenu.light",
