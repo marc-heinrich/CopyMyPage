@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.10</version>
+  <version>0.0.11</version>
   <description>MOD_COPYMYPAGE_NAVBAR_XML_DESCRIPTION</description>
   <scriptfile>script.php</scriptfile>
   <namespace path="src">Joomla\Module\CopyMyPage\Navbar</namespace>
@@ -36,11 +36,9 @@
           <option value="mobilemenu_mmenulight">Mmenu Light</option>
         </field>
       </fieldset>
-
       <fieldset name="navbar_uikit" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_NAV">
         <field name="navbar_uikit_logo" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_DESC" default="media/com_copymypage/images/logo/logo-cmp.png" showon="layoutVariant:navbar_uikit"/>
       </fieldset>
-
       <fieldset name="navbar_uikit_user_dropdown" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_USER_DROPDOWN">
         <field name="navbar_uikit_userDropdownHoldOpenEnabled" type="radio" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_ENABLED_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_ENABLED_DESC" default="1" class="btn-group btn-group-yesno" showon="layoutVariant:navbar_uikit">
           <option value="1">JYES</option>
@@ -52,7 +50,6 @@
           <option value="0">JNO</option>
         </field>
       </fieldset>
-
       <fieldset name="navbar_uikit_user_dropdown_selectors" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_USER_DROPDOWN_SELECTORS" description="MOD_COPYMYPAGE_NAVBAR_FIELDSET_USER_DROPDOWN_SELECTORS_DESC">
         <field name="navbar_uikit_userDropdownSelectorRoot" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_ROOT_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_ROOT_DESC" default=".cmp-module--navbar" filter="raw" showon="layoutVariant:navbar_uikit"/>
         <field name="navbar_uikit_userDropdownSelectorUser" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_USER_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_USER_DESC" default=".cmp-navbar-user" filter="raw" showon="layoutVariant:navbar_uikit"/>
@@ -60,13 +57,11 @@
         <field name="navbar_uikit_userDropdownSelectorDropdown" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_DROPDOWN_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_DROPDOWN_DESC" default=".cmp-navbar-user .uk-navbar-dropdown" filter="raw" showon="layoutVariant:navbar_uikit"/>
         <field name="navbar_uikit_userDropdownSelectorNavbarDropdown" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_NAVBAR_DROPDOWN_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_SELECTOR_NAVBAR_DROPDOWN_DESC" default=".cmp-navbar .uk-navbar-dropdown" filter="raw" showon="layoutVariant:navbar_uikit"/>
       </fieldset>
-
       <fieldset name="mobilemenu_mmenulight_ids" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_NAV">
         <field name="mobilemenu_mmenulight_navOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_NAV_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_NAV_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-nav" filter="cmd" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_userOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_USER_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_USER_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-user" filter="cmd" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_basketOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_BASKET_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_BASKET_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-basket" filter="cmd" showon="layoutVariant:mobilemenu_mmenulight"/>
       </fieldset>
-
       <fieldset name="mobilemenu_mmenulight_global" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_GLOBAL">
         <field name="mobilemenu_mmenulight_mediaQuery" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_MEDIAQUERY_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_MEDIAQUERY_DESC" default="all" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_selectedClass" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_SELECTED_CLASS_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_SELECTED_CLASS_DESC" default="Selected" filter="cmd" showon="layoutVariant:mobilemenu_mmenulight"/>
@@ -87,7 +82,6 @@
         <field name="mobilemenu_mmenulight_ocdMinWidth" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MIN_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MIN_WIDTH_DESC" default="200" hint="200" min="0" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_ocdMaxWidth" type="number" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_OCD_MAX_WIDTH_DESC" default="440" hint="440" min="0" showon="layoutVariant:mobilemenu_mmenulight"/>
       </fieldset>
-
       <fieldset name="mobilemenu_mmenulight_nav" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_NAV">
         <field name="mobilemenu_mmenulight_navTitle" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_DESC" default="Menu" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_navPosition" type="list" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_DESC" default="left" showon="layoutVariant:mobilemenu_mmenulight">
@@ -95,7 +89,6 @@
           <option value="right">JGLOBAL_RIGHT</option>
         </field>
       </fieldset>
-
       <fieldset name="mobilemenu_mmenulight_user" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_USER">
         <field name="mobilemenu_mmenulight_userTitle" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_DESC" default="User" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_userPosition" type="list" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_DESC" default="right" showon="layoutVariant:mobilemenu_mmenulight">
@@ -103,7 +96,6 @@
           <option value="right">JGLOBAL_RIGHT</option>
         </field>
       </fieldset>
-
       <fieldset name="mobilemenu_mmenulight_basket" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_BASKET">
         <field name="mobilemenu_mmenulight_basketTitle" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_DESC" default="Basket" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_basketPosition" type="list" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_DESC" default="right" showon="layoutVariant:mobilemenu_mmenulight">

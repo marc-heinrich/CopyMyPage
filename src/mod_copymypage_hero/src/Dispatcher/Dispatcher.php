@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.11
  */
 
 namespace Joomla\Module\CopyMyPage\Hero\Site\Dispatcher;
@@ -75,7 +75,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $layoutVariant = strtolower(trim((string) ($displayData['cfg']['layoutVariant'] ?? $baseLayout)));
         $layout        = $this->resolveLayout($layoutVariant, $baseLayout);
 
-        $this->populateHeroData($displayData, $layout);
+        $this->populateHeroData($displayData, $layout, $baseLayout);
 
         $displayData['warning'] = $this->renderWarnings();
 
@@ -305,12 +305,17 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
      *
      * @param   array<string, mixed>  $displayData  Prepared display data.
      * @param   string                $layout       Validated layout key.
+     * @param   string                $baseLayout   Resolved fallback layout key.
      *
      * @return  void
      */
-    protected function populateHeroData(array &$displayData, string $layout): void
+    protected function populateHeroData(array &$displayData, string $layout, string $baseLayout): void
     {
         $helper = $this->getHelperFactory()->getHelper('HeroHelper');
+
+        if (method_exists($helper, 'setLayoutContext')) {
+            $helper->setLayoutContext($baseLayout, $this->layoutPrefix);
+        }
 
         $displayData['heroHelper']       = $helper;
         $displayData['slides']           = $helper->getSlides($displayData['cfg'], $layout);

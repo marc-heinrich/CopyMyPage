@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.11
  */
 
 namespace Joomla\Module\CopyMyPage\Hero\Site\Helper;
@@ -21,11 +21,32 @@ use Joomla\Registry\Registry;
 final class HeroHelper
 {
     /**
-     * Default layout variant for the current hero module.
+     * Dispatcher-provided fallback layout for the current module context.
      *
      * @var string
      */
-    private const DEFAULT_LAYOUT = 'hero_slideshow';
+    private string $defaultLayout = '';
+
+    /**
+     * Dispatcher-provided layout prefix for the current system slot.
+     *
+     * @var string
+     */
+    private string $layoutPrefix = '';
+
+    /**
+     * Set the layout context resolved by the module dispatcher.
+     *
+     * @param   string  $defaultLayout  Validated fallback layout key.
+     * @param   string  $layoutPrefix   Expected layout prefix for the slot.
+     *
+     * @return  void
+     */
+    public function setLayoutContext(string $defaultLayout, string $layoutPrefix = ''): void
+    {
+        $this->defaultLayout = self::normalizeLayoutKey($defaultLayout);
+        $this->layoutPrefix  = self::normalizeLayoutKey($layoutPrefix);
+    }
 
     /**
      * Build Open Graph compatible tag data for the hero section.
@@ -33,13 +54,14 @@ final class HeroHelper
      * @param   Registry      $params  The module params.
      * @param   object|null   $module  The published module row.
      * @param   string        $slot    The active system slot.
+     * @param   string        $layout  Optional validated layout key from a dispatcher caller.
      *
      * @return  array<string, string>
      */
-    public function getOGTags(Registry $params, ?object $module = null, string $slot = ''): array
+    public function getOGTags(Registry $params, ?object $module = null, string $slot = '', string $layout = ''): array
     {
         $config      = $params->toArray();
-        $layout      = $this->resolveLayoutVariant($config);
+        $layout      = $this->resolveLayoutVariant($config, $layout, $slot);
         $slides      = $this->getSlides($config, $layout);
         $primaryMeta = $this->resolvePrimarySlideMeta($slides);
 
@@ -112,12 +134,16 @@ final class HeroHelper
         $animation    = strtolower(trim(self::cfgString($layoutConfig, 'animation', 'fade')));
         $autoplay     = self::cfgBool($layoutConfig, 'autoplay', true) ? 'true' : 'false';
         $draggable    = self::cfgBool($layoutConfig, 'draggable', true) ? 'true' : 'false';
+        $interval     = (int) self::cfgString($layoutConfig, 'autoplayInterval', '16000');
 
         if (!\in_array($animation, ['fade', 'slide', 'push', 'pull'], true)) {
             $animation = 'fade';
         }
 
-        return 'ratio: false; animation: ' . $animation . '; autoplay: ' . $autoplay . '; draggable: ' . $draggable;
+        $interval = max(7000, min(60000, $interval));
+
+        return 'ratio: false; animation: ' . $animation . '; autoplay: ' . $autoplay
+            . '; autoplay-interval: ' . $interval . '; draggable: ' . $draggable;
     }
 
     /**
@@ -215,23 +241,79 @@ final class HeroHelper
     /**
      * Resolve the validated layout variant for hero metadata and rendering helpers.
      *
-     * @param   array<string, mixed>  $cfg  Flat module config array.
+     * @param   array<string, mixed>  $cfg     Flat module config array.
+     * @param   string                $layout  Optional validated layout key.
+     * @param   string                $slot    Optional slot name used as fallback prefix.
      *
      * @return  string
      */
-    private function resolveLayoutVariant(array $cfg): string
+    private function resolveLayoutVariant(array $cfg, string $layout = '', string $slot = ''): string
     {
-        $layout = strtolower(trim((string) ($cfg['layoutVariant'] ?? self::DEFAULT_LAYOUT)));
+        $layout       = self::normalizeLayoutKey($layout);
+        $layoutPrefix = $this->layoutPrefix !== ''
+            ? $this->layoutPrefix
+            : self::normalizeLayoutKey($slot);
 
-        if ($layout === '' || $layout === 'default') {
-            return self::DEFAULT_LAYOUT;
+        if ($layout === '') {
+            $layout = self::normalizeLayoutKey((string) ($cfg['layoutVariant'] ?? ''));
         }
 
-        if (!str_starts_with($layout, 'hero_')) {
-            return self::DEFAULT_LAYOUT;
+        if ($layout === '' || $layout === 'default') {
+            $layout = $this->resolveConfiguredLayout($cfg, $layoutPrefix);
+        }
+
+        if ($layout === '' || $layout === 'default') {
+            return $this->defaultLayout;
+        }
+
+        if ($layoutPrefix !== '' && !str_starts_with($layout, $layoutPrefix . '_')) {
+            return $this->defaultLayout;
         }
 
         return $layout;
+    }
+
+    /**
+     * Infer a layout key from prefixed layout params when no explicit variant is stored.
+     *
+     * @param   array<string, mixed>  $cfg     Flat module config array.
+     * @param   string                $prefix  Slot/layout prefix.
+     *
+     * @return  string
+     */
+    private function resolveConfiguredLayout(array $cfg, string $prefix): string
+    {
+        $prefix = self::normalizeLayoutKey($prefix);
+
+        if ($prefix === '') {
+            return '';
+        }
+
+        foreach ($cfg as $key => $value) {
+            if (!\is_string($key) || !str_starts_with($key, $prefix . '_')) {
+                continue;
+            }
+
+            $parts = explode('_', $key, 3);
+
+            if (\count($parts) >= 2 && $parts[1] !== '') {
+                return $parts[0] . '_' . $parts[1];
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Normalize a layout or prefix token.
+     *
+     * @param   string  $layout  Raw layout token.
+     *
+     * @return  string
+     */
+    private static function normalizeLayoutKey(string $layout): string
+    {
+        return strtolower(trim($layout));
     }
 
     /**

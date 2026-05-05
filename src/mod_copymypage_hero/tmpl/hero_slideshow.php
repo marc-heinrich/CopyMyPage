@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.11
  */
 
 \defined('_JEXEC') or die;
@@ -55,7 +55,7 @@ $layoutConfig = HeroHelper::getLayoutConfig($cfg, $layout);
 
 // Define static template defaults and environment-dependent path values.
 $moduleClass   = 'cmp-module cmp-module--hero cmp-module--hero-slideshow';
-$variantWidths = [960, 1920];
+$variantWidths = [960, 1280, 1920];
 $siteBaseUrl   = rtrim(Uri::root(), '/');
 $siteRootPath  = rtrim(Uri::root(true), '/');
 
