@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.13
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -28,6 +28,9 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._sectionObserver = null;
             this._sections = [];
             this._defaultMeta = null;
+            this._pendingSection = null;
+            this._sectionParam = 'section';
+            this._activeSectionToken = '';
             this._activeMetaSignature = '';
             this._handleLifecycleChange = this._handleLifecycleChange.bind(this);
             this._handleSectionChange = this._handleSectionChange.bind(this);
@@ -61,6 +64,9 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._disconnectSectionObserver();
             this._sections = [];
             this._defaultMeta = null;
+            this._pendingSection = null;
+            this._sectionParam = 'section';
+            this._activeSectionToken = '';
             this._activeMetaSignature = '';
             super.destroy();
         }
@@ -99,6 +105,16 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         _handleLifecycleChange() {
+            const requestedSection = this._getSectionByHash(window.location.hash)
+                || this._getSectionByLocationParam();
+
+            if (requestedSection && !this._isSectionInAnchorBand(requestedSection)) {
+                this._pendingSection = requestedSection;
+                this._applySectionMeta(requestedSection);
+            } else {
+                this._pendingSection = null;
+            }
+
             this._scheduleHashRecoverySequence();
             this.scheduleSectionMetaSync();
         }
@@ -161,6 +177,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
+            this._sectionParam = String(metaState.sectionParam || 'section').trim() || 'section';
             this._defaultMeta = this._normalizeMetaPayload(metaState.page || {});
             const sections = metaState.sections && typeof metaState.sections === 'object'
                 ? Object.values(metaState.sections)
@@ -258,6 +275,10 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return null;
             }
 
+            if (this._pendingSection) {
+                return this._pendingSection;
+            }
+
             const hashSection = this._getSectionByHash(window.location.hash);
 
             if (hashSection && this._isSectionInAnchorBand(hashSection)) {
@@ -308,6 +329,26 @@ window.CopyMyPage = window.CopyMyPage || {};
             return this._sections.find((section) => section.hash === normalizedHash) || null;
         }
 
+        _getSectionByLocationParam() {
+            try {
+                const token = new URL(window.location.href).searchParams.get(this._sectionParam || 'section');
+
+                return this._getSectionByToken(token);
+            } catch (error) {
+                return null;
+            }
+        }
+
+        _getSectionByToken(token) {
+            const normalizedToken = String(token || '').trim().toLowerCase();
+
+            if (!normalizedToken) {
+                return null;
+            }
+
+            return this._sections.find((section) => section.token === normalizedToken) || null;
+        }
+
         _normalizeMetaPayload(entry) {
             const payload = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry : {};
 
@@ -336,6 +377,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             const resolvedImageAlt = resolvedImage ? (meta.imageAlt || '') : '';
             const resolvedUrl = meta.url || this._defaultMeta?.url || window.location.href;
             const resolvedTwitterCard = meta.twitterCard || (resolvedImage ? 'summary_large_image' : 'summary');
+            const resolvedToken = String(meta.token || '').trim().toLowerCase();
             const signature = [
                 resolvedTitle,
                 resolvedDescription,
@@ -352,6 +394,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             }
 
             this._activeMetaSignature = signature;
+            this._activeSectionToken = resolvedToken;
 
             if (resolvedTitle) {
                 document.title = resolvedTitle;
@@ -370,6 +413,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._upsertMetaByName('twitter:title', resolvedTitle);
             this._upsertMetaByName('twitter:description', resolvedDescription);
             this._upsertMetaByName('twitter:image', resolvedImage);
+            this.scheduleNavbarTopStateSync();
         }
 
         _syncSectionLocation(url) {
@@ -482,6 +526,12 @@ window.CopyMyPage = window.CopyMyPage || {};
             }
 
             const stickyOffset = utils.getStickyOffset();
+            const sectionPinState = this._resolveSectionPinState(scrollLinks);
+
+            if (sectionPinState) {
+                this._pinLink(scrollLinks, sectionPinState.link, constants.PINNED_LINK_DATA.hash);
+                return;
+            }
 
             if (this._shouldPinFirstLink(scrollLinks, stickyOffset)) {
                 this._pinLink(scrollLinks, firstLink, constants.PINNED_LINK_DATA.top);
@@ -631,7 +681,9 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            const targetHash = this.normalizeHash(window.location.hash);
+            const sectionFromLocation = this._getSectionByLocationParam();
+            const targetHash = this.normalizeHash(window.location.hash)
+                || (sectionFromLocation ? sectionFromLocation.hash : '');
 
             if (!targetHash || targetHash === '#top') {
                 return;
@@ -650,10 +702,19 @@ window.CopyMyPage = window.CopyMyPage || {};
                 && targetTop > utils.getExpectedAnchorBand(stickyOffset);
 
             if (!shouldRestoreScroll) {
+                if (this._pendingSection?.element === target) {
+                    this._pendingSection = null;
+                }
+
                 return;
             }
 
             target.scrollIntoView({ behavior: 'auto', block: 'start' });
+
+            if (this._pendingSection?.element === target) {
+                this._pendingSection = null;
+            }
+
             this.scheduleNavbarTopStateSync();
             this.scheduleSectionMetaSync();
         }
@@ -666,6 +727,25 @@ window.CopyMyPage = window.CopyMyPage || {};
             }
 
             return scrollLinks.find((link) => this.normalizeHash(link.getAttribute('href')) === currentHash) || null;
+        }
+
+        _resolveSectionPinState(scrollLinks) {
+            const activeToken = String(this._activeSectionToken || '').trim().toLowerCase();
+
+            if (!activeToken) {
+                return null;
+            }
+
+            const activeSection = this._getSectionByToken(activeToken);
+            const activeHash = activeSection?.hash || this.normalizeHash(`#${activeToken}`);
+
+            if (!activeHash) {
+                return null;
+            }
+
+            const link = scrollLinks.find((item) => this.normalizeHash(item.getAttribute('href')) === activeHash);
+
+            return utils.isHTMLElement(link) ? { link } : null;
         }
 
         _getNavbar() {

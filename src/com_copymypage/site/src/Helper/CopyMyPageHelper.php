@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.13
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper;
@@ -19,6 +19,66 @@ use Joomla\CMS\Language\Language;
  */
 abstract class CopyMyPageHelper
 {
+    /**
+     * Ordered onepage sections rendered by the CopyMyPage template.
+     *
+     * @var  array<string, array{label: string, hasMeta: bool}>
+     */
+    private const ONEPAGE_SECTIONS = [
+        'hero' => [
+            'label'   => 'TPL_COPYMYPAGE_MODULE_HERO',
+            'hasMeta' => true,
+        ],
+        'gallery' => [
+            'label'   => 'TPL_COPYMYPAGE_MODULE_GALLERY',
+            'hasMeta' => true,
+        ],
+        'team' => [
+            'label'   => 'TPL_COPYMYPAGE_MODULE_TEAM',
+            'hasMeta' => true,
+        ],
+        'counts' => [
+            'label'   => 'TPL_COPYMYPAGE_MODULE_COUNTS',
+            'hasMeta' => false,
+        ],
+        'tickets' => [
+            'label'   => 'TPL_COPYMYPAGE_MODULE_TICKETS',
+            'hasMeta' => false,
+        ],
+        'contact' => [
+            'label'   => 'TPL_COPYMYPAGE_MODULE_CONTACT',
+            'hasMeta' => true,
+        ],
+    ];
+
+    /**
+     * Return ordered onepage section definitions.
+     *
+     * @return  array<string, array{label: string, hasMeta: bool}>
+     */
+    public static function getOnepageSections(): array
+    {
+        return self::ONEPAGE_SECTIONS;
+    }
+
+    /**
+     * Return ordered onepage slots that may contribute section metadata.
+     *
+     * @return  array<int, string>
+     */
+    public static function getOnepageMetaSlots(): array
+    {
+        $slots = [];
+
+        foreach (self::ONEPAGE_SECTIONS as $slot => $section) {
+            if (!empty($section['hasMeta'])) {
+                $slots[] = $slot;
+            }
+        }
+
+        return $slots;
+    }
+
     /**
      * Load additional language packs used by shared CopyMyPage UI elements.
      *

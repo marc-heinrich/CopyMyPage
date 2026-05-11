@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "assets": [
@@ -80,7 +80,7 @@
       "name": "copymypage.onepage",
       "type": "script",
       "uri": "com_copymypage/copymypage-onepage.min.js",
-      "version": "0.0.10",
+      "version": "0.0.13",
       "dependencies": [
         "copymypage.base"
       ],
@@ -210,13 +210,13 @@
       "name": "uikit",
       "type": "style",
       "uri": "com_copymypage/uikit/uikit.min.css",
-      "version": "3.25.11"
+      "version": "3.25.16"
     },
     {
       "name": "uikit",
       "type": "script",
       "uri": "com_copymypage/uikit/uikit.min.js",
-      "version": "3.25.11",
+      "version": "3.25.16",
       "attributes": {
         "defer": true
       }
@@ -225,7 +225,7 @@
       "name": "uikit.icons",
       "type": "script",
       "uri": "com_copymypage/uikit/uikit-icons.min.js",
-      "version": "3.25.11",
+      "version": "3.25.16",
       "dependencies": [
         "uikit"
       ],

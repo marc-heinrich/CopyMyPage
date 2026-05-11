@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.13
  */
 
 \defined('_JEXEC') or die;
@@ -277,47 +277,18 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
 
                 <?php if ($isOnepage) : ?>
 
-                    <?php if ($this->countModules('hero')) : ?>
-                        <!-- Module Hero -->
-                        <section id="hero" class="cmp-section cmp-section--hero" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_HERO'), ENT_QUOTES, 'UTF-8'); ?>">
-                            <jdoc:include type="modules" name="hero" style="none" />
-                        </section>
-                    <?php endif; ?>
-
-                    <?php if ($this->countModules('gallery')) : ?>
-                        <!-- Module Gallery -->
-                        <section id="gallery" class="cmp-section cmp-section--gallery" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_GALLERY'), ENT_QUOTES, 'UTF-8'); ?>">
-                            <jdoc:include type="modules" name="gallery" style="none" />
-                        </section>
-                    <?php endif; ?>
-
-                    <?php if ($this->countModules('team')) : ?>
-                        <!-- Module Team -->
-                        <section id="team" class="cmp-section cmp-section--team" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_TEAM'), ENT_QUOTES, 'UTF-8'); ?>">
-                            <jdoc:include type="modules" name="team" style="none" />
-                        </section>
-                    <?php endif; ?>
-
-                    <?php if ($this->countModules('counts')) : ?>
-                        <!-- Module Counts -->
-                        <section id="counts" class="cmp-section cmp-section--counts" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_COUNTS'), ENT_QUOTES, 'UTF-8'); ?>">
-                            <jdoc:include type="modules" name="counts" style="none" />
-                        </section>
-                    <?php endif; ?>
-
-                    <?php if ($this->countModules('tickets')) : ?>
-                        <!-- Module Tickets -->
-                        <section id="tickets" class="cmp-section cmp-section--tickets" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_TICKETS'), ENT_QUOTES, 'UTF-8'); ?>">
-                            <jdoc:include type="modules" name="tickets" style="none" />
-                        </section>
-                    <?php endif; ?>
-
-                    <?php if ($this->countModules('contact')) : ?>
-                        <!-- Module Contact -->
-                        <section id="contact" class="cmp-section cmp-section--contact" role="region" aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_CONTACT'), ENT_QUOTES, 'UTF-8'); ?>">
-                            <jdoc:include type="modules" name="contact" style="none" />
-                        </section>
-                    <?php endif; ?>
+                    <?php foreach (CopyMyPageHelper::getOnepageSections() as $sectionSlot => $section) : ?>
+                        <?php if ($this->countModules($sectionSlot)) : ?>
+                            <?php
+                            $sectionLabel = (string) ($section['label'] ?? '');
+                            $sectionTitle = $sectionLabel !== '' ? Text::_($sectionLabel) : ucfirst($sectionSlot);
+                            ?>
+                            <!-- Module <?php echo htmlspecialchars(ucfirst($sectionSlot), ENT_QUOTES, 'UTF-8'); ?> -->
+                            <section id="<?php echo htmlspecialchars($sectionSlot, ENT_QUOTES, 'UTF-8'); ?>" class="cmp-section cmp-section--<?php echo htmlspecialchars($sectionSlot, ENT_QUOTES, 'UTF-8'); ?>" role="region" aria-label="<?php echo htmlspecialchars($sectionTitle, ENT_QUOTES, 'UTF-8'); ?>">
+                                <jdoc:include type="modules" name="<?php echo htmlspecialchars($sectionSlot, ENT_QUOTES, 'UTF-8'); ?>" style="none" />
+                            </section>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
 
                 <?php endif; ?>
 

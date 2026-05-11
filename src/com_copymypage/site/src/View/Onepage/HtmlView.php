@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.13
  */
 
 namespace Joomla\Component\CopyMyPage\Site\View\Onepage;
@@ -16,6 +16,7 @@ use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Router\Route;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Component\CopyMyPage\Site\View\HtmlViewMetaDataTrait;
 use Joomla\Registry\Registry;
 
@@ -31,11 +32,11 @@ class HtmlView extends BaseHtmlView
     use HtmlViewMetaDataTrait;
 
     /**
-     * Ordered onepage slots that may contribute section metadata.
+     * Query parameter used for server-visible section share URLs.
      *
-     * @var  array<int, string>
+     * @var  string
      */
-    private const ONEPAGE_META_SLOTS = ['hero', 'gallery', 'team', 'contact'];
+    private const ONEPAGE_SECTION_PARAM = 'section';
 
     /**
      * Component and menu parameters.
@@ -108,8 +109,8 @@ class HtmlView extends BaseHtmlView
         $sectionMeta    = $this->collectSectionMeta($pageMeta);
         $defaultSection = array_key_first($sectionMeta) ?? '';
         $sectionMeta    = $this->applyCanonicalPageUrlToDefaultSection($sectionMeta, $defaultSection, $pageMeta['url']);
-        $activeSection  = $defaultSection;
-        $activeMeta     = $defaultSection !== '' ? array_replace($pageMeta, $sectionMeta[$defaultSection]) : $pageMeta;
+        $activeSection  = $this->resolveRequestedSection($sectionMeta, $defaultSection);
+        $activeMeta     = $activeSection !== '' ? array_replace($pageMeta, $sectionMeta[$activeSection]) : $pageMeta;
 
         $document->setTitle($activeMeta['title']);
         $document->setDescription($activeMeta['description']);
@@ -129,6 +130,7 @@ class HtmlView extends BaseHtmlView
                         'meta' => [
                             'page'           => $pageMeta,
                             'baseUrl'        => $pageMeta['url'],
+                            'sectionParam'   => self::ONEPAGE_SECTION_PARAM,
                             'defaultSection' => $defaultSection,
                             'activeSection'  => $activeSection,
                             'sections'       => $sectionMeta,
@@ -191,7 +193,32 @@ class HtmlView extends BaseHtmlView
             return $this->onepageUrl;
         }
 
-        return $this->onepageUrl . '#' . $slot;
+        return Route::link(
+            'site',
+            'index.php?option=com_copymypage&view=onepage&' . self::ONEPAGE_SECTION_PARAM . '=' . rawurlencode($slot),
+            false,
+            Route::TLS_IGNORE,
+            true
+        );
+    }
+
+    /**
+     * Resolve the requested onepage section from the server-visible share URL.
+     *
+     * @param   array<string, array<string, string>>  $sections        The collected section metadata.
+     * @param   string                                $defaultSection  The default section token.
+     *
+     * @return  string
+     */
+    private function resolveRequestedSection(array $sections, string $defaultSection): string
+    {
+        $requestedSection = strtolower(trim(Factory::getApplication()->getInput()->getCmd(self::ONEPAGE_SECTION_PARAM, '')));
+
+        if ($requestedSection !== '' && isset($sections[$requestedSection])) {
+            return $requestedSection;
+        }
+
+        return $defaultSection;
     }
 
     /**
@@ -205,7 +232,7 @@ class HtmlView extends BaseHtmlView
     {
         $sections = [];
 
-        foreach (self::ONEPAGE_META_SLOTS as $slot) {
+        foreach (CopyMyPageHelper::getOnepageMetaSlots() as $slot) {
             $meta = $this->resolveSectionMeta($slot, $pageMeta);
 
             if ($meta === []) {
