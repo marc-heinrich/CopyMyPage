@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="module" client="site" method="upgrade">
+  <name>mod_copymypage_team</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2026-05</creationDate>
+  <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
+  <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.14</version>
+  <description>MOD_COPYMYPAGE_TEAM_XML_DESCRIPTION</description>
+  <scriptfile>script.php</scriptfile>
+  <namespace path="src">Joomla\Module\CopyMyPage\Team</namespace>
+  <files>
+    <folder module="mod_copymypage_team">services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+    <folder>language</folder>
+    <folder>images</folder>
+  </files>
+  <config>
+    <fields name="params">
+      <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
+        <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_TEAM_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_TEAM_LAYOUT_VARIANT_DESC" default="team_cards">
+          <option value="team_cards">MOD_COPYMYPAGE_TEAM_LAYOUT_VARIANT_CARDS</option>
+        </field>
+        <field
+          name="team_cards_eyebrow"
+          type="text"
+          label="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_EYEBROW_LABEL"
+          description="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_EYEBROW_DESC"
+          showon="layoutVariant:team_cards" />
+        <field
+          name="team_cards_headline"
+          type="text"
+          label="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_HEADLINE_LABEL"
+          description="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_HEADLINE_DESC"
+          showon="layoutVariant:team_cards" />
+        <field
+          name="team_cards_lead"
+          type="textarea"
+          label="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_LEAD_LABEL"
+          description="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_LEAD_DESC"
+          rows="4"
+          filter="safehtml"
+          showon="layoutVariant:team_cards" />
+        <field
+          name="team_cards_cardStyle"
+          type="list"
+          label="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_CARD_STYLE_LABEL"
+          description="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_CARD_STYLE_DESC"
+          default="default"
+          showon="layoutVariant:team_cards">
+          <option value="default">MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_CARD_STYLE_DEFAULT</option>
+          <option value="primary">MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_CARD_STYLE_PRIMARY</option>
+          <option value="secondary">MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_CARD_STYLE_SECONDARY</option>
+        </field>
+        <field
+          name="team_cards_showImages"
+          type="radio"
+          label="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_SHOW_IMAGES_LABEL"
+          description="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_SHOW_IMAGES_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:team_cards">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="team_cards_showDescriptions"
+          type="radio"
+          label="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_SHOW_DESCRIPTIONS_LABEL"
+          description="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_SHOW_DESCRIPTIONS_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:team_cards">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="team_cards_showSocial"
+          type="radio"
+          label="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_SHOW_SOCIAL_LABEL"
+          description="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_SHOW_SOCIAL_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:team_cards">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="team_cards_maxItems"
+          type="number"
+          label="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_MAX_ITEMS_LABEL"
+          description="MOD_COPYMYPAGE_TEAM_LAYOUT_CARDS_MAX_ITEMS_DESC"
+          default="3"
+          min="1"
+          max="12"
+          step="1"
+          showon="layoutVariant:team_cards" />
+      </fieldset>
+    </fields>
+  </config>
+</extension>

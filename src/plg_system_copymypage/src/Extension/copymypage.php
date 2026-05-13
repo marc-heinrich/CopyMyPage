@@ -11,6 +11,7 @@ namespace Joomla\Plugin\System\CopyMyPage\Extension;
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Event\Model;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
@@ -46,7 +47,8 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
-            'onAfterInitialise' => 'onAfterInitialise',
+            'onAfterInitialise'    => 'onAfterInitialise',
+            'onContentPrepareForm' => 'onContentPrepareForm',
         ];
     }
 
@@ -82,5 +84,35 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
 
         // Provide a stable string alias for convenience and backwards compatibility.
         $container->alias('copymypage.registry', CopyMyPageRegistry::class);
+    }
+
+    /**
+     * Add CopyMyPage app settings to the contact edit form.
+     *
+     * @param   Model\PrepareFormEvent  $event  The form preparation event.
+     *
+     * @return  bool
+     *
+     * @since   0.0.14
+     */
+    public function onContentPrepareForm(Model\PrepareFormEvent $event): bool
+    {
+        $app = $this->getApplication();
+
+        if (!$app->isClient('administrator')) {
+            return true;
+        }
+
+        $form = $event->getForm();
+
+        if ($form->getName() !== 'com_contact.contact') {
+            return true;
+        }
+
+        $this->loadLanguage();
+
+        $form->loadFile(JPATH_PLUGINS . '/system/copymypage/forms/contact.xml', false);
+
+        return true;
     }
 }

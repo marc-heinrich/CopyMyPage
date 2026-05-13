@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.14
  */
 
 \defined('_JEXEC') or die;
@@ -80,11 +80,11 @@ if ($lead === '') {
 <div class="<?php echo $moduleClass; ?>">
     <?php if ($list !== []) : ?>
         <div class="uk-container">
-            <div class="cmp-gallery-preview__header">
-                <h2 class="cmp-gallery-preview__headline">
+            <div class="cmp-gallery-preview__header cmp-section-header">
+                <h2 class="cmp-gallery-preview__headline cmp-section-header__headline">
                     <?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?>
                 </h2>
-                <p class="cmp-gallery-preview__lead">
+                <p class="cmp-gallery-preview__lead cmp-section-header__lead">
                     <?php echo htmlspecialchars($lead, ENT_QUOTES, 'UTF-8'); ?>
                 </p>
             </div>

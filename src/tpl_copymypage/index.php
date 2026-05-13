@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.13
+ * @since       0.0.14
  */
 
 \defined('_JEXEC') or die;
@@ -93,7 +93,7 @@ $mobileMenuClass  = CopyMyPageHelper::selectorToToken((string) $this->params->ge
 $backToTopID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopSelector'));
 $preloaderID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('preloaderSelector'));
 $mainContentID    = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopTargetSelector'));
-$headerOffset     = (int) $this->params->get('headerOffset', 80);
+$headerOffset     = (int) $this->params->get('headerOffset', 64);
 
 // Build preloader config.
 $preloaderEnabled = (bool) $this->params->get('preloaderEnabled', 1);

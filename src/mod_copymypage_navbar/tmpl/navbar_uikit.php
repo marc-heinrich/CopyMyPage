@@ -62,7 +62,7 @@ if (!empty($warning)) {
     echo $warning;
 }
 ?>
-<!-- Navbar Module Template: Desktop UIkit Framework (https://getuikit.com/docs/navbar) -->
+<!-- Navbar Module Template: UIkit Framework (https://getuikit.com/docs/navbar) -->
 <div class="cmp-module <?php echo htmlspecialchars($userDropdownRootClass, ENT_QUOTES, 'UTF-8'); ?>">
     <div
         uk-sticky="start: 1; end: false; sel-target: .uk-navbar-container;

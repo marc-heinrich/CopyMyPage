@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">CopyMyPage Team Placeholder</title>
+  <desc id="desc">Neutral placeholder image for the CopyMyPage team module.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#f5f7fa" />
+      <stop offset="100%" stop-color="#dbe7ee" />
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)" />
+  <g fill="none" stroke="#1f2d3d" stroke-width="10" opacity="0.18">
+    <circle cx="520" cy="300" r="120" />
+    <circle cx="800" cy="280" r="140" />
+    <circle cx="1080" cy="300" r="120" />
+    <path d="M320 700c70-160 180-240 330-240 100 0 170 35 210 100 45-70 125-105 240-105 150 0 260 80 330 245" />
+  </g>
+  <g fill="#1f2d3d" text-anchor="middle">
+    <text x="800" y="475" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="8">
+      COPYMYPAGE
+    </text>
+    <text x="800" y="585" font-family="Georgia, Times New Roman, serif" font-size="126" font-weight="700">
+      Team
+    </text>
+    <text x="800" y="665" font-family="Segoe UI, Arial, sans-serif" font-size="30">
+      UIkit card module scaffold
+    </text>
+  </g>
+</svg>
