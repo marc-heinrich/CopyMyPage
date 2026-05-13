@@ -22,7 +22,8 @@
           description="PLG_SYSTEM_COPYMYPAGE_CONTACT_TEAM_ORDER_DESC"
           default="0"
           min="0"
-          step="1"
+          step="10"
+          showon="copymypage_team_enabled:1"
           filter="integer"
         />
       </fieldset>
