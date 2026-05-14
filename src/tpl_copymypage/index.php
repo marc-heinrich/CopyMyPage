@@ -17,10 +17,10 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /** @var \Joomla\CMS\Document\HtmlDocument $this */
 
-$app     = Factory::getApplication();
-$input   = $app->getInput();
-$wa      = $this->getWebAssetManager();
-$root    = Uri::root(true);
+$app   = Factory::getApplication();
+$input = $app->getInput();
+$wa    = $this->getWebAssetManager();
+$root  = Uri::root(true);
 
 // Build path variables.
 $logoPath = 'com_' . $this->template . '/logo/';
@@ -60,7 +60,7 @@ if ($this->getTitle() === '') {
 
 // Global, non-changeable meta tags.
 $this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
-    ->setMetaData('robots', 'index, follow');
+     ->setMetaData('robots', 'index, follow');
 
 // Provide global Open Graph defaults unless a view has already defined them.
 $siteName = trim((string) $app->get('sitename'));

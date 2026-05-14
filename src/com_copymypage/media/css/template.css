@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.14
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -108,7 +108,7 @@
     --cmp-spacing-md: 1rem;
     --cmp-spacing-lg: 1.5rem;
     --cmp-spacing-xl: 2rem;
-    --cmp-section-spacing-top: clamp(2.5rem, 5vw, 4.5rem);
+    --cmp-section-spacing-top: clamp(3rem, 5.5vw, 5rem);
 
     --cmp-letter-spacing-xs: -0.1rem;
     --cmp-letter-spacing-sm: -0.05rem;
@@ -125,7 +125,7 @@
     --cmp-z-index-preloader: 1050;
     --cmp-z-index-tooltip: 1030;
 
-    --cmp-header-offset: 80px;
+    --cmp-header-offset: 64px;
 }
 
 /* ==========================================================================
@@ -840,6 +840,102 @@ body.no-onepage .cmp-section--component {
     padding-top: calc(var(--cmp-header-offset) + var(--cmp-section-spacing-top));
 }
 
+.cmp-section--team {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-block-end: var(--cmp-section-spacing-top);
+}
+
+.cmp-section--team::before {
+    position: absolute;
+    content: "";
+    top: calc(var(--cmp-section-spacing-top) * 0.5);
+    right: 0;
+    bottom: calc(var(--cmp-section-spacing-top) * 0.5);
+    left: 0;
+    z-index: 0;
+    background: var(--cmp-color-surface);
+    transform: skewY(-3deg);
+}
+
+.cmp-section--team > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* SECTION HEADERS
+   ========================================================================== */
+
+.cmp-section-header {
+    max-inline-size: 52rem;
+    margin-inline: auto;
+    margin-block-end: clamp(1.75rem, 4vw, 3rem);
+    text-align: center;
+}
+
+.cmp-section-header__eyebrow {
+    margin: 0 0 0.6rem;
+    color: var(--cmp-color-strong);
+    font-size: var(--cmp-font-size-sm);
+    font-weight: 700;
+    letter-spacing: var(--cmp-letter-spacing-lg);
+    text-transform: uppercase;
+}
+
+.cmp-section-header__headline {
+    position: relative;
+    margin: 0;
+    padding-bottom: 20px;
+    color: var(--cmp-color-logo-dark);
+    font-size: var(--cmp-font-size-heading);
+    font-weight: 700;
+    line-height: 1.15;
+    text-transform: none;
+}
+
+.cmp-section-header__headline::before {
+    position: absolute;
+    content: "";
+    left: 50%;
+    bottom: 0;
+    inline-size: min(84%, 36rem);
+    block-size: 2px;
+    border-radius: 1px;
+    background: var(--cmp-color);
+    opacity: 0.2;
+    transform: translateX(-50%);
+}
+
+.cmp-section-header__headline::after {
+    position: absolute;
+    content: "";
+    bottom: -2px;
+    left: 50%;
+    inline-size: 50px;
+    block-size: 6px;
+    border-radius: 3px;
+    background: var(--cmp-color);
+    transform: translateX(-50%);
+}
+
+.cmp-section-header__lead {
+    max-inline-size: 42rem;
+    margin: clamp(0.85rem, 2vw, 1.15rem) auto 0;
+    color: var(--cmp-color-text-muted);
+    font-family: var(--cmp-font-family-body-alt);
+    font-size: var(--cmp-font-size-lg);
+    line-height: 1.65;
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-header__headline {
+    font-size: var(--cmp-font-size-heading-lg);
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-header__lead {
+    font-size: var(--cmp-font-size-sm);
+}
+
 /* DEBUG
    ========================================================================== */
 
@@ -867,46 +963,6 @@ body.no-onepage .cmp-section--component {
 .cmp-module--gallery-sigplus-preview {
     --cmp-gallery-preview-filter-font-size: 0.9375rem;
     color: var(--cmp-color-text-default);
-}
-
-.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__header {
-    max-inline-size: 52rem;
-    margin-inline: auto;
-    margin-block-end: clamp(1.75rem, 4vw, 3rem);
-    text-align: center;
-}
-
-.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__headline {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: clamp(0.75rem, 2vw, 1.25rem);
-    margin: 0;
-    font-size: var(--cmp-font-size-heading);
-    font-weight: 700;
-    line-height: 1.15;
-}
-
-.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__headline::before,
-.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__headline::after {
-    content: "";
-    inline-size: clamp(2.25rem, 6vw, 4rem);
-    block-size: 2px;
-    border-radius: 999px;
-    background: linear-gradient(90deg, rgba(var(--cmp-color-rgb), 0), rgba(var(--cmp-color-rgb), 0.85));
-}
-
-.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__headline::before {
-    transform: scaleX(-1);
-}
-
-.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__lead {
-    max-inline-size: 42rem;
-    margin: clamp(0.85rem, 2vw, 1.15rem) auto 0;
-    color: var(--cmp-color-text-muted);
-    font-family: var(--cmp-font-family-body-alt);
-    font-size: var(--cmp-font-size-lg);
-    line-height: 1.65;
 }
 
 .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__filters {
@@ -1408,21 +1464,8 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-gallery-view__content--instagram
     }
 }
 
-body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__headline::before,
-body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__headline::after {
-    inline-size: 1.4rem;
-}
-
-body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__headline {
-    font-size: var(--cmp-font-size-heading-lg);
-}
-
 body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--gallery-sigplus-preview {
     --cmp-gallery-preview-filter-font-size: var(--cmp-font-size-sm);
-}
-
-body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__lead {
-    font-size: var(--cmp-font-size-sm);
 }
 
 body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__filters > li > a {
@@ -1434,6 +1477,81 @@ body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__info::b
 body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__info::after {
     inline-size: 2.2rem;
     block-size: 2.2rem;
+}
+
+/* TEAM
+   ========================================================================== */
+
+/* LAYOUT VARIANTS
+   ========================================================================== */
+
+/* UIkit card layout
+   -------------------------------------------------------------------------- */
+
+.cmp-module--team-cards {
+    color: var(--cmp-color-text-default);
+}
+
+.cmp-module--team-cards .cmp-team__card {
+	position: relative;
+	min-inline-size: 0;
+	overflow: hidden;
+	border: 0;
+	border-radius: var(--cmp-border-radius-lg);
+	background: var(--cmp-color-background-default);
+	box-shadow: var(--cmp-box-shadow-sm);
+	text-align: left;
+	transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.cmp-module--team-cards .cmp-team__card:hover,
+.cmp-module--team-cards .cmp-team__card:focus-within {
+    box-shadow: var(--cmp-box-shadow-md);
+    transform: translateY(-2px);
+}
+
+.cmp-module--team-cards .cmp-team__media {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    background: var(--cmp-color-surface);
+}
+
+.cmp-module--team-cards .cmp-team__media img {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+}
+
+.cmp-module--team-cards .cmp-team__body {
+    padding: 25px 15px;
+}
+
+.cmp-module--team-cards .cmp-team__name {
+    margin: 0 0 5px;
+    color: var(--cmp-color-logo-dark);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.cmp-module--team-cards .cmp-team__role {
+    display: block;
+    margin: 0;
+    color: rgba(var(--cmp-color-logo-dark-rgb), 0.6);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.45;
+}
+
+.cmp-module--team-cards .cmp-team__description {
+    margin: 0.65rem 0 0;
+    color: rgba(var(--cmp-color-logo-dark-rgb), 0.6);
+    font-family: var(--cmp-font-family-body-alt);
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.6;
 }
 
 /* HERO

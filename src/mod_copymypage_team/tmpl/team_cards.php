@@ -55,7 +55,6 @@ if ($warning !== '') {
 $layoutConfig     = TeamHelper::getLayoutConfig($cfg, $layout);
 $showImages       = TeamHelper::cfgBool($layoutConfig, 'showImages', true);
 $showDescriptions = TeamHelper::cfgBool($layoutConfig, 'showDescriptions', true);
-$showSocial       = TeamHelper::cfgBool($layoutConfig, 'showSocial', true);
 $cardStyle        = strtolower(trim(TeamHelper::cfgString($layoutConfig, 'cardStyle', 'default')));
 $cardStyle        = \in_array($cardStyle, ['default', 'primary', 'secondary'], true) ? $cardStyle : 'default';
 $moduleClass      = 'cmp-module cmp-module--team cmp-module--team-cards';
@@ -65,22 +64,23 @@ if ($headline === '') {
     $headline = Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_HEADLINE');
 }
 ?>
-<section class="<?php echo htmlspecialchars($moduleClass, ENT_QUOTES, 'UTF-8'); ?>">
+<!-- Team Module Template: UIkit Framework (https://getuikit.com/docs/card) -->
+<div class="<?php echo htmlspecialchars($moduleClass, ENT_QUOTES, 'UTF-8'); ?>">
     <div class="uk-container">
         <?php if ($eyebrow !== '' || $headline !== '' || $lead !== '') : ?>
-            <header class="cmp-team__header uk-margin-large-bottom">
+            <header class="cmp-team__header cmp-section-header">
                 <?php if ($eyebrow !== '') : ?>
-                    <p class="cmp-team__eyebrow uk-text-meta uk-text-uppercase">
+                    <p class="cmp-team__eyebrow cmp-section-header__eyebrow">
                         <?php echo htmlspecialchars($eyebrow, ENT_QUOTES, 'UTF-8'); ?>
                     </p>
                 <?php endif; ?>
                 <?php if ($headline !== '') : ?>
-                    <h2 class="cmp-team__headline">
+                    <h2 class="cmp-team__headline cmp-section-header__headline">
                         <?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?>
                     </h2>
                 <?php endif; ?>
                 <?php if ($lead !== '') : ?>
-                    <p class="cmp-team__lead">
+                    <p class="cmp-team__lead cmp-section-header__lead">
                         <?php echo htmlspecialchars($lead, ENT_QUOTES, 'UTF-8'); ?>
                     </p>
                 <?php endif; ?>
@@ -89,7 +89,7 @@ if ($headline === '') {
 
         <?php if ($items !== []) : ?>
             <div
-                class="cmp-team__grid uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-3@l uk-grid-match"
+                class="cmp-team__grid uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-4@l uk-grid-column-small uk-grid-row-small uk-grid-match"
                 uk-grid
                 uk-scrollspy="target: > .cmp-team__item; cls: uk-animation-fade; delay: 120; repeat: false"
             >
@@ -106,7 +106,6 @@ if ($headline === '') {
                     $imageAlt    = trim((string) ($item->imageAlt ?? $name));
                     $imageWidth  = (int) ($item->imageWidth ?? 0);
                     $imageHeight = (int) ($item->imageHeight ?? 0);
-                    $social      = \is_array($item->social ?? null) ? $item->social : [];
 
                     if ($name === '' && $description === '') {
                         continue;
@@ -136,53 +135,22 @@ if ($headline === '') {
                             <?php endif; ?>
 
                             <div class="cmp-team__body uk-card-body">
-                                <?php if ($role !== '') : ?>
-                                    <div class="cmp-team__role uk-card-badge uk-label">
-                                        <?php echo htmlspecialchars($role, ENT_QUOTES, 'UTF-8'); ?>
-                                    </div>
-                                <?php endif; ?>
-
                                 <?php if ($name !== '') : ?>
                                     <h3 class="cmp-team__name uk-card-title">
                                         <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
                                     </h3>
                                 <?php endif; ?>
 
+                                <?php if ($role !== '') : ?>
+                                    <p class="cmp-team__role">
+                                        <?php echo htmlspecialchars($role, ENT_QUOTES, 'UTF-8'); ?>
+                                    </p>
+                                <?php endif; ?>
+
                                 <?php if ($showDescriptions && $description !== '') : ?>
                                     <p class="cmp-team__description">
                                         <?php echo htmlspecialchars($description, ENT_QUOTES, 'UTF-8'); ?>
                                     </p>
-                                <?php endif; ?>
-
-                                <?php if ($showSocial && $social !== []) : ?>
-                                    <div class="cmp-team__social uk-flex uk-flex-wrap uk-flex-middle uk-grid-small" uk-grid>
-                                        <?php foreach ($social as $link) : ?>
-                                            <?php
-                                            if (!\is_array($link)) {
-                                                continue;
-                                            }
-
-                                            $url   = trim((string) ($link['url'] ?? ''));
-                                            $label = trim((string) ($link['label'] ?? Text::_('MOD_COPYMYPAGE_TEAM_SOCIAL_LINK')));
-                                            $icon  = trim((string) ($link['icon'] ?? 'link'));
-
-                                            if ($url === '') {
-                                                continue;
-                                            }
-                                            ?>
-                                            <div>
-                                                <a
-                                                    class="uk-icon-button"
-                                                    href="<?php echo htmlspecialchars($url, ENT_QUOTES, 'UTF-8'); ?>"
-                                                    aria-label="<?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>"
-                                                    title="<?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>"
-                                                    rel="noopener noreferrer"
-                                                >
-                                                    <span uk-icon="icon: <?php echo htmlspecialchars($icon, ENT_QUOTES, 'UTF-8'); ?>" aria-hidden="true"></span>
-                                                </a>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
                                 <?php endif; ?>
                             </div>
                         </article>
@@ -193,4 +161,4 @@ if ($headline === '') {
             <?php echo $hint; ?>
         <?php endif; ?>
     </div>
-</section>
+</div>

@@ -11,16 +11,22 @@ namespace Joomla\Module\CopyMyPage\Team\Site\Helper;
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
+use Joomla\Database\DatabaseAwareInterface;
+use Joomla\Database\DatabaseAwareTrait;
+use Joomla\Database\ParameterType;
 use Joomla\Registry\Registry;
 
 /**
  * Helper class for the CopyMyPage Team module.
  */
-final class TeamHelper
+final class TeamHelper implements DatabaseAwareInterface
 {
+    use DatabaseAwareTrait;
+
     /**
      * Dispatcher-provided fallback layout for the current module context.
      *
@@ -149,7 +155,7 @@ final class TeamHelper
     }
 
     /**
-     * Get the prepared placeholder team members for the active layout.
+     * Get the configured contact records for the active team layout.
      *
      * @param   array<string, mixed>  $cfg     Flat module config array.
      * @param   string                $layout  Validated layout key.
@@ -160,21 +166,31 @@ final class TeamHelper
     {
         $layoutConfig = self::getLayoutConfig($cfg, $layout);
         $maxItems     = self::cfgInt($layoutConfig, 'maxItems', 3, 1, 12);
+        $contacts     = [];
         $items        = [];
-        $defaultImage = $this->getPlaceholderImageUrl();
-        $defaultAlt   = Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_IMAGE_ALT');
 
-        foreach (array_slice($this->getDefaultItems(), 0, $maxItems) as $item) {
-            $items[] = (object) [
-                'name'        => trim((string) ($item['name'] ?? '')),
-                'role'        => trim((string) ($item['role'] ?? '')),
-                'description' => trim((string) ($item['description'] ?? '')),
-                'image'       => $this->toAbsoluteUrl(trim((string) ($item['image'] ?? $defaultImage))),
-                'imageAlt'    => trim((string) ($item['imageAlt'] ?? $defaultAlt)),
-                'imageWidth'  => (int) ($item['imageWidth'] ?? self::DEFAULT_IMAGE_WIDTH),
-                'imageHeight' => (int) ($item['imageHeight'] ?? self::DEFAULT_IMAGE_HEIGHT),
-                'social'      => $this->normalizeSocialLinks($item['social'] ?? []),
-            ];
+        foreach ($this->getPublishedContacts() as $contact) {
+            if (!$this->isTeamContact($contact)) {
+                continue;
+            }
+
+            $contacts[] = $contact;
+        }
+
+        usort($contacts, [$this, 'compareTeamContacts']);
+
+        foreach ($contacts as $contact) {
+            $item = $this->prepareContactItem($contact);
+
+            if ($item === null) {
+                continue;
+            }
+
+            $items[] = $item;
+
+            if (\count($items) >= $maxItems) {
+                break;
+            }
         }
 
         return $items;
@@ -349,65 +365,471 @@ final class TeamHelper
     }
 
     /**
-     * Return the placeholder dataset for the team cards.
+     * Load published contacts that may be eligible for the team section.
      *
-     * @return  array<int, array<string, mixed>>
+     * @return  array<int, object>
      */
-    private function getDefaultItems(): array
+    private function getPublishedContacts(): array
     {
-        return [
-            [
-                'name'        => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_1_NAME'),
-                'role'        => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_1_ROLE'),
-                'description' => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_1_DESC'),
-            ],
-            [
-                'name'        => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_2_NAME'),
-                'role'        => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_2_ROLE'),
-                'description' => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_2_DESC'),
-            ],
-            [
-                'name'        => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_3_NAME'),
-                'role'        => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_3_ROLE'),
-                'description' => Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_ITEM_3_DESC'),
-            ],
+        $db            = $this->getDatabase();
+        $language      = Factory::getApplication()->getLanguage()->getTag();
+        $schemaContext = 'com_contact.contact';
+        $schemaType    = 'Person';
+        $query         = $db->getQuery(true)
+            ->select(
+                [
+                    $db->quoteName('c.id'),
+                    $db->quoteName('c.name'),
+                    $db->quoteName('c.alias'),
+                    $db->quoteName('c.con_position'),
+                    $db->quoteName('c.telephone'),
+                    $db->quoteName('c.mobile'),
+                    $db->quoteName('c.image'),
+                    $db->quoteName('c.email_to'),
+                    $db->quoteName('c.webpage'),
+                    $db->quoteName('c.misc'),
+                    $db->quoteName('c.params'),
+                    $db->quoteName('c.ordering'),
+                    $db->quoteName('c.language'),
+                    $db->quoteName('c.catid'),
+                    $db->quoteName('s.schema', 'schemaorg_schema'),
+                ]
+            )
+            ->from($db->quoteName('#__contact_details', 'c'))
+            ->leftJoin(
+                $db->quoteName('#__schemaorg', 's')
+                . ' ON ' . $db->quoteName('s.itemId') . ' = ' . $db->quoteName('c.id')
+                . ' AND ' . $db->quoteName('s.context') . ' = :schemaContext'
+                . ' AND ' . $db->quoteName('s.schemaType') . ' = :schemaType'
+            )
+            ->where($db->quoteName('c.published') . ' = 1')
+            ->where(
+                '(' . $db->quoteName('c.language') . ' = ' . $db->quote('*')
+                . ' OR ' . $db->quoteName('c.language') . ' = :language)'
+            )
+            ->order($db->quoteName('c.ordering') . ' ASC')
+            ->order($db->quoteName('c.name') . ' ASC')
+            ->bind(':schemaContext', $schemaContext, ParameterType::STRING)
+            ->bind(':schemaType', $schemaType, ParameterType::STRING)
+            ->bind(':language', $language, ParameterType::STRING);
+
+        $contacts = $db->setQuery($query)->loadObjectList();
+
+        return \is_array($contacts) ? $contacts : [];
+    }
+
+    /**
+     * Check whether the contact is explicitly enabled for the CopyMyPage team section.
+     *
+     * @param   object  $contact  Contact row.
+     *
+     * @return  bool
+     */
+    private function isTeamContact(object $contact): bool
+    {
+        $params = new Registry((string) ($contact->params ?? ''));
+
+        return CopyMyPageHelper::toBool($params->get('copymypage_team_enabled', 0), false);
+    }
+
+    /**
+     * Compare contacts by CopyMyPage team order, then by Joomla ordering/name fallback.
+     *
+     * @param   object  $first   First contact row.
+     * @param   object  $second  Second contact row.
+     *
+     * @return  int
+     */
+    private function compareTeamContacts(object $first, object $second): int
+    {
+        $firstTeamOrder  = $this->getTeamOrder($first);
+        $secondTeamOrder = $this->getTeamOrder($second);
+        $firstHasOrder   = $firstTeamOrder > 0;
+        $secondHasOrder  = $secondTeamOrder > 0;
+
+        if ($firstHasOrder !== $secondHasOrder) {
+            return $firstHasOrder ? -1 : 1;
+        }
+
+        if ($firstHasOrder && $firstTeamOrder !== $secondTeamOrder) {
+            return $firstTeamOrder <=> $secondTeamOrder;
+        }
+
+        $ordering = ((int) ($first->ordering ?? 0)) <=> ((int) ($second->ordering ?? 0));
+
+        if ($ordering !== 0) {
+            return $ordering;
+        }
+
+        $name = strnatcasecmp((string) ($first->name ?? ''), (string) ($second->name ?? ''));
+
+        if ($name !== 0) {
+            return $name;
+        }
+
+        return ((int) ($first->id ?? 0)) <=> ((int) ($second->id ?? 0));
+    }
+
+    /**
+     * Get the optional CopyMyPage team ordering value from contact params.
+     *
+     * @param   object  $contact  Contact row.
+     *
+     * @return  int
+     */
+    private function getTeamOrder(object $contact): int
+    {
+        $params = new Registry((string) ($contact->params ?? ''));
+
+        return CopyMyPageHelper::toInt($params->get('copymypage_team_order', 0), 0, 0);
+    }
+
+    /**
+     * Convert one contact row into the object consumed by the team template.
+     *
+     * @param   object  $contact  Contact row with optional schema.org payload.
+     *
+     * @return  object|null
+     */
+    private function prepareContactItem(object $contact): ?object
+    {
+        $schema      = $this->decodeSchema((string) ($contact->schemaorg_schema ?? ''));
+        $name        = trim((string) ($contact->name ?? ($schema['name'] ?? '')));
+        $role        = trim((string) ($contact->con_position ?? ''));
+        $description = trim(strip_tags((string) ($contact->misc ?? '')));
+        $image       = $this->resolveContactImage((string) ($contact->image ?? ''), $name);
+        $social      = $this->buildSocialLinks($contact, $schema);
+
+        if (
+            $name === ''
+            && $role === ''
+            && $description === ''
+            && $image['url'] === ''
+            && $social === []
+        ) {
+            return null;
+        }
+
+        return (object) [
+            'name'        => $name,
+            'role'        => $role,
+            'description' => $description,
+            'image'       => $image['url'],
+            'imageAlt'    => $image['alt'],
+            'imageWidth'  => $image['width'],
+            'imageHeight' => $image['height'],
+            'social'      => $social,
         ];
     }
 
     /**
-     * Normalize optional social links.
+     * Decode a schema.org JSON payload.
      *
-     * @param   mixed  $links  Raw link list.
+     * @param   string  $schema  Raw schema JSON.
      *
-     * @return  array<int, array{url: string, label: string, icon: string}>
+     * @return  array<string, mixed>
      */
-    private function normalizeSocialLinks(mixed $links): array
+    private function decodeSchema(string $schema): array
     {
-        if (!\is_array($links)) {
+        $schema = trim($schema);
+
+        if ($schema === '') {
             return [];
         }
 
-        $normalized = [];
+        $decoded = json_decode($schema, true);
 
-        foreach ($links as $link) {
-            if (!\is_array($link)) {
-                continue;
-            }
+        return \is_array($decoded) ? $decoded : [];
+    }
 
-            $url = trim((string) ($link['url'] ?? ''));
+    /**
+     * Build normalized social links from contact and schema.org data.
+     *
+     * @param   object                $contact  Contact row.
+     * @param   array<string, mixed>  $schema   Decoded schema.org data.
+     *
+     * @return  array<int, array{url: string, label: string, icon: string}>
+     */
+    private function buildSocialLinks(object $contact, array $schema): array
+    {
+        $links     = [];
+        $email     = trim((string) ($contact->email_to ?? ($schema['email'] ?? '')));
+        $telephone = trim((string) ($contact->telephone ?? ''));
+        $mobile    = trim((string) ($contact->mobile ?? ''));
+        $webpage   = trim((string) ($contact->webpage ?? ($schema['url'] ?? '')));
 
-            if ($url === '') {
-                continue;
-            }
+        $this->appendSocialLink(
+            $links,
+            $this->normalizeEmailUrl($email),
+            Text::_('MOD_COPYMYPAGE_TEAM_SOCIAL_EMAIL'),
+            'mail'
+        );
 
-            $normalized[] = [
-                'url'   => $url,
-                'label' => trim((string) ($link['label'] ?? Text::_('MOD_COPYMYPAGE_TEAM_SOCIAL_LINK'))),
-                'icon'  => trim((string) ($link['icon'] ?? 'link')),
+        $this->appendSocialLink(
+            $links,
+            $this->normalizePhoneUrl($telephone),
+            Text::_('MOD_COPYMYPAGE_TEAM_SOCIAL_PHONE'),
+            'receiver'
+        );
+
+        $this->appendSocialLink(
+            $links,
+            $this->normalizePhoneUrl($mobile),
+            Text::_('MOD_COPYMYPAGE_TEAM_SOCIAL_MOBILE'),
+            'receiver'
+        );
+
+        $this->appendSocialLink(
+            $links,
+            $this->normalizeExternalUrl($webpage),
+            Text::_('MOD_COPYMYPAGE_TEAM_SOCIAL_WEBSITE'),
+            'world'
+        );
+
+        return $links;
+    }
+
+    /**
+     * Append one social link when the URL is usable.
+     *
+     * @param   array<int, array{url: string, label: string, icon: string}>  $links  Prepared links.
+     * @param   string                                                       $url    Normalized URL.
+     * @param   string                                                       $label  Accessible label.
+     * @param   string                                                       $icon   UIkit icon token.
+     *
+     * @return  void
+     */
+    private function appendSocialLink(array &$links, string $url, string $label, string $icon): void
+    {
+        if ($url === '') {
+            return;
+        }
+
+        $links[] = [
+            'url'   => $url,
+            'label' => $label !== '' ? $label : Text::_('MOD_COPYMYPAGE_TEAM_SOCIAL_LINK'),
+            'icon'  => $icon !== '' ? $icon : 'link',
+        ];
+    }
+
+    /**
+     * Normalize an email value into a mailto URL.
+     *
+     * @param   string  $email  Raw email.
+     *
+     * @return  string
+     */
+    private function normalizeEmailUrl(string $email): string
+    {
+        $email = trim($email);
+
+        if ($email === '') {
+            return '';
+        }
+
+        if (str_starts_with(strtolower($email), 'mailto:')) {
+            $email = substr($email, 7);
+        }
+
+        return filter_var($email, FILTER_VALIDATE_EMAIL) ? 'mailto:' . $email : '';
+    }
+
+    /**
+     * Normalize a phone value into a tel URL.
+     *
+     * @param   string  $phone  Raw phone number.
+     *
+     * @return  string
+     */
+    private function normalizePhoneUrl(string $phone): string
+    {
+        $phone = trim($phone);
+
+        if ($phone === '') {
+            return '';
+        }
+
+        if (str_starts_with(strtolower($phone), 'tel:')) {
+            $phone = substr($phone, 4);
+        }
+
+        $phone = preg_replace('/[^\d+]/', '', $phone) ?? '';
+
+        return $phone !== '' ? 'tel:' . $phone : '';
+    }
+
+    /**
+     * Normalize a website/profile URL.
+     *
+     * @param   string  $url  Raw URL.
+     *
+     * @return  string
+     */
+    private function normalizeExternalUrl(string $url): string
+    {
+        $url = trim($url);
+
+        if ($url === '') {
+            return '';
+        }
+
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . ltrim($url, '/');
+        }
+
+        return filter_var($url, FILTER_VALIDATE_URL) ? $url : '';
+    }
+
+    /**
+     * Normalize a Joomla contact image field value.
+     *
+     * @param   string  $rawImage  Stored contact image value.
+     * @param   string  $name      Contact name used as alt fallback.
+     *
+     * @return  array{url: string, alt: string, width: int, height: int}
+     */
+    private function resolveContactImage(string $rawImage, string $name): array
+    {
+        $rawImage = trim(html_entity_decode($rawImage, ENT_QUOTES, 'UTF-8'));
+
+        if ($rawImage === '') {
+            return [
+                'url'    => '',
+                'alt'    => '',
+                'width'  => 0,
+                'height' => 0,
             ];
         }
 
-        return $normalized;
+        $path     = $rawImage;
+        $fragment = '';
+
+        if (str_contains($rawImage, '#')) {
+            [$path, $fragment] = explode('#', $rawImage, 2);
+            $path              = trim($path);
+            $fragment          = trim($fragment);
+        }
+
+        $fragmentData = $this->extractJoomlaImageFragmentData($fragment);
+
+        if ($path === '' && $fragmentData['path'] !== '') {
+            $path = $fragmentData['path'];
+        }
+
+        if ($path === '') {
+            return [
+                'url'    => '',
+                'alt'    => '',
+                'width'  => 0,
+                'height' => 0,
+            ];
+        }
+
+        $url    = $this->toAbsoluteUrl($path);
+        $width  = $fragmentData['width'];
+        $height = $fragmentData['height'];
+
+        if ($width <= 0 || $height <= 0) {
+            [$fileWidth, $fileHeight] = $this->resolveLocalImageDimensions($url);
+
+            $width  = $width > 0 ? $width : $fileWidth;
+            $height = $height > 0 ? $height : $fileHeight;
+        }
+
+        $alt = trim($name) !== '' ? trim($name) : Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_IMAGE_ALT');
+
+        return [
+            'url'    => $url,
+            'alt'    => $alt,
+            'width'  => $width,
+            'height' => $height,
+        ];
+    }
+
+    /**
+     * Extract media metadata from Joomla's joomlaImage URL fragment.
+     *
+     * @param   string  $fragment  Fragment after "#".
+     *
+     * @return  array{path: string, width: int, height: int}
+     */
+    private function extractJoomlaImageFragmentData(string $fragment): array
+    {
+        $path   = '';
+        $width  = 0;
+        $height = 0;
+
+        if ($fragment === '') {
+            return [
+                'path'   => '',
+                'width'  => 0,
+                'height' => 0,
+            ];
+        }
+
+        if (preg_match('#^joomlaImage://local-images/([^?]+)#', $fragment, $matches) === 1) {
+            $path = 'images/' . ltrim(rawurldecode((string) $matches[1]), '/');
+        }
+
+        $query = (string) parse_url($fragment, PHP_URL_QUERY);
+
+        if ($query !== '') {
+            parse_str($query, $params);
+
+            $width  = self::toPositiveInt($params['width'] ?? 0);
+            $height = self::toPositiveInt($params['height'] ?? 0);
+        }
+
+        return [
+            'path'   => $path,
+            'width'  => $width,
+            'height' => $height,
+        ];
+    }
+
+    /**
+     * Resolve image dimensions from a local URL or relative path.
+     *
+     * @param   string  $url  Absolute or relative image URL.
+     *
+     * @return  array{0: int, 1: int}
+     */
+    private function resolveLocalImageDimensions(string $url): array
+    {
+        $path = trim((string) parse_url($url, PHP_URL_PATH));
+
+        if ($path === '') {
+            $path = $url;
+        }
+
+        $rootPath = rtrim((string) parse_url(Uri::root(), PHP_URL_PATH), '/');
+
+        if ($rootPath !== '' && $rootPath !== '/' && str_starts_with($path, $rootPath . '/')) {
+            $path = substr($path, strlen($rootPath));
+        }
+
+        $path = ltrim(rawurldecode($path), '/');
+
+        if ($path === '') {
+            return [0, 0];
+        }
+
+        $file = JPATH_ROOT . '/' . str_replace('/', DIRECTORY_SEPARATOR, $path);
+
+        if (!is_file($file)) {
+            return [0, 0];
+        }
+
+        $size = @getimagesize($file);
+
+        if (!\is_array($size)) {
+            return [0, 0];
+        }
+
+        return [
+            self::toPositiveInt($size[0] ?? 0),
+            self::toPositiveInt($size[1] ?? 0),
+        ];
     }
 
     /**
@@ -492,5 +914,19 @@ final class TeamHelper
         }
 
         return $result;
+    }
+
+    /**
+     * Normalize a value into a positive integer.
+     *
+     * @param   mixed  $value  Raw value.
+     *
+     * @return  int
+     */
+    private static function toPositiveInt(mixed $value): int
+    {
+        $value = CopyMyPageHelper::toInt($value, 0, 0);
+
+        return $value > 0 ? $value : 0;
     }
 }
