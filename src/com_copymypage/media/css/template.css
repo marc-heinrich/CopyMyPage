@@ -12,7 +12,10 @@
    FOUNDATIONS - Design tokens (CSS custom properties)
    override via Webassetmanager
 
-   Viewport class mapping from media/com_copymypage/js/copymypage.js:
+   Viewport body classes:
+   - media/com_copymypage/js/copymypage-base.js defines the breakpoint queries.
+   - media/com_copymypage/js/copymypage-behavior.js (ViewportFeature) applies the active body class.
+
    is-small   : <= 639.98px
    is-narrow  : 640px - 767.98px
    is-mobile  : 768px - 959.98px
