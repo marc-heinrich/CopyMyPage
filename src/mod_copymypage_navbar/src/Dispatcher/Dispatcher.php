@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.14
  */
 
 namespace Joomla\Module\CopyMyPage\Navbar\Site\Dispatcher;
@@ -262,10 +262,11 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['basketItems']     = [];
         $data['warning']         = '';
 
-        $option = $data['input']->getCmd('option', '');
-        $view   = $data['input']->getCmd('view', '');
+        $option  = $data['input']->getCmd('option', '');
+        $view    = $data['input']->getCmd('view', '');
+        $section = $data['input']->getCmd('section', '');
         $data['isOnepage'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::isOnepage($option, $view);
-        $data['activeSlot'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::resolveActiveSlot($option, $view);
+        $data['activeSlot'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::resolveActiveSlot($option, $view, $section);
 
         return $data;
     }

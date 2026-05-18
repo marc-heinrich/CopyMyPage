@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.13
+ * @since       0.0.14
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper;
@@ -80,6 +80,20 @@ abstract class CopyMyPageHelper
     }
 
     /**
+     * Normalize and validate a onepage section token.
+     *
+     * @param   string  $section  Raw section token.
+     *
+     * @return  string  Known section token, or an empty string.
+     */
+    public static function normalizeOnepageSection(string $section): string
+    {
+        $section = strtolower(trim($section));
+
+        return isset(self::ONEPAGE_SECTIONS[$section]) ? $section : '';
+    }
+
+    /**
      * Load additional language packs used by shared CopyMyPage UI elements.
      *
      * @param   Language  $language  The active site language object.
@@ -112,11 +126,16 @@ abstract class CopyMyPageHelper
      *
      * @param   string  $option  The component option (e.g. 'com_copymypage').
      * @param   string  $view    The view name (e.g. 'gallery').
+     * @param   string  $section Optional onepage section token.
      *
      * @return  string  The active slot token (for example 'gallery'), or an empty string.
      */
-    public static function resolveActiveSlot(string $option = '', string $view = ''): string
+    public static function resolveActiveSlot(string $option = '', string $view = '', string $section = ''): string
     {
+        if ($option === 'com_copymypage' && $view === 'onepage') {
+            return self::normalizeOnepageSection($section);
+        }
+
         return match (true) {
             $option === 'com_copymypage' && $view === 'gallery' => 'gallery',
             default => '',

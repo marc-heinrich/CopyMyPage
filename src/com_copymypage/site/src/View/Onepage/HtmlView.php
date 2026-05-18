@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.13
+ * @since       0.0.14
  */
 
 namespace Joomla\Component\CopyMyPage\Site\View\Onepage;
@@ -109,8 +109,9 @@ class HtmlView extends BaseHtmlView
         $sectionMeta    = $this->collectSectionMeta($pageMeta);
         $defaultSection = array_key_first($sectionMeta) ?? '';
         $sectionMeta    = $this->applyCanonicalPageUrlToDefaultSection($sectionMeta, $defaultSection, $pageMeta['url']);
-        $activeSection  = $this->resolveRequestedSection($sectionMeta, $defaultSection);
-        $activeMeta     = $activeSection !== '' ? array_replace($pageMeta, $sectionMeta[$activeSection]) : $pageMeta;
+        $requestedSection = $this->resolveRequestedSection($sectionMeta);
+        $activeSection    = $requestedSection !== '' ? $requestedSection : $defaultSection;
+        $activeMeta       = $activeSection !== '' ? array_replace($pageMeta, $sectionMeta[$activeSection]) : $pageMeta;
 
         $document->setTitle($activeMeta['title']);
         $document->setDescription($activeMeta['description']);
@@ -128,12 +129,13 @@ class HtmlView extends BaseHtmlView
                     'name'    => 'onepage',
                     'onepage' => [
                         'meta' => [
-                            'page'           => $pageMeta,
-                            'baseUrl'        => $pageMeta['url'],
-                            'sectionParam'   => self::ONEPAGE_SECTION_PARAM,
-                            'defaultSection' => $defaultSection,
-                            'activeSection'  => $activeSection,
-                            'sections'       => $sectionMeta,
+                            'page'             => $pageMeta,
+                            'baseUrl'          => $pageMeta['url'],
+                            'sectionParam'     => self::ONEPAGE_SECTION_PARAM,
+                            'defaultSection'   => $defaultSection,
+                            'requestedSection' => $requestedSection,
+                            'activeSection'    => $activeSection,
+                            'sections'         => $sectionMeta,
                         ],
                     ],
                 ],
@@ -205,20 +207,21 @@ class HtmlView extends BaseHtmlView
     /**
      * Resolve the requested onepage section from the server-visible share URL.
      *
-     * @param   array<string, array<string, string>>  $sections        The collected section metadata.
-     * @param   string                                $defaultSection  The default section token.
+     * @param   array<string, array<string, string>>  $sections  The collected section metadata.
      *
      * @return  string
      */
-    private function resolveRequestedSection(array $sections, string $defaultSection): string
+    private function resolveRequestedSection(array $sections): string
     {
-        $requestedSection = strtolower(trim(Factory::getApplication()->getInput()->getCmd(self::ONEPAGE_SECTION_PARAM, '')));
+        $requestedSection = CopyMyPageHelper::normalizeOnepageSection(
+            Factory::getApplication()->getInput()->getCmd(self::ONEPAGE_SECTION_PARAM, '')
+        );
 
         if ($requestedSection !== '' && isset($sections[$requestedSection])) {
             return $requestedSection;
         }
 
-        return $defaultSection;
+        return '';
     }
 
     /**

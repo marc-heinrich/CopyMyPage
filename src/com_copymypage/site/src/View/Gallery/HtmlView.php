@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.14
  */
 
 namespace Joomla\Component\CopyMyPage\Site\View\Gallery;
@@ -122,7 +122,7 @@ class HtmlView extends BaseHtmlView
         $this->imageCount = $this->resolveImageCount();
         $this->headline   = $this->resolveHeadline();
         $this->summary    = trim((string) $this->itemParams->get('caption_summary_template', ''));
-        $this->backUrl    = Route::link('site', 'index.php?option=com_copymypage&view=onepage') . '#gallery';
+        $this->backUrl    = Route::link('site', 'index.php?option=com_copymypage&view=onepage&section=gallery');
 
         $sigplusPlugin = null;
         $model = $this->getModel();

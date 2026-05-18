@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.14
  */
 
 namespace Joomla\Component\CopyMyPage\Administrator\Router\Rules;
@@ -12,17 +12,33 @@ namespace Joomla\Component\CopyMyPage\Administrator\Router\Rules;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Component\Router\Rules\MenuRules;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Component\CopyMyPage\Site\Service\Router;
 
 /**
- * Custom router rules for CopyMyPage gallery routing.
+ * Custom router rules for CopyMyPage onepage and gallery routing.
  */
 final class CopyMyPageRules extends MenuRules
 {
     /**
-     * Append the gallery image count as its own SEF segment.
+     * Query parameter used for server-visible onepage section URLs.
      *
-     * Example:
+     * @var  string
+     */
+    private const ONEPAGE_SECTION_PARAM = 'section';
+
+    /**
+     * Stable SEF prefix for onepage section URLs.
+     *
+     * @var  string
+     */
+    private const ONEPAGE_SECTION_PREFIX = 'section';
+
+    /**
+     * Append CopyMyPage specific values as SEF segments.
+     *
+     * Examples:
+     * `/section/gallery.html`
      * `/component/copymypage/gallery/215/21.html`
      *
      * @param   array  $query     The vars that should be converted.
@@ -36,6 +52,64 @@ final class CopyMyPageRules extends MenuRules
             return;
         }
 
+        $this->buildOnepageSection($query, $segments);
+        $this->buildGalleryImageCount($query, $segments);
+    }
+
+    /**
+     * Parse CopyMyPage specific SEF segments back into query vars.
+     *
+     * @param   array  $segments  The URL segments to parse.
+     * @param   array  $vars      The vars that result from the segments.
+     *
+     * @return  void
+     */
+    public function parse(&$segments, &$vars): void
+    {
+        if (!$this->router instanceof Router) {
+            return;
+        }
+
+        $this->parseOnepageSection($segments, $vars);
+        $this->parseGalleryImageCount($segments, $vars);
+    }
+
+    /**
+     * Append the requested onepage section as its own SEF segment.
+     *
+     * @param   array  $query     The current router query.
+     * @param   array  $segments  Already built URL segments.
+     *
+     * @return  void
+     */
+    private function buildOnepageSection(array &$query, array &$segments): void
+    {
+        if (!array_key_exists(self::ONEPAGE_SECTION_PARAM, $query) || !$this->isOnepageBuildContext($query, $segments)) {
+            return;
+        }
+
+        $section = CopyMyPageHelper::normalizeOnepageSection((string) $query[self::ONEPAGE_SECTION_PARAM]);
+
+        if ($section === '') {
+            return;
+        }
+
+        $segments[] = self::ONEPAGE_SECTION_PREFIX;
+        $segments[] = $section;
+
+        unset($query[self::ONEPAGE_SECTION_PARAM]);
+    }
+
+    /**
+     * Append the gallery image count as its own SEF segment.
+     *
+     * @param   array  $query     The current router query.
+     * @param   array  $segments  Already built URL segments.
+     *
+     * @return  void
+     */
+    private function buildGalleryImageCount(array &$query, array &$segments): void
+    {
         if (!array_key_exists('imageCount', $query) || !$this->isGalleryBuildContext($query, $segments)) {
             return;
         }
@@ -46,6 +120,36 @@ final class CopyMyPageRules extends MenuRules
     }
 
     /**
+     * Parse the first onepage section segment back into the query vars.
+     *
+     * @param   array  $segments  The URL segments to parse.
+     * @param   array  $vars      The vars that result from the segments.
+     *
+     * @return  void
+     */
+    private function parseOnepageSection(array &$segments, array &$vars): void
+    {
+        if (
+            !$this->isOnepageParseContext($vars)
+            || !isset($segments[0], $segments[1])
+            || trim((string) $segments[0], '/') !== self::ONEPAGE_SECTION_PREFIX
+        ) {
+            return;
+        }
+
+        $section = CopyMyPageHelper::normalizeOnepageSection((string) $segments[1]);
+
+        if ($section === '') {
+            return;
+        }
+
+        $vars[self::ONEPAGE_SECTION_PARAM] = $section;
+
+        array_shift($segments);
+        array_shift($segments);
+    }
+
+    /**
      * Parse the trailing gallery image count segment back into the query vars.
      *
      * @param   array  $segments  The URL segments to parse.
@@ -53,13 +157,9 @@ final class CopyMyPageRules extends MenuRules
      *
      * @return  void
      */
-    public function parse(&$segments, &$vars): void
+    private function parseGalleryImageCount(array &$segments, array &$vars): void
     {
-        if (!$this->router instanceof Router || !$this->isGalleryParseContext($vars)) {
-            return;
-        }
-
-        if (!isset($segments[0])) {
+        if (!$this->isGalleryParseContext($vars) || !isset($segments[0])) {
             return;
         }
 
@@ -72,6 +172,71 @@ final class CopyMyPageRules extends MenuRules
         $vars['imageCount'] = (int) $segment;
 
         array_shift($segments);
+    }
+
+    /**
+     * Determine whether the current build cycle targets the onepage view.
+     *
+     * @param   array  $query     The current router query.
+     * @param   array  $segments  Already built URL segments.
+     *
+     * @return  bool
+     */
+    private function isOnepageBuildContext(array $query, array $segments): bool
+    {
+        if (($query['view'] ?? '') === 'onepage') {
+            return true;
+        }
+
+        if (($segments[0] ?? '') === 'onepage') {
+            return true;
+        }
+
+        $itemId = (int) ($query['Itemid'] ?? 0);
+
+        if ($itemId <= 0) {
+            return false;
+        }
+
+        $item = $this->router->menu->getItem($itemId);
+
+        return $item !== null
+            && ($item->component ?? '') === 'com_copymypage'
+            && ($item->query['view'] ?? '') === 'onepage';
+    }
+
+    /**
+     * Determine whether the current parse cycle targets the onepage view.
+     *
+     * @param   array  $vars  The vars already resolved by previous rules.
+     *
+     * @return  bool
+     */
+    private function isOnepageParseContext(array &$vars): bool
+    {
+        $view = (string) ($vars['view'] ?? '');
+
+        if ($view === 'onepage') {
+            return true;
+        }
+
+        if ($view !== '') {
+            return false;
+        }
+
+        $active = $this->router->menu->getActive();
+
+        if (
+            $active === null
+            || ($active->component ?? '') !== 'com_copymypage'
+            || ($active->query['view'] ?? '') !== 'onepage'
+        ) {
+            return false;
+        }
+
+        $vars['view'] = 'onepage';
+
+        return true;
     }
 
     /**
@@ -114,8 +279,14 @@ final class CopyMyPageRules extends MenuRules
      */
     private function isGalleryParseContext(array &$vars): bool
     {
-        if (($vars['view'] ?? '') === 'gallery') {
+        $view = (string) ($vars['view'] ?? '');
+
+        if ($view === 'gallery') {
             return true;
+        }
+
+        if ($view !== '') {
+            return false;
         }
 
         $active = $this->router->menu->getActive();

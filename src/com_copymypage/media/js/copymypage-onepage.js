@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.13
+ * @since       0.0.14
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -30,10 +30,14 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._defaultMeta = null;
             this._pendingSection = null;
             this._sectionParam = 'section';
+            this._requestedSectionToken = '';
             this._activeSectionToken = '';
             this._activeMetaSignature = '';
+            this._lastSmoothRestoreKey = '';
+            this._pendingReleaseTimeout = null;
             this._handleLifecycleChange = this._handleLifecycleChange.bind(this);
             this._handleSectionChange = this._handleSectionChange.bind(this);
+            this._handleScrollLinkClick = this._handleScrollLinkClick.bind(this);
         }
 
         init() {
@@ -51,23 +55,29 @@ window.CopyMyPage = window.CopyMyPage || {};
             this.listen(window, 'pageshow', this._handleLifecycleChange);
             this.listen(window, 'hashchange', this._handleLifecycleChange);
             this.listen(document, 'copymypage:onepage-sectionchange', this._handleSectionChange);
+            this.listen(document, 'click', this._handleScrollLinkClick);
         }
 
         destroy() {
             window.cancelAnimationFrame(this._hashScrollFrame);
             window.cancelAnimationFrame(this._navbarSyncFrame);
             window.cancelAnimationFrame(this._metaSyncFrame);
+            window.clearTimeout(this._pendingReleaseTimeout);
             this._hashScrollFrame = null;
             this._navbarSyncFrame = null;
             this._metaSyncFrame = null;
+            this._pendingReleaseTimeout = null;
             this._clearRecoveryTimeouts();
             this._disconnectSectionObserver();
             this._sections = [];
             this._defaultMeta = null;
             this._pendingSection = null;
             this._sectionParam = 'section';
+            this._requestedSectionToken = '';
             this._activeSectionToken = '';
             this._activeMetaSignature = '';
+            this._lastSmoothRestoreKey = '';
+            this._pendingReleaseTimeout = null;
             super.destroy();
         }
 
@@ -105,8 +115,14 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         _handleLifecycleChange() {
-            const requestedSection = this._getSectionByHash(window.location.hash)
-                || this._getSectionByLocationParam();
+            const hashSection = this._getSectionByHash(window.location.hash);
+            const requestedSection = hashSection
+                || this._getSectionByLocationParam()
+                || this._getSectionByRequestedMeta();
+
+            if (hashSection) {
+                this._clearRequestedSectionToken();
+            }
 
             if (requestedSection && !this._isSectionInAnchorBand(requestedSection)) {
                 this._pendingSection = requestedSection;
@@ -124,11 +140,74 @@ window.CopyMyPage = window.CopyMyPage || {};
             const requestedSection = this._getSectionByHash(requestedHash);
 
             if (requestedSection) {
+                this._clearRequestedSectionToken();
+                this._pendingSection = requestedSection;
                 this._applySectionMeta(requestedSection);
+                this._syncSectionLocation(requestedSection.url || this._defaultMeta?.url || window.location.href);
+                this._schedulePendingSectionRelease(requestedSection);
             }
 
             this.scheduleNavbarTopStateSync();
             this.scheduleSectionMetaSync();
+        }
+
+        _handleScrollLinkClick(event) {
+            const link = event.target?.closest?.('a[data-cmp-scroll="1"]');
+
+            if (!link || !this._isOnepageDocument()) {
+                return;
+            }
+
+            const requestedHash = this.normalizeHash(link.getAttribute('href'));
+            const requestedSection = this._getSectionByHash(requestedHash);
+
+            if (!requestedSection) {
+                return;
+            }
+
+            event.preventDefault();
+            this._activateSectionFromMenu(requestedSection);
+        }
+
+        _activateSectionFromMenu(section) {
+            this._clearRecoveryTimeouts();
+            window.cancelAnimationFrame(this._hashScrollFrame);
+            this._hashScrollFrame = null;
+            this._clearRequestedSectionToken();
+            this._pendingSection = section;
+            this._applySectionMeta(section);
+            this._syncSectionLocation(section.url || this._defaultMeta?.url || window.location.href);
+            section.element.scrollIntoView({
+                behavior: this._prefersReducedMotion() ? 'auto' : 'smooth',
+                block: 'start',
+            });
+            this._schedulePendingSectionRelease(section);
+            this.scheduleNavbarTopStateSync();
+            this.scheduleSectionMetaSync();
+        }
+
+        _clearRequestedSectionToken() {
+            this._requestedSectionToken = '';
+            this._lastSmoothRestoreKey = '';
+        }
+
+        _schedulePendingSectionRelease(section) {
+            window.clearTimeout(this._pendingReleaseTimeout);
+            this._pendingReleaseTimeout = window.setTimeout(() => {
+                this._pendingReleaseTimeout = null;
+
+                if (this._pendingSection === section && this._isSectionInAnchorBand(section)) {
+                    this._pendingSection = null;
+                }
+
+                this.scheduleNavbarTopStateSync();
+                this.scheduleSectionMetaSync();
+            }, 900);
+        }
+
+        _prefersReducedMotion() {
+            return Boolean(window.matchMedia
+                && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
         }
 
         _clearRecoveryTimeouts() {
@@ -171,13 +250,16 @@ window.CopyMyPage = window.CopyMyPage || {};
 
             this._sections = [];
             this._defaultMeta = null;
+            this._requestedSectionToken = '';
             this._activeMetaSignature = '';
+            this._lastSmoothRestoreKey = '';
 
             if (!metaState || typeof metaState !== 'object' || Array.isArray(metaState)) {
                 return;
             }
 
             this._sectionParam = String(metaState.sectionParam || 'section').trim() || 'section';
+            this._requestedSectionToken = String(metaState.requestedSection || '').trim().toLowerCase();
             this._defaultMeta = this._normalizeMetaPayload(metaState.page || {});
             const sections = metaState.sections && typeof metaState.sections === 'object'
                 ? Object.values(metaState.sections)
@@ -337,6 +419,10 @@ window.CopyMyPage = window.CopyMyPage || {};
             } catch (error) {
                 return null;
             }
+        }
+
+        _getSectionByRequestedMeta() {
+            return this._getSectionByToken(this._requestedSectionToken);
         }
 
         _getSectionByToken(token) {
@@ -681,9 +767,11 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
+            const currentHash = this.normalizeHash(window.location.hash);
             const sectionFromLocation = this._getSectionByLocationParam();
-            const targetHash = this.normalizeHash(window.location.hash)
-                || (sectionFromLocation ? sectionFromLocation.hash : '');
+            const sectionFromRequest = sectionFromLocation || this._pendingSection || this._getSectionByRequestedMeta();
+            const targetHash = currentHash || (sectionFromRequest ? sectionFromRequest.hash : '');
+            const shouldUseSmoothRestore = !currentHash && Boolean(sectionFromRequest);
 
             if (!targetHash || targetHash === '#top') {
                 return;
@@ -706,13 +794,33 @@ window.CopyMyPage = window.CopyMyPage || {};
                     this._pendingSection = null;
                 }
 
+                if (!currentHash && sectionFromRequest?.token === this._requestedSectionToken) {
+                    this._clearRequestedSectionToken();
+                }
+
                 return;
             }
 
-            target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            const restoreKey = `${window.location.pathname}${window.location.search}${window.location.hash}:${targetHash}`;
+            const reduceMotion = this._prefersReducedMotion();
+            const useSmoothScroll = shouldUseSmoothRestore && !reduceMotion;
+
+            if (useSmoothScroll && this._lastSmoothRestoreKey === restoreKey) {
+                return;
+            }
+
+            target.scrollIntoView({ behavior: useSmoothScroll ? 'smooth' : 'auto', block: 'start' });
+
+            if (useSmoothScroll) {
+                this._lastSmoothRestoreKey = restoreKey;
+            }
 
             if (this._pendingSection?.element === target) {
                 this._pendingSection = null;
+            }
+
+            if (!currentHash && sectionFromRequest?.token === this._requestedSectionToken) {
+                this._clearRequestedSectionToken();
             }
 
             this.scheduleNavbarTopStateSync();

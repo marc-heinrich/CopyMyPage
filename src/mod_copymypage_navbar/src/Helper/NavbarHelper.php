@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.14
  */
 
 namespace Joomla\Module\CopyMyPage\Navbar\Site\Helper;
@@ -435,6 +435,16 @@ class NavbarHelper
         }
 
         if (!$isOnepage && $level === 1 && $itemType === 'url' && $itemLink !== '' && str_starts_with($itemLink, '#')) {
+            $section = CopyMyPageHelper::normalizeOnepageSection(CopyMyPageHelper::extractHashToken($itemLink));
+
+            if ($section !== '') {
+                return Route::link(
+                    'site',
+                    'index.php?option=com_copymypage&view=onepage&section=' . rawurlencode($section),
+                    false
+                );
+            }
+
             return $onepageBase . $itemLink;
         }
 

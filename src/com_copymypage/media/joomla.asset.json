@@ -80,7 +80,7 @@
       "name": "copymypage.onepage",
       "type": "script",
       "uri": "com_copymypage/copymypage-onepage.min.js",
-      "version": "0.0.13",
+      "version": "0.0.14",
       "dependencies": [
         "copymypage.base"
       ],
@@ -105,7 +105,7 @@
       "name": "copymypage.mmenu.navigation",
       "type": "script",
       "uri": "com_copymypage/copymypage-mmenu-navigation.min.js",
-      "version": "0.0.10",
+      "version": "0.0.14",
       "dependencies": [
         "copymypage.base"
       ],
