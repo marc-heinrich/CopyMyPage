@@ -22,7 +22,7 @@ use Joomla\Database\ParameterType;
  * CopyMyPage Installer Script (System Plugin)
  *
  * Automatically enables the system plugin after install/update so the
- * global registry bootstrap is active without manual backend interaction.
+ * global helper service bootstrap is active without manual backend interaction.
  *
  * @since  0.0.4
  */

@@ -50,17 +50,59 @@
     <fields name="params">
       <!-- Layout Settings -->
       <fieldset name="layout" label="TPL_COPYMYPAGE_FIELDSET_LAYOUT">
-        <field name="pageWrapperSelector" type="text" label="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_SELECTOR_DESC" default=".cmp-page"/>
-        <field name="navbarSelector" type="text" label="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_NAVBAR_SELECTOR_DESC" default=".cmp-navbar"/>
-        <field name="mobileMenuSelector" type="text" label="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_MOBILEMENU_SELECTOR_DESC" default=".cmp-mobilemenu"/>
+        <field name="pageWrapperClass" type="text" label="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_CLASS_LABEL" description="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_CLASS_DESC" default="cmp-page" filter="cmd"/>
+        <field name="navbarClass" type="text" label="TPL_COPYMYPAGE_FIELD_NAVBAR_CLASS_LABEL" description="TPL_COPYMYPAGE_FIELD_NAVBAR_CLASS_DESC" default="cmp-navbar" filter="cmd"/>
+        <field name="mobileMenuClass" type="text" label="TPL_COPYMYPAGE_FIELD_MOBILEMENU_CLASS_LABEL" description="TPL_COPYMYPAGE_FIELD_MOBILEMENU_CLASS_DESC" default="cmp-mobilemenu" filter="cmd"/>
         <field name="headerOffset" type="number" label="TPL_COPYMYPAGE_FIELD_HEADER_OFFSET_LABEL" description="TPL_COPYMYPAGE_FIELD_HEADER_OFFSET_DESC" default="64" min="0" max="300" step="1"/>
+      </fieldset>
+      <!-- Design Tokens -->
+      <fieldset name="designTokens" label="TPL_COPYMYPAGE_FIELDSET_DESIGN_TOKENS">
+        <field name="designColor" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_LABEL" description="CSS token: --cmp-color" default="#04cbd0" control="hue" format="hex"/>
+        <field name="designColorStrong" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_STRONG_LABEL" description="CSS token: --cmp-color-strong" default="#00979c" control="hue" format="hex"/>
+        <field name="designColorSoft" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_SOFT_LABEL" description="CSS token: --cmp-color-soft" default="#c4f4f5" control="hue" format="hex"/>
+        <field name="designColorLogoDark" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_LOGO_DARK_LABEL" description="CSS token: --cmp-color-logo-dark" default="#061225" control="hue" format="hex"/>
+        <field name="designColorLogoLight" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_LOGO_LIGHT_LABEL" description="CSS token: --cmp-color-logo-light" default="#ffffff" control="hue" format="hex"/>
+        <field name="designColorSurface" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_SURFACE_LABEL" description="CSS token: --cmp-color-surface" default="#f5f7fb" control="hue" format="hex"/>
+        <field name="designColorMuted" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_MUTED_LABEL" description="CSS token: --cmp-color-muted" default="#d5dde8" control="hue" format="hex"/>
+        <field name="designColorBackgroundDefault" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_BACKGROUND_DEFAULT_LABEL" description="CSS token: --cmp-color-background-default" default="#ffffff" control="hue" format="hex"/>
+        <field name="designColorTextDefault" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_TEXT_DEFAULT_LABEL" description="CSS token: --cmp-color-text-default" default="#333333" control="hue" format="hex"/>
+        <field name="designColorTextMuted" type="color" label="TPL_COPYMYPAGE_FIELD_DESIGN_COLOR_TEXT_MUTED_LABEL" description="CSS token: --cmp-color-text-muted" default="#6c757d" control="hue" format="hex"/>
+      </fieldset>
+      <!-- Typography Tokens -->
+      <fieldset name="typographyTokens" label="TPL_COPYMYPAGE_FIELDSET_TYPOGRAPHY_TOKENS">
+        <field name="typographyBodyFont" type="list" label="TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_BODY_FONT_LABEL" description="CSS token: --cmp-font-family-body" default="monaSans">
+          <option value="system">TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_OPTION_SYSTEM</option>
+          <option value="monaSans">Mona Sans</option>
+          <option value="openSans">Open Sans</option>
+          <option value="fingerPaint">Finger Paint</option>
+        </field>
+        <field name="typographyUiFont" type="list" label="TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_UI_FONT_LABEL" description="CSS token: --cmp-font-family-ui" default="body">
+          <option value="body">TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_OPTION_BODY</option>
+          <option value="system">TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_OPTION_SYSTEM</option>
+          <option value="monaSans">Mona Sans</option>
+          <option value="openSans">Open Sans</option>
+          <option value="fingerPaint">Finger Paint</option>
+        </field>
+        <field name="typographyAccentFont" type="list" label="TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_ACCENT_FONT_LABEL" description="CSS token: --cmp-font-family-display-accent" default="fingerPaint">
+          <option value="system">TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_OPTION_SYSTEM</option>
+          <option value="monaSans">Mona Sans</option>
+          <option value="openSans">Open Sans</option>
+          <option value="fingerPaint">Finger Paint</option>
+        </field>
+        <field name="typographyAltFont" type="list" label="TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_ALT_FONT_LABEL" description="CSS token: --cmp-font-family-body-alt" default="openSans">
+          <option value="body">TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_OPTION_BODY</option>
+          <option value="system">TPL_COPYMYPAGE_FIELD_TYPOGRAPHY_OPTION_SYSTEM</option>
+          <option value="monaSans">Mona Sans</option>
+          <option value="openSans">Open Sans</option>
+          <option value="fingerPaint">Finger Paint</option>
+        </field>
       </fieldset>
       <!-- UI Settings -->
       <fieldset name="ui" label="TPL_COPYMYPAGE_FIELDSET_UI">
-        <field name="backToTopSelector" type="text" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_SELECTOR_DESC" default="#back-top"/>
+        <field name="backToTopId" type="text" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_ID_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_ID_DESC" default="back-top" filter="cmd"/>
         <field name="backToTopPosition" type="number" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_POSITION_DESC" default="100" min="0"/>
-        <field name="backToTopTargetSelector" type="text" label="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_BACKTOTOP_TARGET_SELECTOR_DESC" default="#main-content" filter="raw"/>
-        <field name="preloaderSelector" type="text" label="TPL_COPYMYPAGE_FIELD_PRELOADER_SELECTOR_LABEL" description="TPL_COPYMYPAGE_FIELD_PRELOADER_SELECTOR_DESC" default="#cmp-preloader"/>
+        <field name="mainContentId" type="text" label="TPL_COPYMYPAGE_FIELD_MAIN_CONTENT_ID_LABEL" description="TPL_COPYMYPAGE_FIELD_MAIN_CONTENT_ID_DESC" default="main-content" filter="cmd"/>
+        <field name="preloaderId" type="text" label="TPL_COPYMYPAGE_FIELD_PRELOADER_ID_LABEL" description="TPL_COPYMYPAGE_FIELD_PRELOADER_ID_DESC" default="cmp-preloader" filter="cmd"/>
         <field name="preloaderEnabled" type="radio" label="TPL_COPYMYPAGE_FIELD_PRELOADER_ENABLED_LABEL" description="TPL_COPYMYPAGE_FIELD_PRELOADER_ENABLED_DESC" default="1" class="btn-group btn-group-yesno">
           <option value="1">JYES</option>
           <option value="0">JNO</option>

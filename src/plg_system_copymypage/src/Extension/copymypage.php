@@ -14,15 +14,19 @@ namespace Joomla\Plugin\System\CopyMyPage\Extension;
 use Joomla\CMS\Event\Model;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\CMSPlugin;
-use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\PreloaderHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\TemplateTokenHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\UserHelper;
+use Joomla\Database\DatabaseInterface;
 use Joomla\DI\Container;
 use Joomla\Event\SubscriberInterface;
 
 /**
  * System plugin for CopyMyPage.
  *
- * Registers the global CopyMyPage helper registry in the root DI container
- * so it can be resolved across extensions (components, modules, templates).
+ * Registers shared CopyMyPage helper services in the root DI container
+ * so they can be resolved across extensions (components, modules, templates).
  *
  * @since  0.0.3
  */
@@ -67,23 +71,61 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     {
         $container = Factory::getContainer();
 
-        // Avoid duplicate registration if another bootstrap already added the service.
-        if ($container->has(CopyMyPageRegistry::class)) {
-            return;
+        $this->registerHelperServices($container);
+    }
+
+    /**
+     * Register CopyMyPage helper services in the root DI container.
+     *
+     * @param   Container  $container  The root DI container.
+     *
+     * @return  void
+     *
+     * @since   0.0.14
+     */
+    private function registerHelperServices(Container $container): void
+    {
+        if (!$container->has(SigplusHelper::class)) {
+            $container->share(
+                SigplusHelper::class,
+                static function (Container $container): SigplusHelper {
+                    $helper = new SigplusHelper();
+                    $helper->setDatabase($container->get(DatabaseInterface::class));
+
+                    return $helper;
+                },
+                true
+            );
         }
 
-        // Register the registry as a shared (singleton) service under its class name (FQCN).
-        $container->share(
-            CopyMyPageRegistry::class,
-            static function (Container $container): CopyMyPageRegistry {
-                // The registry is currently stateless; the container argument is reserved for future extensions.
-                return new CopyMyPageRegistry();
-            },
-            true
-        );
+        if (!$container->has(TemplateTokenHelper::class)) {
+            $container->share(
+                TemplateTokenHelper::class,
+                static fn(Container $container): TemplateTokenHelper => new TemplateTokenHelper(),
+                true
+            );
+        }
 
-        // Provide a stable string alias for convenience and backwards compatibility.
-        $container->alias('copymypage.registry', CopyMyPageRegistry::class);
+        if (!$container->has(PreloaderHelper::class)) {
+            $container->share(
+                PreloaderHelper::class,
+                static fn(Container $container): PreloaderHelper => new PreloaderHelper(),
+                true
+            );
+        }
+
+        if (!$container->has(UserHelper::class)) {
+            $container->share(
+                UserHelper::class,
+                static fn(Container $container): UserHelper => new UserHelper(),
+                true
+            );
+        }
+
+        $container->alias('copymypage.helper.sigplus', SigplusHelper::class);
+        $container->alias('copymypage.helper.preloader', PreloaderHelper::class);
+        $container->alias('copymypage.helper.templateTokens', TemplateTokenHelper::class);
+        $container->alias('copymypage.helper.user', UserHelper::class);
     }
 
     /**

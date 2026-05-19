@@ -4,7 +4,7 @@
  * @subpackage  WebAssetItem
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.14
  * @see         https://docs.joomla.org/J4.x:Web_Assets and CoreAssetItem.php
  */
 
@@ -153,7 +153,26 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
             return [];
         }
 
-        return $template->params->toArray();
+        return $this->addDerivedTemplateSelectors($template->params->toArray());
+    }
+
+    /**
+     * Add selector-ready values derived from template class and id tokens.
+     *
+     * @param   array<string, mixed>  $params  Template parameters.
+     *
+     * @return  array<string, mixed>
+     */
+    private function addDerivedTemplateSelectors(array $params): array
+    {
+        $params['pageWrapperSelector']      = '.' . (string) ($params['pageWrapperClass'] ?? 'cmp-page');
+        $params['navbarSelector']           = '.' . (string) ($params['navbarClass'] ?? 'cmp-navbar');
+        $params['mobileMenuSelector']       = '.' . (string) ($params['mobileMenuClass'] ?? 'cmp-mobilemenu');
+        $params['backToTopSelector']        = '#' . (string) ($params['backToTopId'] ?? 'back-top');
+        $params['backToTopTargetSelector']  = '#' . (string) ($params['mainContentId'] ?? 'main-content');
+        $params['preloaderSelector']        = '#' . (string) ($params['preloaderId'] ?? 'cmp-preloader');
+
+        return $params;
     }
 
     /**

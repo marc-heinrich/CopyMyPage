@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.14
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Model;
@@ -14,7 +14,6 @@ namespace Joomla\Component\CopyMyPage\Site\Model;
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
-use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\Database\ParameterType;
 
 /**
@@ -85,27 +84,17 @@ class GalleryModel extends BaseDatabaseModel
     }
 
     /**
-     * Resolves the shared Sigplus helper via the CopyMyPage registry.
+     * Resolves the shared Sigplus helper via the root DI container.
      *
      * @return  SigplusHelper
      */
     private function getSigplusHelper(): SigplusHelper
     {
-        $container = Factory::getContainer();
-        $registry  = $container->has(CopyMyPageRegistry::class)
-            ? $container->get(CopyMyPageRegistry::class)
-            : new CopyMyPageRegistry();
-        $handler   = $registry->getService('sigplus');
-
-        if (\is_string($handler)) {
-            $handler = new $handler();
-        }
+        $handler = Factory::getContainer()->get(SigplusHelper::class);
 
         if (!$handler instanceof SigplusHelper) {
             throw new \RuntimeException('The CopyMyPage sigplus helper is not available.');
         }
-
-        $handler->setDatabase($this->getDatabase());
 
         return $handler;
     }

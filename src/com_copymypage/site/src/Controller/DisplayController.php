@@ -15,14 +15,13 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\MVC\Controller\Exception;
-use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 
 /**
  * Controller for displaying views in com_copymypage.
  *
  * This controller is responsible for routing incoming requests
  * to the appropriate view and layout. For the "dashboard" view it
- * integrates with the CopyMyPage helper registry to enrich the
+ * integrates with CopyMyPage helper services to enrich the
  * primary model with additional data (for example from com_users)
  * based on the current layout.
  *
@@ -30,6 +29,15 @@ use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
  */
 class DisplayController extends BaseController
 {
+    /**
+     * Prefix for dashboard helper service aliases derived from layout names.
+     *
+     * @var string
+     *
+     * @since 0.0.14
+     */
+    private const DASHBOARD_HELPER_ALIAS_PREFIX = 'copymypage.helper.';
+
     /**
      * Default view for the component.
      *
@@ -52,8 +60,8 @@ class DisplayController extends BaseController
      * Method to display a view.
      *
      * This method sets up the view and its layout, manages the
-     * primary model, and for the "dashboard" view uses the helper
-     * registry from the DI container to attach extra data to the
+     * primary model, and for the "dashboard" view uses helper
+     * services from the DI container to attach extra data to the
      * model's state based on the current layout.
      *
      * @param   boolean  $cachable   If true, enables caching for the view.
@@ -89,7 +97,7 @@ class DisplayController extends BaseController
             );
         }
 
-        // For the dashboard view, load extra data via the helper registry
+        // For the dashboard view, load extra data via the layout-derived helper service
         // and store it in the model state as "extra_data".
         $this->attachDashboardExtraDataFromHelper($model, $vName, $lName);
 
@@ -108,10 +116,10 @@ class DisplayController extends BaseController
     /**
      * Attach extra data to the primary model using a helper from the DI container.
      *
-     * This method only acts for the "dashboard" view. It uses the current layout
-     * name as the service key in the helper registry (for example "user"), resolves
-     * the corresponding helper class from the DI container, calls its getExtraData()
-     * method and stores the returned data in the model's state under "extra_data".
+     * This method only acts for the "dashboard" view. It derives the helper service
+     * alias from the current layout name (for example "user" => "copymypage.helper.user"),
+     * resolves it from the DI container, calls its getExtraData() method and stores
+     * the returned data in the model's state under "extra_data".
      *
      * @param   object  $primaryModel  The primary model instance for the active view.
      * @param   string  $viewName      The current view name.
@@ -119,7 +127,7 @@ class DisplayController extends BaseController
      *
      * @return  void
      *
-     * @since   0.0.3
+     * @since   0.0.14
      */
     protected function attachDashboardExtraDataFromHelper(object $primaryModel, string $viewName, string $layoutName): void
     {
@@ -133,29 +141,14 @@ class DisplayController extends BaseController
             return;
         }
 
-        $container = Factory::getContainer();
+        $container     = Factory::getContainer();
+        $helperService = $this->getDashboardHelperService($layoutName);
 
-        // If the helper registry is not registered in the container, bail out.
-        if (!$container->has(CopyMyPageRegistry::class)) {
+        if ($helperService === '' || !$container->has($helperService)) {
             return;
         }
 
-        /** @var CopyMyPageRegistry $registry */
-        $registry = $container->get(CopyMyPageRegistry::class);
-
-        // Use the layout name as the service key, e.g. "user".
-        $serviceKey = $layoutName;
-
-        if (!$registry->hasService($serviceKey)) {
-            return;
-        }
-
-        $handler = $registry->getService($serviceKey);
-
-        // If the handler is a class name, instantiate it.
-        if (\is_string($handler) && \class_exists($handler)) {
-            $handler = new $handler();
-        }
+        $handler = $container->get($helperService);
 
         // Expect a helper with a generic getExtraData() method.
         if (!\is_object($handler) || !\method_exists($handler, 'getExtraData')) {
@@ -168,5 +161,25 @@ class DisplayController extends BaseController
         // Store the extra data and the layout name in the model state.
         $primaryModel->setState('extra_data', $extraData);
         $primaryModel->setState('form_name', $layoutName);
+    }
+
+    /**
+     * Resolve a dashboard helper service alias from a layout token.
+     *
+     * @param   string  $layoutName  Current dashboard layout name.
+     *
+     * @return  string  Helper service alias or an empty string.
+     *
+     * @since   0.0.14
+     */
+    private function getDashboardHelperService(string $layoutName): string
+    {
+        $layoutName = preg_replace('/[^A-Za-z0-9._-]/', '', trim($layoutName)) ?? '';
+
+        if ($layoutName === '') {
+            return '';
+        }
+
+        return self::DASHBOARD_HELPER_ALIAS_PREFIX . $layoutName;
     }
 }

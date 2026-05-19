@@ -12,15 +12,15 @@
 use Joomla\CMS\Factory;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
-use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /** @var \Joomla\CMS\Document\HtmlDocument $this */
 
 $app   = Factory::getApplication();
+$di    = Factory::getContainer();
 $input = $app->getInput();
-$wa    = $this->getWebAssetManager();
-$root  = Uri::root(true);
+$wa     = $this->getWebAssetManager();
+$escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
 // Build path variables.
 $logoPath = 'com_' . $this->template . '/logo/';
@@ -83,60 +83,39 @@ $layout = $input->getCmd('layout', '');
 $task   = $input->getCmd('task', '');
 $itemId = (int) $input->getInt('Itemid', 0);
 
-$menu      = $app->getMenu()->getActive();
 $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
 
-// Template params (DB) -> convert simple selector (".class"/"#id") to token ("class"/"id").
-$pageWrapperClass = CopyMyPageHelper::selectorToToken((string) $this->params->get('pageWrapperSelector'));
-$navbarClass      = CopyMyPageHelper::selectorToToken((string) $this->params->get('navbarSelector'));
-$mobileMenuClass  = CopyMyPageHelper::selectorToToken((string) $this->params->get('mobileMenuSelector'));
-$backToTopID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopSelector'));
-$preloaderID      = CopyMyPageHelper::selectorToToken((string) $this->params->get('preloaderSelector'));
-$mainContentID    = CopyMyPageHelper::selectorToToken((string) $this->params->get('backToTopTargetSelector'));
-$headerOffset     = (int) $this->params->get('headerOffset', 64);
+// Template params (DB): store raw HTML class/id tokens; build selectors only where needed.
+$pageWrapperClass   = (string) $this->params->get('pageWrapperClass', 'cmp-page');
+$navbarClass        = (string) $this->params->get('navbarClass', 'cmp-navbar');
+$mobileMenuClass    = (string) $this->params->get('mobileMenuClass', 'cmp-mobilemenu');
+$backToTopID        = (string) $this->params->get('backToTopId', 'back-top');
+$mainContentID      = (string) $this->params->get('mainContentId', 'main-content');
+$headerOffset       = (int) $this->params->get('headerOffset', 64);
+$templateTokenStyle = $di->get('copymypage.helper.templateTokens')
+    ->buildRootTokenStyle($this->params, $headerOffset);
 
-// Build preloader config.
-$preloaderEnabled = (bool) $this->params->get('preloaderEnabled', 1);
-$preloaderType    = strtolower(trim((string) $this->params->get('preloaderType', 'logo')));
-$preloaderText    = trim((string) $this->params->get('preloaderText', ''));
-$preloaderLogo    = trim((string) $this->params->get('preloaderLogo', ''));
-$defaultLogoPath  = 'media/com_' . $this->template . '/images/logo/logo-cmp-preloader.png';
-$allowedTypes     = ['dots', 'ring', 'bars', 'logo', 'pulse'];
-
-if (!\in_array($preloaderType, $allowedTypes, true)) {
-    $preloaderType = 'logo';
-}
-
-if ($preloaderLogo === '') {
-    $preloaderLogo = $defaultLogoPath;
-}
-
-$preloaderLogoUrl = '';
-
-if ($preloaderLogo !== '') {
-    if (preg_match('#^(?:[a-z][a-z0-9+.-]*:)?//#i', $preloaderLogo) || str_starts_with($preloaderLogo, 'data:')) {
-        $preloaderLogoUrl = $preloaderLogo;
-    } else {
-        $preloaderLogoUrl = Uri::root() . ltrim($preloaderLogo, '/');
-    }
-}
+// Preloader config (DB): get all values at once since we'll need them all in the template.
+$preloaderConfig  = $di->get('copymypage.helper.preloader')
+    ->getConfig($this->params, $this->template);
+$preloaderEnabled = $preloaderConfig['enabled'];
+$preloaderID      = $preloaderConfig['id'];
+$preloaderType    = $preloaderConfig['type'];
+$preloaderText    = $preloaderConfig['text'];
+$preloaderLogoUrl = $preloaderConfig['logoUrl'];
 
 // Register and load web assets (aligned with offline.php).
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
 $wa->usePreset($this->template . '.site')
-   ->addInlineStyle(":root {\n"
-        . "    /* copymypage tokens */\n"
-        . "    --cmp-header-offset: {$headerOffset}px;\n"
-        . "}");
+   ->addInlineStyle($templateTokenStyle);
 
+// Onepage script adds scrollspy-nav behavior and active section tracking.
 if ($isOnepage) {
     $wa->useScript('copymypage.onepage');
 }
 
 // Enable modal dev harness if in debug mode or URL param is set.
-$enableModalDevHarness = ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmpdev', 0) === 1);
-
-if ($enableModalDevHarness) {
+if ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmpdev', 0) === 1) {
     $wa->useScript('copymypage.modal.dev');
 }
 
@@ -150,7 +129,7 @@ $bodyClasses = [
     $task ? 'task-' . $task : 'no-task',
     $itemId ? 'itemid-' . $itemId : '',
     $isOnepage ? 'is-onepage' : 'no-onepage',
-    // further class param for current viewport (e.g. is-mobile or is-desktop) @see copymypage.js
+    // ViewportFeature adds current viewport classes such as is-mobile or is-desktop.
 ];
 
 $navbarAttrs = [
@@ -163,7 +142,7 @@ $bodyClass  = trim(implode(' ', array_filter($bodyClasses)));
 $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
 ?>
 <!DOCTYPE html>
-<html lang="<?php echo htmlspecialchars($this->language, ENT_QUOTES, 'UTF-8'); ?>" dir="<?php echo htmlspecialchars($this->direction, ENT_QUOTES, 'UTF-8'); ?>">
+<html lang="<?php echo $escape($this->language); ?>" dir="<?php echo $escape($this->direction); ?>">
     <head>
         <jdoc:include type="metas" />
         <jdoc:include type="styles" />
@@ -175,21 +154,21 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                         overflow: auto !important;
                     }
 
-                    #<?php echo htmlspecialchars($preloaderID, ENT_QUOTES, 'UTF-8'); ?> {
+                    #<?php echo $escape($preloaderID); ?> {
                         display: none !important;
                     }
                 </style>
             </noscript>
         <?php endif; ?>
     </head>
-    <body class="<?php echo htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8'); ?>">
+    <body class="<?php echo $escape($bodyClass); ?>">
 
         <?php if ($preloaderEnabled) : ?>
             <!-- Preloader -->
             <div
-                id="<?php echo htmlspecialchars($preloaderID, ENT_QUOTES, 'UTF-8'); ?>"
-                class="cmp-preloader cmp-preloader--<?php echo htmlspecialchars($preloaderType, ENT_QUOTES, 'UTF-8'); ?>"
-                data-cmp-preloader-type="<?php echo htmlspecialchars($preloaderType, ENT_QUOTES, 'UTF-8'); ?>"
+                id="<?php echo $escape($preloaderID); ?>"
+                class="cmp-preloader cmp-preloader--<?php echo $escape($preloaderType); ?>"
+                data-cmp-preloader-type="<?php echo $escape($preloaderType); ?>"
                 aria-hidden="true"
             >
                 <div class="cmp-preloader__content">
@@ -218,7 +197,7 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                             <div class="cmp-preloader__logo-wrap">
                                 <img
                                     class="cmp-preloader__logo"
-                                    src="<?php echo htmlspecialchars($preloaderLogoUrl, ENT_QUOTES, 'UTF-8'); ?>"
+                                    src="<?php echo $escape($preloaderLogoUrl); ?>"
                                     alt=""
                                     loading="eager"
                                     decoding="async"
@@ -237,14 +216,14 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                     <?php endswitch; ?>
 
                     <?php if ($preloaderText !== '') : ?>
-                        <p class="cmp-preloader__text"><?php echo htmlspecialchars($preloaderText, ENT_QUOTES, 'UTF-8'); ?></p>
+                        <p class="cmp-preloader__text"><?php echo $escape($preloaderText); ?></p>
                     <?php endif; ?>
                 </div>
             </div>
         <?php endif; ?>
 
         <!-- Page Wrapper -->
-        <div id="page" class="<?php echo htmlspecialchars($pageWrapperClass, ENT_QUOTES, 'UTF-8'); ?>">
+        <div id="page" class="<?php echo $escape($pageWrapperClass); ?>">
 
             <!-- Header -->
             <header id="top" class="cmp-header" role="banner">
@@ -252,8 +231,8 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                     <!-- Module Navbar -->
                     <nav
                         id="navbar"
-                        class="<?php echo htmlspecialchars($navbarClass, ENT_QUOTES, 'UTF-8'); ?>"
-                        aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_NAVBAR'), ENT_QUOTES, 'UTF-8'); ?>"
+                        class="<?php echo $escape($navbarClass); ?>"
+                        aria-label="<?php echo $escape(Text::_('TPL_COPYMYPAGE_MODULE_NAVBAR')); ?>"
                         <?php echo $navbarAttr; ?>
                     >
                         <jdoc:include type="modules" name="navbar" style="none" />
@@ -264,8 +243,8 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                     <!-- Module Mobile Menu -->
                     <nav
                         id="mobilemenu"
-                        class="<?php echo htmlspecialchars($mobileMenuClass, ENT_QUOTES, 'UTF-8'); ?>"
-                        aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_MODULE_MOBILEMENU'), ENT_QUOTES, 'UTF-8'); ?>"
+                        class="<?php echo $escape($mobileMenuClass); ?>"
+                        aria-label="<?php echo $escape(Text::_('TPL_COPYMYPAGE_MODULE_MOBILEMENU')); ?>"
                     >
                         <jdoc:include type="modules" name="mobilemenu" style="none" />
                     </nav>
@@ -273,7 +252,7 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
             </header>
 
             <!-- Main Content -->
-            <main id="<?php echo htmlspecialchars($mainContentID, ENT_QUOTES, 'UTF-8'); ?>" class="cmp-main" role="main">
+            <main id="<?php echo $escape($mainContentID); ?>" class="cmp-main" role="main">
 
                 <?php if ($isOnepage) : ?>
 
@@ -283,9 +262,9 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                             $sectionLabel = (string) ($section['label'] ?? '');
                             $sectionTitle = $sectionLabel !== '' ? Text::_($sectionLabel) : ucfirst($sectionSlot);
                             ?>
-                            <!-- Module <?php echo htmlspecialchars(ucfirst($sectionSlot), ENT_QUOTES, 'UTF-8'); ?> -->
-                            <section id="<?php echo htmlspecialchars($sectionSlot, ENT_QUOTES, 'UTF-8'); ?>" class="cmp-section cmp-section--<?php echo htmlspecialchars($sectionSlot, ENT_QUOTES, 'UTF-8'); ?>" role="region" aria-label="<?php echo htmlspecialchars($sectionTitle, ENT_QUOTES, 'UTF-8'); ?>">
-                                <jdoc:include type="modules" name="<?php echo htmlspecialchars($sectionSlot, ENT_QUOTES, 'UTF-8'); ?>" style="none" />
+                            <!-- Module <?php echo $escape(ucfirst($sectionSlot)); ?> -->
+                            <section id="<?php echo $escape($sectionSlot); ?>" class="cmp-section cmp-section--<?php echo $escape($sectionSlot); ?>" role="region" aria-label="<?php echo $escape($sectionTitle); ?>">
+                                <jdoc:include type="modules" name="<?php echo $escape($sectionSlot); ?>" style="none" />
                             </section>
                         <?php endif; ?>
                     <?php endforeach; ?>
@@ -314,10 +293,10 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
 
             <!-- Back to top button -->
             <a
-                href="#<?php echo htmlspecialchars($mainContentID, ENT_QUOTES, 'UTF-8'); ?>"
-                id="<?php echo htmlspecialchars($backToTopID, ENT_QUOTES, 'UTF-8'); ?>"
+                href="#<?php echo $escape($mainContentID); ?>"
+                id="<?php echo $escape($backToTopID); ?>"
                 class="cmp-back-to-top"
-                aria-label="<?php echo htmlspecialchars(Text::_('TPL_COPYMYPAGE_BUTTON_BACKTOTOP'), ENT_QUOTES, 'UTF-8'); ?>"
+                aria-label="<?php echo $escape(Text::_('TPL_COPYMYPAGE_BUTTON_BACKTOTOP')); ?>"
             >
                 <span class="uk-icon" uk-icon="chevron-up" aria-hidden="true"></span>
             </a>
