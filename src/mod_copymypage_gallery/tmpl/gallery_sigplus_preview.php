@@ -26,6 +26,9 @@ use Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper;
  * @var \Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper|null $galleryHelper
  */
 
+// Closure for escaping output.
+$escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+
 // Normalize the raw inputs received from the dispatcher.
 $cfg     = \is_array($cfg ?? null) ? $cfg : [];
 $layout  = strtolower(trim((string) ($layout ?? '')));
@@ -77,15 +80,15 @@ if ($lead === '') {
     $lead = $defaultLead;
 }
 ?>
-<div class="<?php echo $moduleClass; ?>">
+<div class="<?php echo $escape($moduleClass); ?>">
     <?php if ($list !== []) : ?>
         <div class="uk-container">
             <div class="cmp-gallery-preview__header cmp-section-header">
                 <h2 class="cmp-gallery-preview__headline cmp-section-header__headline">
-                    <?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?>
+                    <?php echo $escape($headline); ?>
                 </h2>
                 <p class="cmp-gallery-preview__lead cmp-section-header__lead">
-                    <?php echo htmlspecialchars($lead, ENT_QUOTES, 'UTF-8'); ?>
+                    <?php echo $escape($lead); ?>
                 </p>
             </div>
 
@@ -94,7 +97,7 @@ if ($lead === '') {
                     <ul class="cmp-gallery-preview__filters uk-subnav uk-flex-center uk-margin-medium-bottom">
                         <li class="uk-active" uk-filter-control>
                             <a href="#">
-                                <?php echo htmlspecialchars($filterAllLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                <?php echo $escape($filterAllLabel); ?>
                             </a>
                         </li>
                         <?php foreach ($filters as $filter) : ?>
@@ -106,9 +109,9 @@ if ($lead === '') {
                                 continue;
                             }
                             ?>
-                            <li uk-filter-control=".<?php echo htmlspecialchars($filterClass, ENT_QUOTES, 'UTF-8'); ?>">
+                            <li uk-filter-control=".<?php echo $escape($filterClass); ?>">
                                 <a href="#">
-                                    <?php echo htmlspecialchars($filterLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                    <?php echo $escape($filterLabel); ?>
                                 </a>
                             </li>
                         <?php endforeach; ?>
@@ -158,7 +161,7 @@ if ($lead === '') {
                             );
                         }
                         ?>
-                        <div class="<?php echo htmlspecialchars($cardItemClass, ENT_QUOTES, 'UTF-8'); ?>">
+                        <div class="<?php echo $escape($cardItemClass); ?>">
                             <div
                                 class="cmp-gallery-preview__card"
                                 <?php if ($galleryLink !== '') : ?>
@@ -167,30 +170,30 @@ if ($lead === '') {
                             >
                                 <img
                                     class="cmp-gallery-preview__image"
-                                    src="<?php echo htmlspecialchars($previewSrc, ENT_QUOTES, 'UTF-8'); ?>"
-                                    alt="<?php echo htmlspecialchars($cardTitle, ENT_QUOTES, 'UTF-8'); ?>"
+                                    src="<?php echo $escape($previewSrc); ?>"
+                                    alt="<?php echo $escape($cardTitle); ?>"
                                     loading="lazy"
                                     decoding="async"
                                 >
 
                                 <div class="cmp-gallery-preview__info">
                                     <h3 class="cmp-gallery-preview__title">
-                                        <?php echo htmlspecialchars($cardTitle, ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php echo $escape($cardTitle); ?>
                                     </h3>
                                     <p class="cmp-gallery-preview__meta">
                                         <span class="cmp-gallery-preview__meta-icon" uk-icon="icon: album" aria-hidden="true"></span>
                                         <span>
                                             <?php echo $imageCount; ?>
-                                            <?php echo htmlspecialchars($imagesLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                            <?php echo $escape($imagesLabel); ?>
                                         </span>
                                     </p>
 
                                     <?php if ($galleryLink !== '') : ?>
                                         <a
                                             class="cmp-gallery-preview__action"
-                                            href="<?php echo htmlspecialchars($galleryLink, ENT_QUOTES, 'UTF-8'); ?>"
-                                            aria-label="<?php echo htmlspecialchars($galleryLabel, ENT_QUOTES, 'UTF-8'); ?>"
-                                            title="<?php echo htmlspecialchars($galleryLabel, ENT_QUOTES, 'UTF-8'); ?>"
+                                            href="<?php echo $escape($galleryLink); ?>"
+                                            aria-label="<?php echo $escape($galleryLabel); ?>"
+                                            title="<?php echo $escape($galleryLabel); ?>"
                                         >
                                             <span uk-icon="icon: search"></span>
                                         </a>

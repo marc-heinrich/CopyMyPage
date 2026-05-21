@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.11
+ * @since       0.0.14
  */
 
 \defined('_JEXEC') or die;
@@ -25,6 +25,9 @@ use Joomla\Module\CopyMyPage\Hero\Site\Helper\HeroHelper;
  * @var string                                          $hint
  * @var \Joomla\Module\CopyMyPage\Hero\Site\Helper\HeroHelper|null $heroHelper
  */
+
+// Closure for escaping output.
+$escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
 // Normalize dispatcher input so the template works with predictable value types.
 $cfg        = \is_array($cfg ?? null) ? $cfg : [];
@@ -94,19 +97,19 @@ $buildAbsolutePath = static function (string $publicPath): string {
 };
 ?>
 <!-- Hero Module Template: UIkit Framework (https://getuikit.com/docs/slideshow) -->
-<div class="<?php echo $moduleClass; ?>">
+<div class="<?php echo $escape($moduleClass); ?>">
     <?php if ($slides !== []) : ?>
         <div class="uk-position-relative uk-visible-toggle uk-light" tabindex="-1"
-            uk-slideshow="<?php echo htmlspecialchars($slideshowOptions, ENT_QUOTES, 'UTF-8'); ?>">
+            uk-slideshow="<?php echo $escape($slideshowOptions); ?>">
             <ul class="uk-slideshow-items">
                 <?php foreach ($slides as $slide) : ?>
                     <?php
                     $rawSrc = (string) ($slide->src ?? '');
-                    $alt = htmlspecialchars((string) ($slide->alt ?? ''), ENT_QUOTES, 'UTF-8');
+                    $alt = $escape($slide->alt ?? '');
                     $isLazy = !empty($slide->isLazy) && $slide->isLazy === true;
                     $width = (int) ($slide->width ?? 0);
                     $height = (int) ($slide->height ?? 0);
-                    $fetchPriority = htmlspecialchars((string) ($slide->fetchPriority ?? ($isLazy ? 'low' : 'high')), ENT_QUOTES, 'UTF-8');
+                    $fetchPriority = $escape($slide->fetchPriority ?? ($isLazy ? 'low' : 'high'));
                     $publicSrc = $normalizePublicPath($rawSrc);
                     $displaySrc = $publicSrc !== '' ? $buildPublicUrl($publicSrc) : $rawSrc;
                     $defaultDisplaySrc = $displaySrc;
@@ -125,7 +128,7 @@ $buildAbsolutePath = static function (string $publicPath): string {
                             $avifVariantPath = $buildVariantPublicPath($publicSrc, '-' . $variantWidth, 'avif');
 
                             if (is_file($buildAbsolutePath($jpgVariantPath))) {
-                                $jpgSrcsetEntries[] = htmlspecialchars($buildPublicUrl($jpgVariantPath), ENT_QUOTES, 'UTF-8') . ' ' . $variantWidth . 'w';
+                                $jpgSrcsetEntries[] = $escape($buildPublicUrl($jpgVariantPath)) . ' ' . $variantWidth . 'w';
 
                                 if ($width > 0 && $variantWidth === $width) {
                                     $defaultDisplaySrc = $buildPublicUrl($jpgVariantPath);
@@ -134,23 +137,23 @@ $buildAbsolutePath = static function (string $publicPath): string {
                             }
 
                             if (is_file($buildAbsolutePath($webpVariantPath))) {
-                                $webpSrcsetEntries[] = htmlspecialchars($buildPublicUrl($webpVariantPath), ENT_QUOTES, 'UTF-8') . ' ' . $variantWidth . 'w';
+                                $webpSrcsetEntries[] = $escape($buildPublicUrl($webpVariantPath)) . ' ' . $variantWidth . 'w';
                             }
 
                             if (is_file($buildAbsolutePath($avifVariantPath))) {
-                                $avifSrcsetEntries[] = htmlspecialchars($buildPublicUrl($avifVariantPath), ENT_QUOTES, 'UTF-8') . ' ' . $variantWidth . 'w';
+                                $avifSrcsetEntries[] = $escape($buildPublicUrl($avifVariantPath)) . ' ' . $variantWidth . 'w';
                             }
                         }
                     }
 
                     if ($publicSrc !== '' && $width > 0 && !$hasIntrinsicJpgVariant) {
-                        $jpgSrcsetEntries[] = htmlspecialchars($buildPublicUrl($publicSrc), ENT_QUOTES, 'UTF-8') . ' ' . $width . 'w';
+                        $jpgSrcsetEntries[] = $escape($buildPublicUrl($publicSrc)) . ' ' . $width . 'w';
                     }
 
                     $jpgSrcset  = implode(', ', array_unique($jpgSrcsetEntries));
                     $webpSrcset = implode(', ', array_unique($webpSrcsetEntries));
                     $avifSrcset = implode(', ', array_unique($avifSrcsetEntries));
-                    $escapedDisplaySrc = htmlspecialchars($defaultDisplaySrc, ENT_QUOTES, 'UTF-8');
+                    $escapedDisplaySrc = $escape($defaultDisplaySrc);
                     ?>
                     <li>
                         <picture>
@@ -191,13 +194,13 @@ $buildAbsolutePath = static function (string $publicPath): string {
                             <div class="uk-position-center uk-text-center cmp-hero-overlay">
                                 <?php if (!empty($slide->headline)) : ?>
                                     <h2 class="uk-heading-medium">
-                                        <?php echo htmlspecialchars((string) $slide->headline, ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php echo $escape($slide->headline); ?>
                                     </h2>
                                 <?php endif; ?>
 
                                 <?php if (!empty($slide->subline)) : ?>
                                     <p class="uk-text-lead">
-                                        <?php echo htmlspecialchars((string) $slide->subline, ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php echo $escape($slide->subline); ?>
                                     </p>
                                 <?php endif; ?>
                             </div>

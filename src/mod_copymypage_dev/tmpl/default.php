@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.5
+ * @since       0.0.14
  */
 
 \defined('_JEXEC') or die;
@@ -15,6 +15,9 @@ use Joomla\Registry\Registry;
 /** @var array<string, mixed> $debugData */
 /** @var string $moduleclassSfx */
 /** @var Registry $params */
+
+// Closure for escaping output.
+$escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
 $showModuleInfo = (bool) $params->get('show_module_info', 1);
 $showMenuInfo   = (bool) $params->get('show_menu_info', 1);
@@ -32,7 +35,7 @@ $hasParams     = !empty($paramsArray);
  *
  * @param iterable<string, mixed> $items
  */
-$renderKvList = static function (iterable $items, bool $encodeComplex = false): void {
+$renderKvList = static function (iterable $items, bool $encodeComplex = false) use ($escape): void {
     ?>
     <ul class="uk-list uk-list-divider uk-text-small uk-margin-remove">
         <?php foreach ($items as $key => $value) : ?>
@@ -54,10 +57,10 @@ $renderKvList = static function (iterable $items, bool $encodeComplex = false): 
             ?>
             <li class="uk-flex uk-flex-between uk-flex-top">
                 <span class="uk-text-bold">
-                    <?php echo htmlspecialchars((string) $key, ENT_QUOTES, 'UTF-8'); ?>
+                    <?php echo $escape($key); ?>
                 </span>
                 <span class="uk-text-muted uk-text-right uk-text-break uk-margin-small-left">
-                    <?php echo htmlspecialchars($valueString, ENT_QUOTES, 'UTF-8'); ?>
+                    <?php echo $escape($valueString); ?>
                 </span>
             </li>
         <?php endforeach; ?>
@@ -65,11 +68,9 @@ $renderKvList = static function (iterable $items, bool $encodeComplex = false): 
     <?php
 };
 
-$rootSfx = $moduleclassSfx !== ''
-    ? ' ' . htmlspecialchars($moduleclassSfx, ENT_QUOTES, 'UTF-8')
-    : '';
+$moduleClass = trim('cmp-module cmp-module--dev uk-container uk-margin-medium-top uk-margin-medium-bottom ' . (string) $moduleclassSfx);
 ?>
-<div class="cmp-module cmp-module--dev uk-container uk-margin-medium-top uk-margin-medium-bottom<?php echo $rootSfx; ?>">
+<div class="<?php echo $escape($moduleClass); ?>">
     <div
         class="uk-grid-small uk-grid-match uk-child-width-1-1 uk-child-width-1-2@m uk-child-width-1-3@xl"
         uk-grid

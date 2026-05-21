@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.14
  */
 
 \defined('_JEXEC') or die;
@@ -38,6 +38,9 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  * @var \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper $navbarHelper
  */
 
+// Closure for escaping output.
+$escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+
 // Read only the config keys used by this layout.
 // For type normalization (boolean or integer), use the component helper class CopyMyPage.
 $navOffcanvasId    = (string) ($cfg['navOffcanvasId'] ?? '');
@@ -51,8 +54,11 @@ $itemHeight  = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightItemHeight', 50, 0) . '
 $ocdWidth    = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdWidth', 80, 0) . '%';
 $ocdMinWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMinWidth', 200, 0) . 'px';
 $ocdMaxWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMaxWidth', 440, 0) . 'px';
-$navigationState = is_array($navigationState ?? null) ? $navigationState : [];
-$onepageBase     = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
+$navigationState   = is_array($navigationState ?? null) ? $navigationState : [];
+$onepageBase       = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
+$navModuleClass    = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-nav uk-hidden@m';
+$userModuleClass   = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-user uk-hidden@m';
+$basketModuleClass = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-basket uk-hidden@m';
 
 if (!isset($navbarHelper) || !$navbarHelper instanceof \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper) {
     return;
@@ -87,7 +93,7 @@ if (!empty($warning)) {
 <!-- Navbar Module Template: Mmenu Light JS-Plugin (https://mmenujs.com/mmenu-light) -->
 
 <!-- Navigation offcanvas menu (mobile only) -->
-<nav id="<?php echo htmlspecialchars($navOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>" class="uk-hidden@m">
+<nav id="<?php echo $escape($navOffcanvasId); ?>" class="<?php echo $escape($navModuleClass); ?>">
     <?php if (!empty($list) && \is_array($list)) : ?>
         <ul>
             <?php foreach ($list as $item) : ?>
@@ -114,14 +120,14 @@ if (!empty($warning)) {
                 // Headings: prefer <span> like the mmenu-light demo, so they open submenus without navigation.
                 $isHeading = (($item->type ?? '') === 'heading');
 
-                $liAttr = $liClasses ? ' class="' . htmlspecialchars(implode(' ', $liClasses), ENT_QUOTES, 'UTF-8') . '"' : '';
+                $liAttr = $liClasses ? ' class="' . $escape(implode(' ', $liClasses)) . '"' : '';
                 echo '<li' . $liAttr . '>';
 
                 if ($isHeading) {
-                    echo '<span>' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</span>';
+                    echo '<span>' . $escape($title) . '</span>';
                 } else {
-                    echo '<a href="' . htmlspecialchars((string) $url, ENT_QUOTES, 'UTF-8') . '">'
-                        . htmlspecialchars($title, ENT_QUOTES, 'UTF-8')
+                    echo '<a href="' . $escape($url) . '">'
+                        . $escape($title)
                         . '</a>';
                 }
 
@@ -145,7 +151,7 @@ if (!empty($warning)) {
 
 <!-- User offcanvas menu (mobile only) -->
 <?php if ($userOffcanvasId !== '') : ?>
-    <nav id="<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>" class="uk-hidden@m">
+    <nav id="<?php echo $escape($userOffcanvasId); ?>" class="<?php echo $escape($userModuleClass); ?>">
         <ul>
             <?php if (!empty($userItems) && \is_array($userItems)) : ?>
                 <?php foreach ($userItems as $item) : ?>
@@ -154,15 +160,15 @@ if (!empty($warning)) {
                     $href  = (string) ($item->link ?? '#');
                     ?>
                     <li>
-                        <a href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>">
-                            <?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?>
+                        <a href="<?php echo $escape($href); ?>">
+                            <?php echo $escape($title); ?>
                         </a>
                     </li>
                 <?php endforeach; ?>
             <?php else : ?>
                 <li>
-                    <a href="<?php echo htmlspecialchars(Route::link('site', 'index.php?option=com_users&view=login'), ENT_QUOTES, 'UTF-8'); ?>">
-                        <?php echo htmlspecialchars(Text::_('JLOGIN'), ENT_QUOTES, 'UTF-8'); ?>
+                    <a href="<?php echo $escape(Route::link('site', 'index.php?option=com_users&view=login')); ?>">
+                        <?php echo $escape(Text::_('JLOGIN')); ?>
                     </a>
                 </li>
             <?php endif; ?>
@@ -172,10 +178,10 @@ if (!empty($warning)) {
 
 <!-- Basket offcanvas menu (mobile only) -->
 <?php if ($basketOffcanvasId !== '') : ?>
-    <nav id="<?php echo htmlspecialchars($basketOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>" class="uk-hidden@m">
+    <nav id="<?php echo $escape($basketOffcanvasId); ?>" class="<?php echo $escape($basketModuleClass); ?>">
         <ul>
             <li>
-                <a href="#"><?php echo htmlspecialchars(Text::_('MOD_COPYMYPAGE_NAVBAR_BASKET_EMPTY'), ENT_QUOTES, 'UTF-8'); ?></a>
+                <a href="#"><?php echo $escape(Text::_('MOD_COPYMYPAGE_NAVBAR_BASKET_EMPTY')); ?></a>
             </li>
         </ul>
     </nav>

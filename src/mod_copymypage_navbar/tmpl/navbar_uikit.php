@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.14
  */
 
 \defined('_JEXEC') or die;
@@ -38,6 +38,9 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  * @var \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper $navbarHelper
  */
 
+// Closure for escaping output.
+$escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+
 // Read only the config keys used by this layout.
 // For type normalization (boolean or integer), use the component helper class CopyMyPage.
 $logo                   = (string) ($cfg['logo'] ?? '');
@@ -45,6 +48,7 @@ $navOffcanvasId         = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId        = (string) ($cfg['userOffcanvasId'] ?? '');
 $basketOffcanvasId      = (string) ($cfg['basketOffcanvasId'] ?? '');
 $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userDropdownSelectorRoot'] ?? '');
+$moduleClass            = trim('cmp-module ' . $userDropdownRootClass);
 $onepageBase            = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
 $logoHref               = $isOnepage ? '#top' : $onepageBase;
 $navigationState        = is_array($navigationState ?? null) ? $navigationState : [];
@@ -62,8 +66,8 @@ if (!empty($warning)) {
     echo $warning;
 }
 ?>
-<!-- Navbar Module Template: UIkit Framework (https://getuikit.com/docs/navbar) -->
-<div class="cmp-module <?php echo htmlspecialchars($userDropdownRootClass, ENT_QUOTES, 'UTF-8'); ?>">
+<!-- Navbar Module Template: Desktop UIkit Framework (https://getuikit.com/docs/navbar) -->
+<div class="<?php echo $escape($moduleClass); ?>">
     <div
         uk-sticky="start: 1; end: false; sel-target: .uk-navbar-container;
         cls-active: cmp-navbar--scrolled;
@@ -86,13 +90,13 @@ if (!empty($warning)) {
                             aria-label="Open menu"
                             aria-expanded="false"
                             title="Open menu"
-                            data-cmp-mmenulight-open="#<?php echo htmlspecialchars($navOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
+                            data-cmp-mmenulight-open="#<?php echo $escape($navOffcanvasId); ?>"
                         ></mm-burger>
 
-                        <a class="uk-navbar-item uk-logo uk-visible@m cmp-navbar-logo-link" href="<?php echo htmlspecialchars($logoHref, ENT_QUOTES, 'UTF-8'); ?>">
+                        <a class="uk-navbar-item uk-logo uk-visible@m cmp-navbar-logo-link" href="<?php echo $escape($logoHref); ?>">
                             <img
                                 class="cmp-navbar-logo"
-                                src="<?php echo htmlspecialchars($logo, ENT_QUOTES, 'UTF-8'); ?>"
+                                src="<?php echo $escape($logo); ?>"
                                 alt="CopyMyPage – Your website. Just copy it."
                                 width="140"
                                 height="32"
@@ -104,10 +108,10 @@ if (!empty($warning)) {
 
                     <!-- CENTER: Desktop = Nav items, Mobile = Logo -->
                     <div class="uk-navbar-center">
-                        <a class="uk-navbar-item uk-logo uk-hidden@m cmp-navbar-logo-link" href="<?php echo htmlspecialchars($logoHref, ENT_QUOTES, 'UTF-8'); ?>">
+                        <a class="uk-navbar-item uk-logo uk-hidden@m cmp-navbar-logo-link" href="<?php echo $escape($logoHref); ?>">
                             <img
                                 class="cmp-navbar-logo"
-                                src="<?php echo htmlspecialchars($logo, ENT_QUOTES, 'UTF-8'); ?>"
+                                src="<?php echo $escape($logo); ?>"
                                 alt="CopyMyPage – Your website. Just copy it."
                                 width="140"
                                 height="32"
@@ -118,11 +122,6 @@ if (!empty($warning)) {
 
                         <ul class="uk-navbar-nav uk-visible@m cmp-navbar-nav">
                             <?php
-                            // Escape plain text for safe HTML output.
-                            $escape = static function (string $value): string {
-                                return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-                            };
-
                             // Build shared link attributes for navbar items.
                             $buildLinkAttribs = static function (object $menuItem, bool $isActive): array {
                                 $attribs = [
@@ -378,7 +377,7 @@ if (!empty($warning)) {
                             href="#"
                             role="button"
                             aria-label="Open user menu"
-                            data-cmp-mmenulight-open="#<?php echo htmlspecialchars($userOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
+                            data-cmp-mmenulight-open="#<?php echo $escape($userOffcanvasId); ?>"
                         >
                             <span uk-icon="user"></span>
                         </a>
@@ -389,7 +388,7 @@ if (!empty($warning)) {
                             href="#"
                             role="button"
                             aria-label="Open basket"
-                            data-cmp-mmenulight-open="#<?php echo htmlspecialchars($basketOffcanvasId, ENT_QUOTES, 'UTF-8'); ?>"
+                            data-cmp-mmenulight-open="#<?php echo $escape($basketOffcanvasId); ?>"
                         >
                             <span uk-icon="cart"></span>
                         </a>
@@ -435,9 +434,9 @@ if (!empty($warning)) {
                                                         continue;
                                                     }
                                                     ?>
-                                                    <li<?php echo $liClass !== '' ? ' class="' . htmlspecialchars($liClass, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>>
-                                                        <a class="cmp-navbar-link" href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>">
-                                                            <?php echo htmlspecialchars($title, ENT_QUOTES, 'UTF-8'); ?>
+                                                    <li<?php echo $liClass !== '' ? ' class="' . $escape($liClass) . '"' : ''; ?>>
+                                                        <a class="cmp-navbar-link" href="<?php echo $escape($href); ?>">
+                                                            <?php echo $escape($title); ?>
                                                         </a>
                                                     </li>
                                                 <?php endforeach; ?>
@@ -448,7 +447,7 @@ if (!empty($warning)) {
 
                                 <li>
                                     <a
-                                        href="<?php echo Route::link('site', 'index.php?option=com_finder&view=search'); ?>"
+                                        href="<?php echo $escape(Route::link('site', 'index.php?option=com_finder&view=search')); ?>"
                                         class="cmp-navbar-icon"
                                         aria-label="Search"
                                     >
@@ -458,7 +457,7 @@ if (!empty($warning)) {
 
                                 <li>
                                     <a
-                                        href="<?php echo Route::link('site', 'index.php?option=com_copymypage&view=basket'); ?>"
+                                        href="<?php echo $escape(Route::link('site', 'index.php?option=com_copymypage&view=basket')); ?>"
                                         class="cmp-navbar-icon"
                                         aria-label="Basket"
                                     >

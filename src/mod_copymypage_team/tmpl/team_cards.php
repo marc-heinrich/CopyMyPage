@@ -26,6 +26,9 @@ use Joomla\Module\CopyMyPage\Team\Site\Helper\TeamHelper;
  * @var \Joomla\Module\CopyMyPage\Team\Site\Helper\TeamHelper|null $teamHelper
  */
 
+// Closure for escaping output.
+$escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+
 $cfg      = \is_array($cfg ?? null) ? $cfg : [];
 $layout   = strtolower(trim((string) ($layout ?? '')));
 $eyebrow  = trim((string) ($eyebrow ?? ''));
@@ -65,23 +68,23 @@ if ($headline === '') {
 }
 ?>
 <!-- Team Module Template: UIkit Framework (https://getuikit.com/docs/card) -->
-<div class="<?php echo htmlspecialchars($moduleClass, ENT_QUOTES, 'UTF-8'); ?>">
+<div class="<?php echo $escape($moduleClass); ?>">
     <div class="uk-container">
         <?php if ($eyebrow !== '' || $headline !== '' || $lead !== '') : ?>
             <header class="cmp-team__header cmp-section-header">
                 <?php if ($eyebrow !== '') : ?>
                     <p class="cmp-team__eyebrow cmp-section-header__eyebrow">
-                        <?php echo htmlspecialchars($eyebrow, ENT_QUOTES, 'UTF-8'); ?>
+                        <?php echo $escape($eyebrow); ?>
                     </p>
                 <?php endif; ?>
                 <?php if ($headline !== '') : ?>
                     <h2 class="cmp-team__headline cmp-section-header__headline">
-                        <?php echo htmlspecialchars($headline, ENT_QUOTES, 'UTF-8'); ?>
+                        <?php echo $escape($headline); ?>
                     </h2>
                 <?php endif; ?>
                 <?php if ($lead !== '') : ?>
                     <p class="cmp-team__lead cmp-section-header__lead">
-                        <?php echo htmlspecialchars($lead, ENT_QUOTES, 'UTF-8'); ?>
+                        <?php echo $escape($lead); ?>
                     </p>
                 <?php endif; ?>
             </header>
@@ -116,12 +119,12 @@ if ($headline === '') {
                     }
                     ?>
                     <div class="cmp-team__item">
-                        <article class="<?php echo htmlspecialchars($cardClass, ENT_QUOTES, 'UTF-8'); ?>">
+                        <article class="<?php echo $escape($cardClass); ?>">
                             <?php if ($showImages && $image !== '') : ?>
                                 <div class="cmp-team__media uk-card-media-top">
                                     <img
-                                        src="<?php echo htmlspecialchars($image, ENT_QUOTES, 'UTF-8'); ?>"
-                                        alt="<?php echo htmlspecialchars($imageAlt, ENT_QUOTES, 'UTF-8'); ?>"
+                                        src="<?php echo $escape($image); ?>"
+                                        alt="<?php echo $escape($imageAlt); ?>"
                                         <?php if ($imageWidth > 0) : ?>
                                             width="<?php echo $imageWidth; ?>"
                                         <?php endif; ?>
@@ -137,19 +140,19 @@ if ($headline === '') {
                             <div class="cmp-team__body uk-card-body">
                                 <?php if ($name !== '') : ?>
                                     <h3 class="cmp-team__name uk-card-title">
-                                        <?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php echo $escape($name); ?>
                                     </h3>
                                 <?php endif; ?>
 
                                 <?php if ($role !== '') : ?>
                                     <p class="cmp-team__role">
-                                        <?php echo htmlspecialchars($role, ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php echo $escape($role); ?>
                                     </p>
                                 <?php endif; ?>
 
                                 <?php if ($showDescriptions && $description !== '') : ?>
                                     <p class="cmp-team__description">
-                                        <?php echo htmlspecialchars($description, ENT_QUOTES, 'UTF-8'); ?>
+                                        <?php echo $escape($description); ?>
                                     </p>
                                 <?php endif; ?>
                             </div>
