@@ -16,9 +16,9 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /** @var \Joomla\CMS\Document\HtmlDocument $this */
 
-$app   = Factory::getApplication();
-$di    = Factory::getContainer();
-$input = $app->getInput();
+$app    = Factory::getApplication();
+$di     = Factory::getContainer();
+$input  = $app->getInput();
 $wa     = $this->getWebAssetManager();
 $escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 

@@ -48,8 +48,7 @@
         "uikit",
         "uikit.icons",
         "copymypage.base",
-        "copymypage.behavior",
-        "copymypage.onepage"
+        "copymypage.behavior"
       ],
       "attributes": {
         "defer": true
