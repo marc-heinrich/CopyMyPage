@@ -92,7 +92,7 @@ $navbarClass        = (string) $this->params->get('navbarClass', 'cmp-navbar');
 $mobileMenuClass    = (string) $this->params->get('mobileMenuClass', 'cmp-mobilemenu');
 $backToTopID        = (string) $this->params->get('backToTopId', 'back-top');
 $mainContentID      = (string) $this->params->get('mainContentId', 'main-content');
-$headerOffset       = (int) $this->params->get('headerOffset', 64);
+$headerOffset       = (int) $this->params->get('headerOffset', 80);
 $templateTokenStyle = $di->get('copymypage.helper.templateTokens')
     ->buildRootTokenStyle($this->params, $headerOffset);
 

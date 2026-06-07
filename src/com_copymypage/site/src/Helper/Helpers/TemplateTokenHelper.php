@@ -109,7 +109,7 @@ final class TemplateTokenHelper
      *
      * @return  string
      */
-    public function buildRootTokenStyle(JoomlaRegistry|array $params, int $headerOffset = 64): string
+    public function buildRootTokenStyle(JoomlaRegistry|array $params, int $headerOffset = 80): string
     {
         $rootTokenStyles = [
             '    /* copymypage tokens */',

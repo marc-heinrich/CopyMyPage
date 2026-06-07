@@ -29,6 +29,15 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
+            const preloaderEnabled = this.tmpl.preloaderEnabled === undefined
+                ? true
+                : this.toBool(this.tmpl.preloaderEnabled);
+
+            if (!preloaderEnabled) {
+                document.body.classList.remove('is-preloader-active');
+                return;
+            }
+
             const preloader = this.select(this.tmpl.preloaderSelector || '#cmp-preloader');
 
             if (!preloader) {

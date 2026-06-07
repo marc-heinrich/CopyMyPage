@@ -54,7 +54,7 @@
         <field name="pageWrapperClass" type="text" label="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_CLASS_LABEL" description="TPL_COPYMYPAGE_FIELD_PAGEWRAPPER_CLASS_DESC" default="cmp-page" filter="cmd"/>
         <field name="navbarClass" type="text" label="TPL_COPYMYPAGE_FIELD_NAVBAR_CLASS_LABEL" description="TPL_COPYMYPAGE_FIELD_NAVBAR_CLASS_DESC" default="cmp-navbar" filter="cmd"/>
         <field name="mobileMenuClass" type="text" label="TPL_COPYMYPAGE_FIELD_MOBILEMENU_CLASS_LABEL" description="TPL_COPYMYPAGE_FIELD_MOBILEMENU_CLASS_DESC" default="cmp-mobilemenu" filter="cmd"/>
-        <field name="headerOffset" type="number" label="TPL_COPYMYPAGE_FIELD_HEADER_OFFSET_LABEL" description="TPL_COPYMYPAGE_FIELD_HEADER_OFFSET_DESC" default="64" min="0" max="300" step="1"/>
+        <field name="headerOffset" type="number" label="TPL_COPYMYPAGE_FIELD_HEADER_OFFSET_LABEL" description="TPL_COPYMYPAGE_FIELD_HEADER_OFFSET_DESC" default="80" min="0" max="300" step="1"/>
       </fieldset>
       <!-- Design Tokens -->
       <fieldset name="designTokens" label="TPL_COPYMYPAGE_FIELDSET_DESIGN_TOKENS">
