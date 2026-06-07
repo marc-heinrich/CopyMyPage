@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.9
+ * @since       0.0.14
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -111,7 +111,24 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            this.button.classList.toggle('visible', utils.getCurrentScrollPosition() > this.position);
+            const scrollPosition = utils.getCurrentScrollPosition();
+
+            this.button.classList.toggle('visible', scrollPosition > this.position);
+            this.updateScrollProgress(scrollPosition);
+        }
+
+        updateScrollProgress(scrollPosition = utils.getCurrentScrollPosition()) {
+            if (!this.button) {
+                return;
+            }
+
+            const scrollingElement = document.scrollingElement || document.documentElement;
+            const maxScroll = Math.max(0, scrollingElement.scrollHeight - scrollingElement.clientHeight);
+            const progress = maxScroll > 0
+                ? Math.min(Math.max(scrollPosition / maxScroll, 0), 1)
+                : 0;
+
+            this.button.style.setProperty('--cmp-back-to-top-progress', `${(progress * 360).toFixed(2)}deg`);
         }
 
         scrollToTarget(selector) {

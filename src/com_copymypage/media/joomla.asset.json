@@ -58,7 +58,7 @@
       "name": "copymypage.base",
       "type": "script",
       "uri": "com_copymypage/copymypage-base.min.js",
-      "version": "0.0.12",
+      "version": "0.0.14",
       "attributes": {
         "defer": true
       }
@@ -67,8 +67,23 @@
       "name": "copymypage.behavior",
       "type": "script",
       "uri": "com_copymypage/copymypage-behavior.min.js",
-      "version": "0.0.9",
+      "version": "0.0.14",
       "dependencies": [
+        "copymypage.base"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.alertbar",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-alertbar.min.js",
+      "version": "0.0.14",
+      "dependencies": [
+        "core",
+        "uikit",
+        "uikit.icons",
         "copymypage.base"
       ],
       "attributes": {

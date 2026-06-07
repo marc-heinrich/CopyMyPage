@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.12
+ * @since       0.0.14
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -69,7 +69,10 @@ window.CopyMyPage = window.CopyMyPage || {};
     utils.getStickyOffset = utils.getStickyOffset || function getStickyOffset() {
         const rootStyles = getComputedStyle(document.documentElement);
 
-        return Number.parseFloat(rootStyles.getPropertyValue('--cmp-header-offset')) || 0;
+        const headerOffset = Number.parseFloat(rootStyles.getPropertyValue('--cmp-header-offset')) || 0;
+        const alertOffset = Number.parseFloat(rootStyles.getPropertyValue('--cmp-alert-offset')) || 0;
+
+        return headerOffset + alertOffset;
     };
 
     utils.getExpectedAnchorBand = utils.getExpectedAnchorBand || function getExpectedAnchorBand(stickyOffset) {

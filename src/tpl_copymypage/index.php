@@ -83,6 +83,7 @@ $layout = $input->getCmd('layout', '');
 $task   = $input->getCmd('task', '');
 $itemId = (int) $input->getInt('Itemid', 0);
 
+// Onepage context is determined by view or menu item; it enables scrollspy-nav and section tracking.
 $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
 
 // Template params (DB): store raw HTML class/id tokens; build selectors only where needed.
@@ -103,6 +104,7 @@ $preloaderID      = $preloaderConfig['id'];
 $preloaderType    = $preloaderConfig['type'];
 $preloaderText    = $preloaderConfig['text'];
 $preloaderLogoUrl = $preloaderConfig['logoUrl'];
+$hasAlertModules  = $this->countModules('alert') > 0;
 
 // Register and load web assets (aligned with offline.php).
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
@@ -129,6 +131,7 @@ $bodyClasses = [
     $task ? 'task-' . $task : 'no-task',
     $itemId ? 'itemid-' . $itemId : '',
     $isOnepage ? 'is-onepage' : 'no-onepage',
+    $hasAlertModules ? 'has-alert' : '',
     // ViewportFeature adds current viewport classes such as is-mobile or is-desktop.
 ];
 
@@ -224,6 +227,18 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
 
         <!-- Page Wrapper -->
         <div id="page" class="<?php echo $escape($pageWrapperClass); ?>">
+
+            <?php if ($hasAlertModules) : ?>
+                <!-- Module Alert -->
+                <div
+                    id="alert"
+                    class="cmp-alert-slot"
+                    role="region"
+                    aria-label="<?php echo $escape(Text::_('TPL_COPYMYPAGE_MODULE_ALERT')); ?>"
+                >
+                    <jdoc:include type="modules" name="alert" style="none" />
+                </div>
+            <?php endif; ?>
 
             <!-- Header -->
             <header id="top" class="cmp-header" role="banner">

@@ -20,6 +20,7 @@
   </files>
   <!-- Template positions -->
   <positions>
+    <position>alert</position>
     <position>navbar</position>
     <position>mobilemenu</position>
     <position>hero</position>

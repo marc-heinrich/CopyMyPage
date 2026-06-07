@@ -36,6 +36,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._lastSmoothRestoreKey = '';
             this._pendingReleaseTimeout = null;
             this._handleLifecycleChange = this._handleLifecycleChange.bind(this);
+            this._handleOffsetChange = this._handleOffsetChange.bind(this);
             this._handleSectionChange = this._handleSectionChange.bind(this);
             this._handleScrollLinkClick = this._handleScrollLinkClick.bind(this);
         }
@@ -54,6 +55,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             this.listen(window, 'load', this._handleLifecycleChange);
             this.listen(window, 'pageshow', this._handleLifecycleChange);
             this.listen(window, 'hashchange', this._handleLifecycleChange);
+            this.listen(document, 'copymypage:alert-offset-change', this._handleOffsetChange);
             this.listen(document, 'copymypage:onepage-sectionchange', this._handleSectionChange);
             this.listen(document, 'click', this._handleScrollLinkClick);
         }
@@ -147,6 +149,12 @@ window.CopyMyPage = window.CopyMyPage || {};
                 this._schedulePendingSectionRelease(requestedSection);
             }
 
+            this.scheduleNavbarTopStateSync();
+            this.scheduleSectionMetaSync();
+        }
+
+        _handleOffsetChange() {
+            this._bindSectionObserver();
             this.scheduleNavbarTopStateSync();
             this.scheduleSectionMetaSync();
         }

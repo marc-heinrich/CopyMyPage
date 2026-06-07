@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="module" client="site" method="upgrade">
+  <name>mod_copymypage_alert</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2026-05</creationDate>
+  <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
+  <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.14</version>
+  <description>MOD_COPYMYPAGE_ALERT_XML_DESCRIPTION</description>
+  <scriptfile>script.php</scriptfile>
+  <namespace path="src">Joomla\Module\CopyMyPage\Alert</namespace>
+  <files>
+    <folder module="mod_copymypage_alert">services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+    <folder>language</folder>
+  </files>
+  <config>
+    <fields name="params">
+      <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
+        <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_ALERT_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_ALERT_LAYOUT_VARIANT_DESC" default="alert_bar">
+          <option value="alert_bar">MOD_COPYMYPAGE_ALERT_LAYOUT_VARIANT_BAR</option>
+        </field>
+        <field
+          name="alert_bar_style"
+          type="list"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_STYLE_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_STYLE_DESC"
+          default="warning"
+          showon="layoutVariant:alert_bar">
+          <option value="default">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_STYLE_DEFAULT</option>
+          <option value="primary">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_STYLE_PRIMARY</option>
+          <option value="success">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_STYLE_SUCCESS</option>
+          <option value="warning">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_STYLE_WARNING</option>
+          <option value="danger">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_STYLE_DANGER</option>
+          <option value="maintenance">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_STYLE_MAINTENANCE</option>
+        </field>
+        <field
+          name="alert_bar_colorMode"
+          type="list"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_COLOR_MODE_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_COLOR_MODE_DESC"
+          default="preset"
+          showon="layoutVariant:alert_bar">
+          <option value="preset">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_COLOR_MODE_PRESET</option>
+          <option value="custom">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_COLOR_MODE_CUSTOM</option>
+        </field>
+        <field
+          name="alert_bar_backgroundColor"
+          type="color"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_BACKGROUND_COLOR_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_BACKGROUND_COLOR_DESC"
+          default="#c4f4f5"
+          control="hue"
+          format="hex"
+          showon="layoutVariant:alert_bar[AND]alert_bar_colorMode:custom" />
+        <field
+          name="alert_bar_textColor"
+          type="color"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_TEXT_COLOR_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_TEXT_COLOR_DESC"
+          default="#061225"
+          control="hue"
+          format="hex"
+          showon="layoutVariant:alert_bar[AND]alert_bar_colorMode:custom" />
+        <field
+          name="alert_bar_label"
+          type="text"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_LABEL_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_LABEL_DESC"
+          showon="layoutVariant:alert_bar" />
+        <field
+          name="alert_bar_message"
+          type="textarea"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_MESSAGE_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_MESSAGE_DESC"
+          rows="4"
+          filter="safehtml"
+          showon="layoutVariant:alert_bar" />
+        <field
+          name="alert_bar_ctaLabel"
+          type="text"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_CTA_LABEL_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_CTA_LABEL_DESC"
+          showon="layoutVariant:alert_bar" />
+        <field
+          name="alert_bar_ctaUrl"
+          type="url"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_CTA_URL_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_CTA_URL_DESC"
+          filter="url"
+          validate="url"
+          relative="true"
+          showon="layoutVariant:alert_bar" />
+        <field
+          name="alert_bar_ctaTarget"
+          type="list"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_CTA_TARGET_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_CTA_TARGET_DESC"
+          default="_self"
+          showon="layoutVariant:alert_bar">
+          <option value="_self">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_CTA_TARGET_SELF</option>
+          <option value="_blank">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_CTA_TARGET_BLANK</option>
+        </field>
+        <field
+          name="alert_bar_displayMode"
+          type="list"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISPLAY_MODE_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISPLAY_MODE_DESC"
+          default="static"
+          showon="layoutVariant:alert_bar">
+          <option value="static">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISPLAY_MODE_STATIC</option>
+          <option value="ticker">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISPLAY_MODE_TICKER</option>
+        </field>
+        <field
+          name="alert_bar_tickerDuration"
+          type="number"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_TICKER_DURATION_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_TICKER_DURATION_DESC"
+          default="28"
+          min="8"
+          max="120"
+          step="1"
+          showon="layoutVariant:alert_bar" />
+        <field
+          name="alert_bar_showClose"
+          type="radio"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_SHOW_CLOSE_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_SHOW_CLOSE_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:alert_bar">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="alert_bar_dismissBehavior"
+          type="list"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISMISS_BEHAVIOR_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISMISS_BEHAVIOR_DESC"
+          default="session"
+          showon="layoutVariant:alert_bar">
+          <option value="none">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISMISS_BEHAVIOR_NONE</option>
+          <option value="session">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISMISS_BEHAVIOR_SESSION</option>
+          <option value="cookie">MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISMISS_BEHAVIOR_COOKIE</option>
+        </field>
+        <field
+          name="alert_bar_dismissKey"
+          type="text"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISMISS_KEY_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_DISMISS_KEY_DESC"
+          filter="cmd"
+          showon="layoutVariant:alert_bar" />
+        <field
+          name="alert_bar_cookieDays"
+          type="number"
+          label="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_COOKIE_DAYS_LABEL"
+          description="MOD_COPYMYPAGE_ALERT_LAYOUT_BAR_COOKIE_DAYS_DESC"
+          default="7"
+          min="1"
+          max="365"
+          step="1"
+          showon="layoutVariant:alert_bar" />
+      </fieldset>
+    </fields>
+  </config>
+</extension>
