@@ -128,7 +128,23 @@
     --cmp-z-index-preloader: 1050;
     --cmp-z-index-tooltip: 1030;
 
+    --cmp-alert-offset: 0px;
     --cmp-header-offset: 64px;
+
+    /*
+     * Reserved token API:
+     * The following tokens are intentionally kept for module overrides and future
+     * template variants, even when this stylesheet does not consume them directly:
+     * --cmp-font-family-code, --cmp-font-family-sans-serif,
+     * --cmp-font-family-sans-serif-alt, --cmp-border-radius-sm,
+     * --cmp-border-width-sm, --cmp-border-width, --cmp-border-width-lg,
+     * --cmp-border-color, --cmp-box-shadow-lg, --cmp-text-shadow-xs,
+     * --cmp-text-shadow-sm, --cmp-font-size, --cmp-font-size-xl,
+     * --cmp-font-size-3xl, --cmp-font-size-heading-sm,
+     * --cmp-font-size-heading-2xl, --cmp-spacing-md, --cmp-spacing-lg,
+     * --cmp-spacing-xl, --cmp-letter-spacing-xl,
+     * --cmp-z-index-modal-backdrop.
+     */
 }
 
 /* ==========================================================================
@@ -142,13 +158,18 @@ body {
     font-family: var(--cmp-font-family-body);
 }
 
-body.cmp-preloader-active {
+body.is-preloader-active {
     overflow: hidden;
 }
 
 html {
-    scroll-padding-top: var(--cmp-header-offset);
+    scroll-padding-top: calc(var(--cmp-header-offset) + var(--cmp-alert-offset));
     scroll-behavior: smooth;
+}
+
+#page {
+    box-sizing: border-box;
+    padding-block-start: var(--cmp-alert-offset);
 }
 
 /* Keep heading typography consistent across UIkit and native heading tags. */
@@ -176,10 +197,18 @@ html {
 
 .cmp-header {
     position: absolute;
-    top: 0;
+    top: var(--cmp-alert-offset);
     left: 0;
     right: 0;
     z-index: var(--cmp-z-index-sticky);
+}
+
+body.is-alert-active .cmp-header {
+    top: var(--cmp-alert-offset);
+}
+
+body.is-alert-active .cmp-header .uk-sticky-fixed {
+    top: var(--cmp-alert-offset) !important;
 }
 
 /* Targeted fix: keep DPCalendar token field from causing mobile layout drift on profile edit. */
@@ -201,6 +230,234 @@ html {
 /* ==========================================================================
    COMPONENTS - System UI
    ========================================================================== */
+
+/* ALERT BAR
+   ========================================================================== */
+
+.cmp-alert-slot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: calc(var(--cmp-z-index-sticky) + 2);
+    width: 100%;
+}
+
+.cmp-alert-slot.is-dismissed {
+    display: none;
+}
+
+.cmp-module--alert,
+.cmp-alert-bar {
+    width: 100%;
+}
+
+.cmp-alert-bar {
+    --cmp-alert-ticker-duration: 28s;
+
+    box-sizing: border-box;
+    position: relative;
+    margin: 0;
+    border-radius: 0;
+    border: 0;
+    padding: 0.65rem 0;
+    color: var(--cmp-color-logo-dark);
+    background: var(--cmp-color-surface);
+}
+
+.cmp-alert-bar[hidden] {
+    display: none !important;
+}
+
+.cmp-alert-bar--default {
+    color: var(--cmp-color-logo-dark);
+    background: var(--cmp-color-background-default);
+}
+
+.cmp-alert-bar--primary,
+.cmp-alert-bar--maintenance {
+    color: var(--cmp-color-logo-dark);
+    background: var(--cmp-color-soft);
+}
+
+.cmp-alert-bar--custom {
+    color: var(--cmp-alert-color, var(--cmp-color-logo-dark));
+    background: var(--cmp-alert-background, var(--cmp-color-surface));
+}
+
+.cmp-alert-bar__container {
+    position: relative;
+}
+
+.cmp-alert-bar__inner {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-width: 0;
+    padding-inline-end: 3rem;
+}
+
+.cmp-alert-bar__label {
+    flex: 0 0 auto;
+    font-size: var(--cmp-font-size-xs);
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.cmp-alert-bar__message {
+    min-width: 0;
+    font-size: 0.95rem;
+    line-height: 1.45;
+}
+
+.cmp-alert-bar__message p {
+    margin: 0;
+}
+
+.cmp-alert-bar__message a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+}
+
+.cmp-alert-bar__action {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 1.9rem;
+    padding: 0 0.85rem;
+    border: 1px solid currentColor;
+    border-radius: var(--cmp-border-radius);
+    background: transparent;
+    color: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-decoration: none;
+    text-transform: none;
+    white-space: nowrap;
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.cmp-alert-bar__action:hover,
+.cmp-alert-bar__action:focus {
+    border-color: var(--cmp-color-strong);
+    background-color: var(--cmp-color-strong);
+    color: var(--cmp-color-logo-light);
+    text-decoration: none;
+}
+
+.cmp-alert-bar__action:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.cmp-alert-bar .cmp-alert-bar__close {
+    position: absolute;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    top: 50%;
+    right: 0.75rem;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: currentColor;
+    opacity: 0.8;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+.cmp-alert-bar .cmp-alert-bar__close:hover,
+.cmp-alert-bar .cmp-alert-bar__close:focus-visible {
+    opacity: 1;
+}
+
+.cmp-alert-bar__viewport {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.cmp-alert-bar__viewport:focus {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+}
+
+.cmp-alert-bar__ticker {
+    display: inline-flex;
+    align-items: center;
+    gap: 2rem;
+    min-width: max-content;
+    animation: cmp-alert-bar-ticker var(--cmp-alert-ticker-duration) linear infinite;
+    will-change: transform;
+}
+
+.cmp-alert-bar:hover .cmp-alert-bar__ticker,
+.cmp-alert-bar:focus-within .cmp-alert-bar__ticker {
+    animation-play-state: paused;
+}
+
+.cmp-alert-bar__message--clone {
+    flex: 0 0 auto;
+}
+
+@keyframes cmp-alert-bar-ticker {
+    from {
+        transform: translateX(0);
+    }
+
+    to {
+        transform: translateX(calc(-50% - 1rem));
+    }
+}
+
+body.is-small .cmp-alert-bar {
+    padding: 0.7rem 0;
+}
+
+body.is-small .cmp-alert-bar__inner {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.65rem;
+    padding-inline-end: 3rem;
+}
+
+body.is-small .cmp-alert-bar--ticker .cmp-alert-bar__inner {
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+body.is-small .cmp-alert-bar__label,
+body.is-small .cmp-alert-bar__action {
+    font-size: var(--cmp-font-size-xs);
+}
+
+body.is-small .cmp-alert-bar__message {
+    font-size: var(--cmp-font-size-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cmp-alert-bar__ticker {
+        animation: none;
+        transform: none;
+    }
+
+    .cmp-alert-bar__message--clone {
+        display: none;
+    }
+}
 
 /* NAVBAR
    ========================================================================== */
@@ -526,10 +783,8 @@ mm-burger.cmp-navbar-toggle:focus-visible {
     pointer-events: none;
 }
 
-@media (max-width: 959.98px) {
-    .cmp-preloader {
-        background: rgba(var(--cmp-color-logo-light-rgb), 0.96);
-    }
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-preloader {
+    background: rgba(var(--cmp-color-logo-light-rgb), 0.96);
 }
 
 .cmp-preloader__content {
@@ -767,6 +1022,10 @@ mm-burger.cmp-navbar-toggle:focus-visible {
    ========================================================================== */
 
 .cmp-back-to-top {
+    --cmp-back-to-top-progress: 0deg;
+    --cmp-back-to-top-ring-width: 0.16rem;
+    --cmp-back-to-top-ring-color: var(--cmp-color-text-default);
+
     position: fixed;
     inset-inline-end: 1rem;
     bottom: 1rem;
@@ -774,17 +1033,43 @@ mm-burger.cmp-navbar-toggle:focus-visible {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 2.5rem;
-    min-height: 2.5rem;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
     padding: 0.5rem;
     border-radius: 50%;
-    border: var(--cmp-border-width) solid var(--cmp-color-surface);
+    border: 0;
     background-color: var(--cmp-color-background-default);
     color: var(--cmp-color-text-default);
     box-shadow: 0 0.375rem 1rem rgba(0, 0, 0, 0.2);
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.2s ease-in;
+    transition:
+        opacity 0.2s ease-in,
+        background-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.cmp-back-to-top::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: conic-gradient(
+        from 0deg,
+        var(--cmp-back-to-top-ring-color) 0deg var(--cmp-back-to-top-progress),
+        transparent var(--cmp-back-to-top-progress) 360deg
+    );
+    pointer-events: none;
+    -webkit-mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - var(--cmp-back-to-top-ring-width)),
+        #000 calc(100% - var(--cmp-back-to-top-ring-width) + 1px)
+    );
+    mask: radial-gradient(
+        farthest-side,
+        transparent calc(100% - var(--cmp-back-to-top-ring-width)),
+        #000 calc(100% - var(--cmp-back-to-top-ring-width) + 1px)
+    );
 }
 
 .cmp-back-to-top.visible {
@@ -799,14 +1084,27 @@ mm-burger.cmp-navbar-toggle:focus-visible {
 
 .cmp-back-to-top:hover,
 .cmp-back-to-top:focus-visible {
+    background-color: var(--cmp-color-soft);
     color: var(--cmp-color-text-default);
+    box-shadow: 0 0.5rem 1.2rem rgba(0, 0, 0, 0.22);
+}
+
+.cmp-back-to-top:focus-visible {
     outline: 0.125rem solid var(--cmp-color-text-default);
-    outline-offset: 0.125rem;
+    outline-offset: 0.2rem;
 }
 
 .cmp-back-to-top .uk-icon {
     display: inline-flex;
+    position: relative;
+    z-index: 1;
     line-height: 0;
+    transition: transform 0.2s ease;
+}
+
+.cmp-back-to-top:hover .uk-icon,
+.cmp-back-to-top:focus-visible .uk-icon {
+    transform: translateY(-1px);
 }
 
 .cmp-back-to-top .uk-icon svg {
@@ -818,8 +1116,8 @@ mm-burger.cmp-navbar-toggle:focus-visible {
 }
 
 body:is(.is-narrow, .is-small) .cmp-back-to-top {
-    min-width: 2.25rem;
-    min-height: 2.25rem;
+    inline-size: 2.25rem;
+    block-size: 2.25rem;
     inset-inline-end: 0.75rem;
     bottom: 0.75rem;
 }
@@ -830,10 +1128,6 @@ body:is(.is-narrow, .is-small) .cmp-back-to-top {
 
 /* BASICS
    ========================================================================== */
-
-.cmp-section {
-    scroll-margin-top: var(--cmp-header-offset);
-}
 
 .cmp-section:not(.cmp-section--hero) {
     padding-block-start: var(--cmp-section-spacing-top);
@@ -1090,9 +1384,6 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-header__lead {
 .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__image {
     inline-size: 100%;
     block-size: 100%;
-}
-
-.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__image {
     display: block;
     aspect-ratio: 4 / 3;
     object-fit: cover;
@@ -1451,20 +1742,16 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-gallery-view__content--instagram
     gap: 0.08rem;
 }
 
-@media (min-width: 64rem) {
-    .cmp-gallery-view__content--instagram-grid {
-        max-inline-size: min(92vw, 76rem);
-    }
-
-    .cmp-gallery-view__content--instagram-grid .sigplus-gallery > ul {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
+body:is(.is-tablet, .is-desktop) .cmp-gallery-view__content--instagram-grid {
+    max-inline-size: min(92vw, 76rem);
 }
 
-@media (max-width: 28rem) {
-    .cmp-gallery-view__content--instagram-grid .sigplus-gallery > ul {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+body:is(.is-tablet, .is-desktop) .cmp-gallery-view__content--instagram-grid .sigplus-gallery > ul {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+body.is-small .cmp-gallery-view__content--instagram-grid .sigplus-gallery > ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--gallery-sigplus-preview {

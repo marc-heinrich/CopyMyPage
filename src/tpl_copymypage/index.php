@@ -124,14 +124,14 @@ if ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmpdev', 0) === 1) {
 // Build body classes and navbar attributes.
 $bodyClasses = [
     'cmp-site',
-    $preloaderEnabled ? 'cmp-preloader-active' : '',
+    $preloaderEnabled ? 'is-preloader-active' : '',
     $option ?: 'no-option',
     'view-' . ($view ?: 'no-view'),
     $layout ? 'layout-' . $layout : 'no-layout',
     $task ? 'task-' . $task : 'no-task',
     $itemId ? 'itemid-' . $itemId : '',
     $isOnepage ? 'is-onepage' : 'no-onepage',
-    $hasAlertModules ? 'has-alert' : '',
+    $hasAlertModules ? 'is-alert-active' : '',
     // ViewportFeature adds current viewport classes such as is-mobile or is-desktop.
 ];
 
@@ -153,7 +153,7 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
         <?php if ($preloaderEnabled) : ?>
             <noscript>
                 <style>
-                    body.cmp-preloader-active {
+                    body.is-preloader-active {
                         overflow: auto !important;
                     }
 

@@ -32,7 +32,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             const preloader = this.select(this.tmpl.preloaderSelector || '#cmp-preloader');
 
             if (!preloader) {
-                document.body.classList.remove('cmp-preloader-active');
+                document.body.classList.remove('is-preloader-active');
                 this.logError('TPL_COPYMYPAGE_JS_ERROR_PRELOADER_NOT_FOUND');
                 return;
             }
@@ -44,7 +44,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             };
 
             const hidePreloader = () => {
-                document.body.classList.remove('cmp-preloader-active');
+                document.body.classList.remove('is-preloader-active');
 
                 if (preloader.classList.contains('is-loaded')) {
                     return;

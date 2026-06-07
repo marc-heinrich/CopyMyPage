@@ -59,7 +59,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             this._lastOffset = null;
 
             if (document.body) {
-                document.body.classList.remove('has-alert');
+                document.body.classList.remove('is-alert-active');
             }
 
             this._initialized = false;
@@ -176,7 +176,7 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
-            document.body.classList.toggle('has-alert', offset > 0);
+            document.body.classList.toggle('is-alert-active', offset > 0);
 
             if (previousOffset !== offset) {
                 this._dispatchOffsetChange(offset, previousOffset);
