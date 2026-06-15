@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.14
  */
 
 namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
@@ -12,11 +12,11 @@ namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Helper\MediaHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
-use Joomla\Component\CopyMyPage\Site\Helper\Registry as CopyMyPageRegistry;
 use Joomla\Database\DatabaseAwareInterface;
 use Joomla\Database\DatabaseAwareTrait;
 use Joomla\Database\ParameterType;
@@ -30,6 +30,13 @@ final class GalleryHelper implements DatabaseAwareInterface
     use DatabaseAwareTrait;
 
     /**
+     * Default preview image used when no explicit Open Graph image is configured.
+     *
+     * @var string
+     */
+    private const DEFAULT_OG_IMAGE = 'images/copymypage/module/mod_copymypage_gallery/2026/kinder/00_start_001.jpg';
+
+    /**
      * Build Open Graph compatible tag data for the gallery section.
      *
      * @param   Registry      $params  The module params.
@@ -40,13 +47,45 @@ final class GalleryHelper implements DatabaseAwareInterface
      */
     public function getOGTags(Registry $params, ?object $module = null, string $slot = ''): array
     {
+        $config         = $params->toArray();
+        $layout         = strtolower(trim((string) ($config['layoutVariant'] ?? 'gallery_sigplus_preview')));
+        $layout         = $layout !== '' && $layout !== 'default' ? $layout : 'gallery_sigplus_preview';
+        $layoutConfig   = self::getLayoutConfig($config, $layout);
+        $headline       = trim(self::cfgString($layoutConfig, 'headline', Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE')));
+        $lead           = trim(self::cfgString($layoutConfig, 'lead', Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_DESC')));
+        $configuredMeta = $this->resolveConfiguredOpenGraphMeta($config);
+        $meta           = self::mergeOpenGraphMeta(
+            [
+                'title'       => self::htmlToPlainText($headline !== '' ? $headline : Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE')),
+                'description' => self::htmlToPlainText($lead !== '' ? $lead : Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_DESC')),
+                'image'       => $this->toAbsoluteUrl(self::DEFAULT_OG_IMAGE),
+                'imageWidth'  => '',
+                'imageHeight' => '',
+                'imageAlt'    => Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE'),
+                'twitterCard' => 'summary_large_image',
+            ],
+            $configuredMeta
+        );
+
+        if ($meta['title'] === '') {
+            $moduleTitle   = self::htmlToPlainText((string) ($module->title ?? ''));
+            $meta['title'] = $moduleTitle !== '' ? $moduleTitle : Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE');
+        }
+
+        if ($meta['twitterCard'] === '') {
+            $meta['twitterCard'] = $meta['image'] !== '' ? 'summary_large_image' : 'summary';
+        }
+
         return [
             'slot'        => 'gallery',
             'label'       => Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE'),
-            'title'       => Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE'),
-            'description' => Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_DESC'),
-            'image'       => rtrim(Uri::root(), '/') . '/images/copymypage/module/mod_copymypage_gallery/2026/kinder/00_start_001.jpg',
-            'twitterCard' => 'summary_large_image',
+            'title'       => $meta['title'],
+            'description' => $meta['description'],
+            'image'       => $meta['image'],
+            'imageWidth'  => $meta['imageWidth'],
+            'imageHeight' => $meta['imageHeight'],
+            'imageAlt'    => $meta['imageAlt'],
+            'twitterCard' => $meta['twitterCard'],
         ];
     }
 
@@ -254,6 +293,340 @@ final class GalleryHelper implements DatabaseAwareInterface
     }
 
     /**
+     * Typed array getter (int) for template-side layout config usage.
+     *
+     * @param   array<string, mixed>  $cfg      Config bucket.
+     * @param   string                $key      Array key.
+     * @param   int                   $default  Default value.
+     * @param   int|null              $min      Optional minimum.
+     * @param   int|null              $max      Optional maximum.
+     *
+     * @return  int
+     */
+    public static function cfgInt(array $cfg, string $key, int $default = 0, ?int $min = null, ?int $max = null): int
+    {
+        return CopyMyPageHelper::cfgInt($cfg, $key, $default, $min, $max);
+    }
+
+    /**
+     * Build metadata from explicit Open Graph module params.
+     *
+     * @param   array<string, mixed>  $cfg  Flat module config array.
+     *
+     * @return  array<string, string>
+     */
+    private function resolveConfiguredOpenGraphMeta(array $cfg): array
+    {
+        $image       = $this->resolveOpenGraphImage($cfg['og_image'] ?? '');
+        $imageWidth  = self::cfgInt($cfg, 'og_image_width', 0, 0);
+        $imageHeight = self::cfgInt($cfg, 'og_image_height', 0, 0);
+        $twitterCard = strtolower(trim(self::cfgString($cfg, 'og_twitter_card')));
+
+        if (!\in_array($twitterCard, ['summary', 'summary_large_image'], true)) {
+            $twitterCard = '';
+        }
+
+        if ($imageWidth === 0) {
+            $imageWidth = $image['width'];
+        }
+
+        if ($imageHeight === 0) {
+            $imageHeight = $image['height'];
+        }
+
+        return [
+            'title'       => self::htmlToPlainText(self::cfgString($cfg, 'og_title')),
+            'description' => self::htmlToPlainText(self::cfgString($cfg, 'og_description')),
+            'image'       => $this->toAbsoluteUrl($image['src']),
+            'imageWidth'  => $imageWidth > 0 ? (string) $imageWidth : '',
+            'imageHeight' => $imageHeight > 0 ? (string) $imageHeight : '',
+            'imageAlt'    => trim(self::cfgString($cfg, 'og_image_alt')),
+            'twitterCard' => $twitterCard,
+        ];
+    }
+
+    /**
+     * Merge non-empty explicit metadata values over fallback values.
+     *
+     * @param   array<string, string>  $fallback   Derived fallback metadata.
+     * @param   array<string, string>  $overrides  Explicit module param metadata.
+     *
+     * @return  array<string, string>
+     */
+    private static function mergeOpenGraphMeta(array $fallback, array $overrides): array
+    {
+        $meta = array_replace(
+            [
+                'title'       => '',
+                'description' => '',
+                'image'       => '',
+                'imageWidth'  => '',
+                'imageHeight' => '',
+                'imageAlt'    => '',
+                'twitterCard' => '',
+            ],
+            $fallback
+        );
+
+        foreach ($overrides as $key => $value) {
+            if (!\is_string($key) || !\array_key_exists($key, $meta)) {
+                continue;
+            }
+
+            $value = trim((string) $value);
+
+            if ($value !== '') {
+                $meta[$key] = $value;
+            }
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Normalize a media field value to a public image source and dimensions.
+     *
+     * @param   mixed  $rawImage  Stored media field value.
+     *
+     * @return  array{src: string, width: int, height: int}
+     */
+    private function resolveOpenGraphImage(mixed $rawImage): array
+    {
+        $raw = self::mediaFieldString($rawImage);
+
+        if ($raw === '') {
+            return ['src' => '', 'width' => 0, 'height' => 0];
+        }
+
+        $fragmentData = self::extractJoomlaImageFragmentData($raw);
+        $clean        = trim((string) MediaHelper::getCleanMediaFieldValue($raw));
+
+        if ($clean === '' && $fragmentData['path'] !== '') {
+            $clean = $fragmentData['path'];
+        }
+
+        $src = self::normalizeMediaPath($clean);
+
+        if ($src === '') {
+            return ['src' => '', 'width' => 0, 'height' => 0];
+        }
+
+        $width  = self::cfgInt($fragmentData, 'width', 0, 0);
+        $height = self::cfgInt($fragmentData, 'height', 0, 0);
+
+        if (($width === 0 || $height === 0) && !preg_match('#^(?:[a-z][a-z0-9+.-]*:)?//#i', $src) && !str_starts_with($src, 'data:')) {
+            [$localWidth, $localHeight] = self::resolveLocalImageDimensions($src);
+            $width  = $width > 0 ? $width : $localWidth;
+            $height = $height > 0 ? $height : $localHeight;
+        }
+
+        return ['src' => $src, 'width' => $width, 'height' => $height];
+    }
+
+    /**
+     * Extract a path-like string from possible media field value shapes.
+     *
+     * @param   mixed  $value  Raw media value.
+     *
+     * @return  string
+     */
+    private static function mediaFieldString(mixed $value): string
+    {
+        if (\is_string($value)) {
+            $value = trim($value);
+
+            if ($value !== '' && ($value[0] === '{' || $value[0] === '[')) {
+                $decoded = json_decode($value, true);
+
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return self::mediaFieldString($decoded);
+                }
+            }
+
+            return $value;
+        }
+
+        if ($value instanceof Registry) {
+            $value = $value->toArray();
+        } elseif (\is_object($value)) {
+            $value = get_object_vars($value);
+        }
+
+        if (\is_array($value)) {
+            foreach (['imagefile', 'image', 'file', 'src', 'url', 'path'] as $key) {
+                if (array_key_exists($key, $value)) {
+                    $candidate = self::mediaFieldString($value[$key]);
+
+                    if ($candidate !== '') {
+                        return $candidate;
+                    }
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Resolve Joomla media adapter prefixes and local paths to frontend URLs.
+     *
+     * @param   string  $path  Clean media path.
+     *
+     * @return  string
+     */
+    private static function normalizeMediaPath(string $path): string
+    {
+        $path = trim($path);
+
+        if ($path === '') {
+            return '';
+        }
+
+        if (preg_match('#^(?:https?:)?//#i', $path) || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+
+        if (preg_match('#^joomlaImage://local-([^/]+)/(.+)$#', $path, $matches) === 1) {
+            $path = $matches[1] . '/' . $matches[2];
+        } elseif (preg_match('#^local-([^:]+):/?(.*)$#', $path, $matches) === 1) {
+            $path = $matches[1] . '/' . ltrim($matches[2], '/');
+        }
+
+        return ltrim($path, '/');
+    }
+
+    /**
+     * Extract dimensions and fallback path from a Joomla image fragment.
+     *
+     * @param   string  $value  Stored media field value.
+     *
+     * @return  array{path: string, width: int, height: int}
+     */
+    private static function extractJoomlaImageFragmentData(string $value): array
+    {
+        $data = ['path' => '', 'width' => 0, 'height' => 0];
+        $hash = strpos($value, '#');
+
+        if ($hash === false) {
+            return $data;
+        }
+
+        $fragment = substr($value, $hash + 1);
+
+        if ($fragment === '') {
+            return $data;
+        }
+
+        $parts = parse_url($fragment);
+
+        if (!\is_array($parts)) {
+            return $data;
+        }
+
+        if (($parts['scheme'] ?? '') === 'joomlaImage' && str_starts_with((string) ($parts['host'] ?? ''), 'local-')) {
+            $adapter = substr((string) $parts['host'], 6);
+            $path    = ltrim((string) ($parts['path'] ?? ''), '/');
+
+            if ($adapter !== '' && $path !== '') {
+                $data['path'] = $adapter . '/' . $path;
+            }
+        }
+
+        $query = [];
+        parse_str((string) ($parts['query'] ?? ''), $query);
+
+        $data['width']  = CopyMyPageHelper::toInt($query['width'] ?? null, 0, 0);
+        $data['height'] = CopyMyPageHelper::toInt($query['height'] ?? null, 0, 0);
+
+        return $data;
+    }
+
+    /**
+     * Read intrinsic dimensions for local public image paths.
+     *
+     * @param   string  $src  Public local image path.
+     *
+     * @return  array{0: int, 1: int}
+     */
+    private static function resolveLocalImageDimensions(string $src): array
+    {
+        $path = parse_url($src, PHP_URL_PATH);
+
+        if (!\is_string($path) || $path === '') {
+            return [0, 0];
+        }
+
+        $absolutePath = JPATH_ROOT . '/' . ltrim($path, '/');
+
+        if (!is_file($absolutePath)) {
+            return [0, 0];
+        }
+
+        $size = @getimagesize($absolutePath);
+
+        if (!\is_array($size)) {
+            return [0, 0];
+        }
+
+        return [
+            CopyMyPageHelper::toInt($size[0] ?? 0, 0, 0),
+            CopyMyPageHelper::toInt($size[1] ?? 0, 0, 0),
+        ];
+    }
+
+    /**
+     * Convert a gallery asset path into an absolute URL.
+     *
+     * @param   string  $url  Relative, rooted or absolute URL.
+     *
+     * @return  string
+     */
+    private function toAbsoluteUrl(string $url): string
+    {
+        $url = trim($url);
+
+        if ($url === '') {
+            return '';
+        }
+
+        if (preg_match('#^https?://#i', $url)) {
+            return $url;
+        }
+
+        $root     = rtrim(Uri::root(), '/');
+        $rootPath = rtrim((string) parse_url($root, PHP_URL_PATH), '/');
+        $origin   = $root;
+
+        if ($rootPath !== '' && $rootPath !== '/') {
+            $origin = preg_replace('#' . preg_quote($rootPath, '#') . '$#', '', $root) ?? $root;
+        }
+
+        if (str_starts_with($url, '/')) {
+            if ($rootPath !== '' && str_starts_with($url, $rootPath . '/')) {
+                return rtrim($origin, '/') . $url;
+            }
+
+            return $root . $url;
+        }
+
+        return $root . '/' . ltrim($url, '/');
+    }
+
+    /**
+     * Convert filtered editor HTML into compact plain text for metadata.
+     *
+     * @param   string  $html  Filtered HTML or plain text.
+     *
+     * @return  string
+     */
+    private static function htmlToPlainText(string $html): string
+    {
+        $text = trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        return preg_replace('/\s+/u', ' ', $text) ?? $text;
+    }
+
+    /**
      * Adds normalized gallery metadata to one Sigplus module row.
      *
      * @param  object  $moduleRow
@@ -372,27 +745,17 @@ final class GalleryHelper implements DatabaseAwareInterface
     }
 
     /**
-     * Resolves the shared Sigplus helper via the CopyMyPage registry.
+     * Resolves the shared Sigplus helper via the root DI container.
      *
      * @return  SigplusHelper
      */
     private function getSigplusHelper(): SigplusHelper
     {
-        $container = Factory::getContainer();
-        $registry  = $container->has(CopyMyPageRegistry::class)
-            ? $container->get(CopyMyPageRegistry::class)
-            : new CopyMyPageRegistry();
-        $handler = $registry->getService('sigplus');
-
-        if (\is_string($handler)) {
-            $handler = new $handler();
-        }
+        $handler = Factory::getContainer()->get(SigplusHelper::class);
 
         if (!$handler instanceof SigplusHelper) {
             throw new \RuntimeException('The CopyMyPage sigplus helper is not available.');
         }
-
-        $handler->setDatabase($this->getDatabase());
 
         return $handler;
     }

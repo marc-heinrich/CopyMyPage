@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.13</version>
+  <version>0.0.14</version>
   <description>MOD_COPYMYPAGE_GALLERY_XML_DESCRIPTION</description>
   <scriptfile>script.php</scriptfile>
   <namespace path="src">Joomla\Module\CopyMyPage\Gallery</namespace>
@@ -29,6 +29,60 @@
         </field>
         <field name="gallery_sigplus_preview_headline" type="text" label="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_HEADLINE_LABEL" description="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_HEADLINE_DESC" showon="layoutVariant:gallery_sigplus_preview"/>
         <field name="gallery_sigplus_preview_lead" type="textarea" label="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_LEAD_LABEL" description="MOD_COPYMYPAGE_GALLERY_LAYOUT_PREVIEW_LEAD_DESC" rows="4" filter="safehtml" showon="layoutVariant:gallery_sigplus_preview"/>
+      </fieldset>
+      <fieldset name="ogtags" label="MOD_COPYMYPAGE_GALLERY_OG_FIELDSET_LABEL" description="MOD_COPYMYPAGE_GALLERY_OG_FIELDSET_DESC">
+        <field
+          name="og_title"
+          type="text"
+          label="MOD_COPYMYPAGE_GALLERY_OG_TITLE_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_OG_TITLE_DESC"
+          filter="string" />
+        <field
+          name="og_description"
+          type="textarea"
+          label="MOD_COPYMYPAGE_GALLERY_OG_DESCRIPTION_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_OG_DESCRIPTION_DESC"
+          rows="4"
+          filter="string" />
+        <field
+          name="og_image"
+          type="media"
+          label="MOD_COPYMYPAGE_GALLERY_OG_IMAGE_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_OG_IMAGE_DESC"
+          types="images"
+          schemes="http,https,data,file"
+          validate="url"
+          relative="true" />
+        <field
+          name="og_image_alt"
+          type="text"
+          label="MOD_COPYMYPAGE_GALLERY_OG_IMAGE_ALT_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_OG_IMAGE_ALT_DESC"
+          filter="string" />
+        <field
+          name="og_image_width"
+          type="number"
+          label="MOD_COPYMYPAGE_GALLERY_OG_IMAGE_WIDTH_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_OG_IMAGE_WIDTH_DESC"
+          min="0"
+          filter="integer" />
+        <field
+          name="og_image_height"
+          type="number"
+          label="MOD_COPYMYPAGE_GALLERY_OG_IMAGE_HEIGHT_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_OG_IMAGE_HEIGHT_DESC"
+          min="0"
+          filter="integer" />
+        <field
+          name="og_twitter_card"
+          type="list"
+          label="MOD_COPYMYPAGE_GALLERY_OG_TWITTER_CARD_LABEL"
+          description="MOD_COPYMYPAGE_GALLERY_OG_TWITTER_CARD_DESC"
+          default="">
+          <option value="">MOD_COPYMYPAGE_GALLERY_OG_TWITTER_CARD_AUTO</option>
+          <option value="summary_large_image">MOD_COPYMYPAGE_GALLERY_OG_TWITTER_CARD_SUMMARY_LARGE_IMAGE</option>
+          <option value="summary">MOD_COPYMYPAGE_GALLERY_OG_TWITTER_CARD_SUMMARY</option>
+        </field>
       </fieldset>
     </fields>
   </config>

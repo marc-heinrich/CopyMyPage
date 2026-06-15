@@ -12,6 +12,7 @@ namespace Joomla\Module\CopyMyPage\Team\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Helper\MediaHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
@@ -88,22 +89,58 @@ final class TeamHelper implements DatabaseAwareInterface
      */
     public function getOGTags(Registry $params, ?object $module = null, string $slot = '', string $layout = ''): array
     {
-        $config       = $params->toArray();
-        $layout       = $this->resolveLayoutVariant($config, $layout, $slot);
-        $items        = $this->getItems($config, $layout);
-        $primaryMeta  = $this->resolvePrimaryItemMeta($items);
+        $config         = $params->toArray();
+        $layout         = $this->resolveLayoutVariant($config, $layout, $slot);
+        $configuredMeta = $this->resolveConfiguredOpenGraphMeta($config);
+        $primaryMeta    = [
+            'image'       => '',
+            'imageWidth'  => '',
+            'imageHeight' => '',
+            'imageAlt'    => '',
+        ];
+
+        if (
+            $configuredMeta['image'] === ''
+            || $configuredMeta['imageWidth'] === ''
+            || $configuredMeta['imageHeight'] === ''
+            || $configuredMeta['imageAlt'] === ''
+        ) {
+            $primaryMeta = $this->resolvePrimaryItemMeta($this->getItems($config, $layout));
+        }
+
         $resolvedSlot = trim($slot) !== '' ? strtolower(trim($slot)) : self::DEFAULT_SLOT;
+        $meta         = self::mergeOpenGraphMeta(
+            [
+                'title'       => self::htmlToPlainText($this->getHeadline($config, $layout)),
+                'description' => self::htmlToPlainText($this->getLead($config, $layout)),
+                'image'       => $primaryMeta['image'],
+                'imageWidth'  => $primaryMeta['imageWidth'],
+                'imageHeight' => $primaryMeta['imageHeight'],
+                'imageAlt'    => $primaryMeta['imageAlt'],
+                'twitterCard' => 'summary_large_image',
+            ],
+            $configuredMeta
+        );
+
+        if ($meta['title'] === '') {
+            $moduleTitle   = self::htmlToPlainText((string) ($module->title ?? ''));
+            $meta['title'] = $moduleTitle !== '' ? $moduleTitle : Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_HEADLINE');
+        }
+
+        if ($meta['twitterCard'] === '') {
+            $meta['twitterCard'] = $meta['image'] !== '' ? 'summary_large_image' : 'summary';
+        }
 
         return [
             'slot'        => $resolvedSlot,
             'label'       => Text::_('MOD_COPYMYPAGE_TEAM_OG_LABEL'),
-            'title'       => $this->getHeadline($config, $layout),
-            'description' => $this->getLead($config, $layout),
-            'image'       => $primaryMeta['image'],
-            'imageWidth'  => $primaryMeta['imageWidth'],
-            'imageHeight' => $primaryMeta['imageHeight'],
-            'imageAlt'    => $primaryMeta['imageAlt'],
-            'twitterCard' => 'summary_large_image',
+            'title'       => $meta['title'],
+            'description' => $meta['description'],
+            'image'       => $meta['image'],
+            'imageWidth'  => $meta['imageWidth'],
+            'imageHeight' => $meta['imageHeight'],
+            'imageAlt'    => $meta['imageAlt'],
+            'twitterCard' => $meta['twitterCard'],
         ];
     }
 
@@ -338,6 +375,253 @@ final class TeamHelper implements DatabaseAwareInterface
     private static function normalizeLayoutKey(string $layout): string
     {
         return strtolower(trim($layout));
+    }
+
+    /**
+     * Build metadata from explicit Open Graph module params.
+     *
+     * @param   array<string, mixed>  $cfg  Flat module config array.
+     *
+     * @return  array<string, string>
+     */
+    private function resolveConfiguredOpenGraphMeta(array $cfg): array
+    {
+        $image       = $this->resolveOpenGraphImage($cfg['og_image'] ?? '');
+        $imageWidth  = self::cfgInt($cfg, 'og_image_width', 0, 0);
+        $imageHeight = self::cfgInt($cfg, 'og_image_height', 0, 0);
+        $twitterCard = strtolower(trim(self::cfgString($cfg, 'og_twitter_card')));
+
+        if (!\in_array($twitterCard, ['summary', 'summary_large_image'], true)) {
+            $twitterCard = '';
+        }
+
+        if ($imageWidth === 0) {
+            $imageWidth = $image['width'];
+        }
+
+        if ($imageHeight === 0) {
+            $imageHeight = $image['height'];
+        }
+
+        return [
+            'title'       => self::htmlToPlainText(self::cfgString($cfg, 'og_title')),
+            'description' => self::htmlToPlainText(self::cfgString($cfg, 'og_description')),
+            'image'       => $this->toAbsoluteUrl($image['src']),
+            'imageWidth'  => $imageWidth > 0 ? (string) $imageWidth : '',
+            'imageHeight' => $imageHeight > 0 ? (string) $imageHeight : '',
+            'imageAlt'    => trim(self::cfgString($cfg, 'og_image_alt')),
+            'twitterCard' => $twitterCard,
+        ];
+    }
+
+    /**
+     * Merge non-empty explicit metadata values over fallback values.
+     *
+     * @param   array<string, string>  $fallback   Derived fallback metadata.
+     * @param   array<string, string>  $overrides  Explicit module param metadata.
+     *
+     * @return  array<string, string>
+     */
+    private static function mergeOpenGraphMeta(array $fallback, array $overrides): array
+    {
+        $meta = array_replace(
+            [
+                'title'       => '',
+                'description' => '',
+                'image'       => '',
+                'imageWidth'  => '',
+                'imageHeight' => '',
+                'imageAlt'    => '',
+                'twitterCard' => '',
+            ],
+            $fallback
+        );
+
+        foreach ($overrides as $key => $value) {
+            if (!\is_string($key) || !\array_key_exists($key, $meta)) {
+                continue;
+            }
+
+            $value = trim((string) $value);
+
+            if ($value !== '') {
+                $meta[$key] = $value;
+            }
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Normalize a media field value to a public image source and dimensions.
+     *
+     * @param   mixed  $rawImage  Stored media field value.
+     *
+     * @return  array{src: string, width: int, height: int}
+     */
+    private function resolveOpenGraphImage(mixed $rawImage): array
+    {
+        $raw = self::mediaFieldString($rawImage);
+
+        if ($raw === '') {
+            return ['src' => '', 'width' => 0, 'height' => 0];
+        }
+
+        $fragmentData = self::extractJoomlaImageFieldData($raw);
+        $clean        = trim((string) MediaHelper::getCleanMediaFieldValue($raw));
+
+        if ($clean === '' && $fragmentData['path'] !== '') {
+            $clean = $fragmentData['path'];
+        }
+
+        $src = self::normalizeMediaPath($clean);
+
+        if ($src === '') {
+            return ['src' => '', 'width' => 0, 'height' => 0];
+        }
+
+        $width  = self::toPositiveInt($fragmentData['width']);
+        $height = self::toPositiveInt($fragmentData['height']);
+
+        if (($width === 0 || $height === 0) && !preg_match('#^(?:[a-z][a-z0-9+.-]*:)?//#i', $src) && !str_starts_with($src, 'data:')) {
+            [$localWidth, $localHeight] = $this->resolveLocalImageDimensions($src);
+            $width  = $width > 0 ? $width : $localWidth;
+            $height = $height > 0 ? $height : $localHeight;
+        }
+
+        return ['src' => $src, 'width' => $width, 'height' => $height];
+    }
+
+    /**
+     * Extract a path-like string from possible media field value shapes.
+     *
+     * @param   mixed  $value  Raw media value.
+     *
+     * @return  string
+     */
+    private static function mediaFieldString(mixed $value): string
+    {
+        if (\is_string($value)) {
+            $value = trim($value);
+
+            if ($value !== '' && ($value[0] === '{' || $value[0] === '[')) {
+                $decoded = json_decode($value, true);
+
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return self::mediaFieldString($decoded);
+                }
+            }
+
+            return $value;
+        }
+
+        if ($value instanceof Registry) {
+            $value = $value->toArray();
+        } elseif (\is_object($value)) {
+            $value = get_object_vars($value);
+        }
+
+        if (\is_array($value)) {
+            foreach (['imagefile', 'image', 'file', 'src', 'url', 'path'] as $key) {
+                if (array_key_exists($key, $value)) {
+                    $candidate = self::mediaFieldString($value[$key]);
+
+                    if ($candidate !== '') {
+                        return $candidate;
+                    }
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Resolve Joomla media adapter prefixes and local paths to frontend URLs.
+     *
+     * @param   string  $path  Clean media path.
+     *
+     * @return  string
+     */
+    private static function normalizeMediaPath(string $path): string
+    {
+        $path = trim($path);
+
+        if ($path === '') {
+            return '';
+        }
+
+        if (preg_match('#^(?:https?:)?//#i', $path) || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+
+        if (preg_match('#^joomlaImage://local-([^/]+)/(.+)$#', $path, $matches) === 1) {
+            $path = $matches[1] . '/' . $matches[2];
+        } elseif (preg_match('#^local-([^:]+):/?(.*)$#', $path, $matches) === 1) {
+            $path = $matches[1] . '/' . ltrim($matches[2], '/');
+        }
+
+        return ltrim($path, '/');
+    }
+
+    /**
+     * Extract dimensions and fallback path from a Joomla media field value.
+     *
+     * @param   string  $value  Stored media field value.
+     *
+     * @return  array{path: string, width: int, height: int}
+     */
+    private static function extractJoomlaImageFieldData(string $value): array
+    {
+        $data = ['path' => '', 'width' => 0, 'height' => 0];
+        $hash = strpos($value, '#');
+
+        if ($hash === false) {
+            return $data;
+        }
+
+        $fragment = substr($value, $hash + 1);
+
+        if ($fragment === '') {
+            return $data;
+        }
+
+        $parts = parse_url($fragment);
+
+        if (!\is_array($parts)) {
+            return $data;
+        }
+
+        if (($parts['scheme'] ?? '') === 'joomlaImage' && str_starts_with((string) ($parts['host'] ?? ''), 'local-')) {
+            $adapter = substr((string) $parts['host'], 6);
+            $path    = ltrim((string) ($parts['path'] ?? ''), '/');
+
+            if ($adapter !== '' && $path !== '') {
+                $data['path'] = $adapter . '/' . $path;
+            }
+        }
+
+        $query = [];
+        parse_str((string) ($parts['query'] ?? ''), $query);
+
+        $data['width']  = self::toPositiveInt($query['width'] ?? 0);
+        $data['height'] = self::toPositiveInt($query['height'] ?? 0);
+
+        return $data;
+    }
+
+    /**
+     * Convert filtered editor HTML into compact plain text for metadata.
+     *
+     * @param   string  $html  Filtered HTML or plain text.
+     *
+     * @return  string
+     */
+    private static function htmlToPlainText(string $html): string
+    {
+        $text = trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        return preg_replace('/\s+/u', ' ', $text) ?? $text;
     }
 
     /**
