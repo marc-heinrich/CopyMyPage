@@ -56,6 +56,8 @@ window.CopyMyPage = window.CopyMyPage || {};
             }
 
             this.root.style.setProperty('--cmp-alert-offset', '0px');
+            this._syncStickyOffset(0);
+            this.root.style.setProperty('--cmp-hero-viewport-height', '100svh');
             this._lastOffset = null;
 
             if (document.body) {
@@ -170,6 +172,7 @@ window.CopyMyPage = window.CopyMyPage || {};
             const previousOffset = this._lastOffset;
 
             this.root.style.setProperty('--cmp-alert-offset', `${offset}px`);
+            this._syncStickyOffset(offset);
             this._lastOffset = offset;
 
             if (!document.body) {
@@ -199,6 +202,16 @@ window.CopyMyPage = window.CopyMyPage || {};
                     previousOffset,
                 },
             }));
+        }
+
+        _syncStickyOffset(alertOffset) {
+            const rootStyles = window.getComputedStyle(this.root);
+            const headerOffset = Number.parseFloat(rootStyles.getPropertyValue('--cmp-header-offset')) || 0;
+            const stickyOffset = Math.ceil(headerOffset + alertOffset);
+            const heroViewportHeight = Math.max(0, Math.ceil(window.innerHeight - alertOffset));
+
+            this.root.style.setProperty('--cmp-sticky-offset', `${stickyOffset}px`);
+            this.root.style.setProperty('--cmp-hero-viewport-height', `${heroViewportHeight}px`);
         }
 
         _getActiveSlot() {

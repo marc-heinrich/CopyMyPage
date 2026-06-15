@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.11
+ * @since       0.0.14
  */
 
 namespace Joomla\Module\CopyMyPage\Hero\Site\Dispatcher;

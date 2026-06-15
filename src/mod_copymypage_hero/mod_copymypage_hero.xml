@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.13</version>
+  <version>0.0.14</version>
   <description>MOD_COPYMYPAGE_HERO_XML_DESCRIPTION</description>
   <scriptfile>script.php</scriptfile>
   <namespace path="src">Joomla\Module\CopyMyPage\Hero</namespace>
@@ -45,6 +45,110 @@
         <field name="hero_slideshow_showDotnav" type="radio" label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SHOW_DOTNAV_LABEL" description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SHOW_DOTNAV_DESC" default="1" class="btn-group btn-group-yesno" showon="layoutVariant:hero_slideshow">
           <option value="1">JYES</option>
           <option value="0">JNO</option>
+        </field>
+        <field
+          name="hero_slideshow_slides"
+          fieldname="slides"
+          type="subform"
+          label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDES_LABEL"
+          description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDES_DESC"
+          multiple="true"
+          min="0"
+          max="12"
+          layout="joomla.form.field.subform.repeatable-table"
+          groupByFieldset="true"
+          showon="layoutVariant:hero_slideshow">
+          <form>
+            <fieldset name="media" label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_MEDIA_LABEL">
+              <field
+                name="image"
+                type="media"
+                label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_IMAGE_LABEL"
+                description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_IMAGE_DESC"
+                types="images"
+                schemes="http,https,data,file"
+                validate="url"
+                relative="true" />
+              <field
+                name="alt"
+                type="text"
+                label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_ALT_LABEL"
+                description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_ALT_DESC"
+                filter="string" />
+            </fieldset>
+            <fieldset name="overlay" label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_OVERLAY_LABEL">
+              <field
+                name="headline"
+                type="editor"
+                label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_HEADLINE_LABEL"
+                description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_HEADLINE_DESC"
+                buttons="true"
+                hide="readmore,pagebreak,module,fields"
+                filter="\Joomla\CMS\Component\ComponentHelper::filterText" />
+              <field
+                name="subline"
+                type="editor"
+                label="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_SUBLINE_LABEL"
+                description="MOD_COPYMYPAGE_HERO_LAYOUT_SLIDESHOW_SLIDE_SUBLINE_DESC"
+                buttons="true"
+                hide="readmore,pagebreak,module,fields"
+                filter="\Joomla\CMS\Component\ComponentHelper::filterText" />
+            </fieldset>
+          </form>
+        </field>
+      </fieldset>
+      <fieldset name="opengraph" label="MOD_COPYMYPAGE_HERO_OG_FIELDSET_LABEL" description="MOD_COPYMYPAGE_HERO_OG_FIELDSET_DESC">
+        <field
+          name="og_title"
+          type="text"
+          label="MOD_COPYMYPAGE_HERO_OG_TITLE_LABEL"
+          description="MOD_COPYMYPAGE_HERO_OG_TITLE_DESC"
+          filter="string" />
+        <field
+          name="og_description"
+          type="textarea"
+          label="MOD_COPYMYPAGE_HERO_OG_DESCRIPTION_LABEL"
+          description="MOD_COPYMYPAGE_HERO_OG_DESCRIPTION_DESC"
+          rows="4"
+          filter="string" />
+        <field
+          name="og_image"
+          type="media"
+          label="MOD_COPYMYPAGE_HERO_OG_IMAGE_LABEL"
+          description="MOD_COPYMYPAGE_HERO_OG_IMAGE_DESC"
+          types="images"
+          schemes="http,https,data,file"
+          validate="url"
+          relative="true" />
+        <field
+          name="og_image_alt"
+          type="text"
+          label="MOD_COPYMYPAGE_HERO_OG_IMAGE_ALT_LABEL"
+          description="MOD_COPYMYPAGE_HERO_OG_IMAGE_ALT_DESC"
+          filter="string" />
+        <field
+          name="og_image_width"
+          type="number"
+          label="MOD_COPYMYPAGE_HERO_OG_IMAGE_WIDTH_LABEL"
+          description="MOD_COPYMYPAGE_HERO_OG_IMAGE_WIDTH_DESC"
+          min="0"
+          filter="integer" />
+        <field
+          name="og_image_height"
+          type="number"
+          label="MOD_COPYMYPAGE_HERO_OG_IMAGE_HEIGHT_LABEL"
+          description="MOD_COPYMYPAGE_HERO_OG_IMAGE_HEIGHT_DESC"
+          min="0"
+          filter="integer" />
+        <field
+          name="og_twitter_card"
+          type="list"
+          label="MOD_COPYMYPAGE_HERO_OG_TWITTER_CARD_LABEL"
+          description="MOD_COPYMYPAGE_HERO_OG_TWITTER_CARD_DESC"
+          default="">
+          <option value="">MOD_COPYMYPAGE_HERO_OG_TWITTER_CARD_AUTO</option>
+          <option value="summary_large_image">MOD_COPYMYPAGE_HERO_OG_TWITTER_CARD_SUMMARY_LARGE_IMAGE</option>
+          <option value="summary">MOD_COPYMYPAGE_HERO_OG_TWITTER_CARD_SUMMARY</option>
         </field>
       </fieldset>
     </fields>

@@ -123,6 +123,7 @@
     --cmp-z-index-backto-top: 1010;
     --cmp-z-index-sticky: 1020;
     --cmp-z-index-dropdown: 1020;
+    --cmp-z-index-alert: 1022;
     --cmp-z-index-modal-backdrop: 1040;
     --cmp-z-index-modal: 1010;
     --cmp-z-index-preloader: 1050;
@@ -130,6 +131,8 @@
 
     --cmp-alert-offset: 0px;
     --cmp-header-offset: 80px;
+    --cmp-sticky-offset: var(--cmp-header-offset);
+    --cmp-hero-viewport-height: 100svh;
 
     /*
      * Reserved token API:
@@ -163,7 +166,7 @@ body.is-preloader-active {
 }
 
 html {
-    scroll-padding-top: calc(var(--cmp-header-offset) + var(--cmp-alert-offset));
+    scroll-padding-top: var(--cmp-sticky-offset);
     scroll-behavior: smooth;
 }
 
@@ -193,6 +196,10 @@ html {
     -webkit-hyphens: auto;
     -ms-hyphens: auto;
     hyphens: auto;
+}
+
+body.no-onepage .cmp-main {
+    padding-block-start: var(--cmp-header-offset);
 }
 
 .cmp-header {
@@ -239,7 +246,7 @@ body.is-alert-active .cmp-header .uk-sticky-fixed {
     top: 0;
     left: 0;
     right: 0;
-    z-index: calc(var(--cmp-z-index-sticky) + 2);
+    z-index: var(--cmp-z-index-alert);
     width: 100%;
 }
 
@@ -1133,10 +1140,6 @@ body:is(.is-narrow, .is-small) .cmp-back-to-top {
     padding-block-start: var(--cmp-section-spacing-top);
 }
 
-body.no-onepage .cmp-section--component {
-    padding-top: calc(var(--cmp-header-offset) + var(--cmp-section-spacing-top));
-}
-
 .cmp-section--team {
     position: relative;
     isolation: isolate;
@@ -1861,11 +1864,14 @@ body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__info::a
 }
 
 .cmp-module--hero .cmp-hero-overlay h2,
-.cmp-module--hero .cmp-hero-overlay p {
+.cmp-module--hero .cmp-hero-overlay p,
+.cmp-module--hero .cmp-hero-overlay__headline,
+.cmp-module--hero .cmp-hero-overlay__subline {
     margin: 0;
 }
 
-.cmp-module--hero .cmp-hero-overlay h2 {
+.cmp-module--hero .cmp-hero-overlay h2,
+.cmp-module--hero .cmp-hero-overlay__headline {
     font-family: var(--cmp-font-family-body);
     font-weight: 400;
     font-size: var(--cmp-font-size-heading-3xl);
@@ -1875,10 +1881,30 @@ body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__info::a
     margin-bottom: var(--cmp-spacing-sm);
 }
 
-.cmp-module--hero .cmp-hero-overlay p {
+.cmp-module--hero .cmp-hero-overlay p,
+.cmp-module--hero .cmp-hero-overlay__subline {
     font-weight: 400;
     font-size: var(--cmp-font-size-heading-lg);
     line-height: 1.4;
+}
+
+.cmp-module--hero .cmp-hero-overlay__headline > :first-child,
+.cmp-module--hero .cmp-hero-overlay__subline > :first-child {
+    margin-top: 0;
+}
+
+.cmp-module--hero .cmp-hero-overlay__headline > :last-child,
+.cmp-module--hero .cmp-hero-overlay__subline > :last-child {
+    margin-bottom: 0;
+}
+
+.cmp-module--hero .cmp-hero-overlay .cmp-hero-overlay__headline > * {
+    font: inherit;
+    letter-spacing: inherit;
+}
+
+.cmp-module--hero .cmp-hero-overlay .cmp-hero-overlay__subline > * {
+    font: inherit;
 }
 
 /* LAYOUT VARIANTS
@@ -1890,7 +1916,7 @@ body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__info::a
 .cmp-module--hero-slideshow .uk-position-relative[uk-slideshow],
 .cmp-module--hero-slideshow .uk-slideshow-items {
     min-height: 100vh;
-    min-height: 100svh;
+    min-height: var(--cmp-hero-viewport-height);
 }
 
 .cmp-module--hero-slideshow .uk-slideshow-items {
@@ -1913,12 +1939,35 @@ body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__info::a
     padding: 2rem;
 }
 
-.cmp-module--hero-slideshow .cmp-hero-overlay h2 {
+.cmp-module--hero-slideshow .cmp-hero-overlay h2,
+.cmp-module--hero-slideshow .cmp-hero-overlay__headline {
     font-family: var(--cmp-font-family-display-accent);
     font-weight: 700;
     font-size: var(--cmp-font-size-heading-4xl);
     letter-spacing: var(--cmp-letter-spacing-xs);
     text-shadow: 4px 4px 10px rgba(0,0,0,0.8);
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--hero-slideshow .cmp-hero-overlay__headline {
+    font-size: var(--cmp-font-size-heading-3xl);
+    line-height: 1.08;
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--hero-slideshow .cmp-hero-overlay__subline {
+    font-size: var(--cmp-font-size-heading);
+    line-height: 1.35;
+}
+
+body.is-small .cmp-module--hero-slideshow .uk-position-center {
+    padding: 1.5rem;
+}
+
+body.is-small .cmp-module--hero-slideshow .cmp-hero-overlay__headline {
+    font-size: var(--cmp-font-size-heading-2xl);
+}
+
+body.is-small .cmp-module--hero-slideshow .cmp-hero-overlay__subline {
+    font-size: var(--cmp-font-size-heading-sm);
 }
 
 /* Slidenav ring animation container. */

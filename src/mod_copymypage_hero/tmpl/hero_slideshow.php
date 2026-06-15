@@ -68,7 +68,25 @@ $showSlidenav      = HeroHelper::cfgBool($layoutConfig, 'showSlidenav', true) &&
 $showDotnav        = HeroHelper::cfgBool($layoutConfig, 'showDotnav', true) && $hasMultipleSlides;
 
 // Keep path and URL transformations in small local helpers to simplify the slide loop below.
-$normalizePublicPath = static function (string $url) use ($siteRootPath): string {
+$normalizePublicPath = static function (string $url) use ($siteBaseUrl, $siteRootPath): string {
+    $url = trim($url);
+
+    if ($url === '') {
+        return '';
+    }
+
+    $scheme = (string) parse_url($url, PHP_URL_SCHEME);
+    $host = (string) parse_url($url, PHP_URL_HOST);
+    $siteHost = (string) parse_url($siteBaseUrl, PHP_URL_HOST);
+
+    if ($scheme !== '' && !\in_array(strtolower($scheme), ['http', 'https'], true)) {
+        return '';
+    }
+
+    if ($host !== '' && ($siteHost === '' || strcasecmp($host, $siteHost) !== 0)) {
+        return '';
+    }
+
     $path = parse_url($url, PHP_URL_PATH);
 
     if (!\is_string($path) || $path === '') {
@@ -154,6 +172,8 @@ $buildAbsolutePath = static function (string $publicPath): string {
                     $webpSrcset = implode(', ', array_unique($webpSrcsetEntries));
                     $avifSrcset = implode(', ', array_unique($avifSrcsetEntries));
                     $escapedDisplaySrc = $escape($defaultDisplaySrc);
+                    $headline = trim((string) ($slide->headline ?? ''));
+                    $subline = trim((string) ($slide->subline ?? ''));
                     ?>
                     <li>
                         <picture>
@@ -190,18 +210,18 @@ $buildAbsolutePath = static function (string $publicPath): string {
                                 uk-cover
                             >
                         </picture>
-                        <?php if (!empty($slide->headline) || !empty($slide->subline)) : ?>
+                        <?php if ($headline !== '' || $subline !== '') : ?>
                             <div class="uk-position-center uk-text-center cmp-hero-overlay">
-                                <?php if (!empty($slide->headline)) : ?>
-                                    <h2 class="uk-heading-medium">
-                                        <?php echo $escape($slide->headline); ?>
-                                    </h2>
+                                <?php if ($headline !== '') : ?>
+                                    <div class="uk-heading-medium cmp-hero-overlay__headline">
+                                        <?php echo $headline; ?>
+                                    </div>
                                 <?php endif; ?>
 
-                                <?php if (!empty($slide->subline)) : ?>
-                                    <p class="uk-text-lead">
-                                        <?php echo $escape($slide->subline); ?>
-                                    </p>
+                                <?php if ($subline !== '') : ?>
+                                    <div class="uk-text-lead cmp-hero-overlay__subline">
+                                        <?php echo $subline; ?>
+                                    </div>
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>

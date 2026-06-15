@@ -4,13 +4,14 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.11
+ * @since       0.0.14
  */
 
 namespace Joomla\Module\CopyMyPage\Hero\Site\Helper;
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Helper\MediaHelper;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Registry\Registry;
@@ -60,29 +61,49 @@ final class HeroHelper
      */
     public function getOGTags(Registry $params, ?object $module = null, string $slot = '', string $layout = ''): array
     {
-        $config      = $params->toArray();
-        $layout      = $this->resolveLayoutVariant($config, $layout, $slot);
-        $slides      = $this->getSlides($config, $layout);
-        $primaryMeta = $this->resolvePrimarySlideMeta($slides);
+        $config         = $params->toArray();
+        $layout         = $this->resolveLayoutVariant($config, $layout, $slot);
+        $slides         = $this->getSlides($config, $layout);
+        $primaryMeta    = self::emptyOpenGraphMeta();
+        $configuredMeta = $this->resolveConfiguredOpenGraphMeta($config);
+
+        if ($slides !== []) {
+            $primaryMeta = array_replace($primaryMeta, $this->resolvePrimarySlideMeta($slides));
+        }
+
+        if ($slides === [] && !self::hasOpenGraphContent($configuredMeta)) {
+            return [];
+        }
+
+        $meta = self::mergeOpenGraphMeta($primaryMeta, $configuredMeta);
+
+        if ($meta['title'] === '') {
+            $moduleTitle   = self::htmlToPlainText((string) ($module->title ?? ''));
+            $meta['title'] = $moduleTitle !== '' ? $moduleTitle : 'Hero';
+        }
+
+        if ($meta['twitterCard'] === '') {
+            $meta['twitterCard'] = $meta['image'] !== '' ? 'summary_large_image' : 'summary';
+        }
 
         return [
             'slot'        => 'hero',
             'label'       => 'Hero',
-            'title'       => $primaryMeta['title'],
-            'description' => $primaryMeta['description'],
-            'image'       => $primaryMeta['image'],
-            'imageWidth'  => $primaryMeta['imageWidth'],
-            'imageHeight' => $primaryMeta['imageHeight'],
-            'imageAlt'    => $primaryMeta['imageAlt'],
-            'twitterCard' => 'summary_large_image',
+            'title'       => $meta['title'],
+            'description' => $meta['description'],
+            'image'       => $meta['image'],
+            'imageWidth'  => $meta['imageWidth'],
+            'imageHeight' => $meta['imageHeight'],
+            'imageAlt'    => $meta['imageAlt'],
+            'twitterCard' => $meta['twitterCard'],
         ];
     }
 
     /**
      * Get the slideshow items for the current hero output.
      *
-     * Default slide content stays in the module so the template can render a full
-     * fallback hero even before custom layout params are introduced.
+     * Only valid configured slides are rendered. When no valid slide is stored,
+     * the dispatcher renders the module hint instead of a fallback hero.
      *
      * @param   array<string, mixed>  $cfg     Flat module config array.
      * @param   string                $layout  Validated layout key.
@@ -92,32 +113,8 @@ final class HeroHelper
     public function getSlides(array $cfg, string $layout): array
     {
         $layoutConfig = self::getLayoutConfig($cfg, $layout);
-        $basePath     = rtrim(Uri::root(true), '/') . '/modules/mod_copymypage_hero/images';
-        $imageRoot    = JPATH_ROOT . '/modules/mod_copymypage_hero/images';
-        $slides       = [];
 
-        foreach ($this->getDefaultSlides() as $index => $slide) {
-            $slideNumber  = $index + 1;
-            $filename     = trim((string) ($slide['file'] ?? ''));
-            $absolutePath = $imageRoot . '/' . $filename;
-
-            if ($filename === '' || !is_file($absolutePath)) {
-                continue;
-            }
-
-            $slides[] = (object) [
-                'src'           => $basePath . '/' . $filename,
-                'alt'           => trim(self::cfgString($layoutConfig, 'slide_' . $slideNumber . '_alt', (string) ($slide['alt'] ?? ''))),
-                'headline'      => trim(self::cfgString($layoutConfig, 'slide_' . $slideNumber . '_headline', (string) ($slide['headline'] ?? ''))),
-                'subline'       => trim(self::cfgString($layoutConfig, 'slide_' . $slideNumber . '_subline', (string) ($slide['subline'] ?? ''))),
-                'isLazy'        => (bool) ($slide['isLazy'] ?? true),
-                'fetchPriority' => trim((string) ($slide['fetchPriority'] ?? 'low')),
-                'width'         => (int) ($slide['width'] ?? 0),
-                'height'        => (int) ($slide['height'] ?? 0),
-            ];
-        }
-
-        return $slides;
+        return $this->getConfiguredSlides($layoutConfig);
     }
 
     /**
@@ -198,44 +195,312 @@ final class HeroHelper
     }
 
     /**
-     * Default slide dataset for the initial hero slideshow layout.
+     * Resolve user-configured slideshow rows from the layout params.
+     *
+     * @param   array<string, mixed>  $layoutConfig  Layout-specific config bucket.
+     *
+     * @return  array<int, object>
+     */
+    private function getConfiguredSlides(array $layoutConfig): array
+    {
+        $rows = self::normalizeSubformRows($layoutConfig['slides'] ?? []);
+
+        if ($rows === []) {
+            return [];
+        }
+
+        $slides = [];
+
+        foreach ($rows as $row) {
+            $image = $this->resolveSlideImage(self::rowValue($row, 'image'));
+
+            if ($image['src'] === '') {
+                continue;
+            }
+
+            $position = \count($slides) + 1;
+            $alt      = trim(self::rowString($row, 'alt'));
+
+            if ($alt === '') {
+                $alt = 'CopyMyPage hero image ' . $position;
+            }
+
+            $slides[] = (object) [
+                'src'           => $image['src'],
+                'alt'           => $alt,
+                'headline'      => trim(self::rowString($row, 'headline')),
+                'subline'       => trim(self::rowString($row, 'subline')),
+                'isLazy'        => $position > 1,
+                'fetchPriority' => $position === 1 ? 'high' : 'low',
+                'width'         => $image['width'],
+                'height'        => $image['height'],
+            ];
+        }
+
+        return $slides;
+    }
+
+    /**
+     * Normalize a stored Joomla subform value to a list of row arrays.
+     *
+     * @param   mixed  $rows  Stored subform value.
      *
      * @return  array<int, array<string, mixed>>
      */
-    private function getDefaultSlides(): array
+    private static function normalizeSubformRows(mixed $rows): array
     {
-        return [
-            [
-                'file'          => 'slide_1.jpg',
-                'alt'           => 'CopyMyPage hero image 1',
-                'headline'      => 'Fernbreitenbach Helau',
-                'subline'       => 'Willkommen auf der Website des Fernbreiterbacher Carneval-Vereins',
-                'isLazy'        => false,
-                'fetchPriority' => 'high',
-                'width'         => 1920,
-                'height'        => 1280,
-            ],
-            [
-                'file'          => 'slide_2.jpg',
-                'alt'           => 'CopyMyPage hero image 2',
-                'headline'      => 'Feiern, lachen, leben - Carneval verbindet!',
-                'subline'       => '',
-                'isLazy'        => true,
-                'fetchPriority' => 'low',
-                'width'         => 1920,
-                'height'        => 1280,
-            ],
-            [
-                'file'          => 'slide_3.jpg',
-                'alt'           => 'CopyMyPage hero image 3',
-                'headline'      => 'Junge Jecken, grosser Spass - Wir machen den Carneval von morgen!',
-                'subline'       => '',
-                'isLazy'        => true,
-                'fetchPriority' => 'low',
-                'width'         => 1920,
-                'height'        => 1280,
-            ],
-        ];
+        if ($rows instanceof Registry) {
+            $rows = $rows->toArray();
+        } elseif (\is_string($rows)) {
+            $decoded = json_decode($rows, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return [];
+            }
+
+            $rows = $decoded;
+        } elseif (\is_object($rows)) {
+            $rows = get_object_vars($rows);
+        }
+
+        if (!\is_array($rows) || $rows === []) {
+            return [];
+        }
+
+        if (array_key_exists('image', $rows) || array_key_exists('headline', $rows) || array_key_exists('subline', $rows)) {
+            return [$rows];
+        }
+
+        $normalized = [];
+
+        foreach ($rows as $row) {
+            if ($row instanceof Registry) {
+                $row = $row->toArray();
+            } elseif (\is_object($row)) {
+                $row = get_object_vars($row);
+            }
+
+            if (\is_array($row)) {
+                $normalized[] = $row;
+            }
+        }
+
+        return $normalized;
+    }
+
+    /**
+     * Read a field value from a normalized subform row.
+     *
+     * @param   array<string, mixed>  $row  Stored subform row.
+     * @param   string                $key  Field key.
+     *
+     * @return  mixed
+     */
+    private static function rowValue(array $row, string $key): mixed
+    {
+        return $row[$key] ?? null;
+    }
+
+    /**
+     * Read a string field from a normalized subform row.
+     *
+     * @param   array<string, mixed>  $row      Stored subform row.
+     * @param   string                $key      Field key.
+     * @param   string                $default  Fallback value.
+     *
+     * @return  string
+     */
+    private static function rowString(array $row, string $key, string $default = ''): string
+    {
+        return CopyMyPageHelper::toString(self::rowValue($row, $key), $default);
+    }
+
+    /**
+     * Normalize a media field value to a public image source and dimensions.
+     *
+     * @param   mixed  $rawImage  Stored media field value.
+     *
+     * @return  array{src: string, width: int, height: int}
+     */
+    private function resolveSlideImage(mixed $rawImage): array
+    {
+        $raw = self::mediaFieldString($rawImage);
+
+        if ($raw === '') {
+            return ['src' => '', 'width' => 0, 'height' => 0];
+        }
+
+        $fragmentData = self::extractJoomlaImageFragmentData($raw);
+        $clean        = trim((string) MediaHelper::getCleanMediaFieldValue($raw));
+
+        if ($clean === '' && $fragmentData['path'] !== '') {
+            $clean = $fragmentData['path'];
+        }
+
+        $src = self::normalizeMediaPath($clean);
+
+        if ($src === '') {
+            return ['src' => '', 'width' => 0, 'height' => 0];
+        }
+
+        $width  = CopyMyPageHelper::toInt($fragmentData['width'], 0, 0);
+        $height = CopyMyPageHelper::toInt($fragmentData['height'], 0, 0);
+
+        if (($width === 0 || $height === 0) && !preg_match('#^(?:[a-z][a-z0-9+.-]*:)?//#i', $src) && !str_starts_with($src, 'data:')) {
+            [$localWidth, $localHeight] = self::resolveLocalImageDimensions($src);
+            $width  = $width > 0 ? $width : $localWidth;
+            $height = $height > 0 ? $height : $localHeight;
+        }
+
+        return ['src' => $src, 'width' => $width, 'height' => $height];
+    }
+
+    /**
+     * Extract a path-like string from possible media field value shapes.
+     *
+     * @param   mixed  $value  Raw media value.
+     *
+     * @return  string
+     */
+    private static function mediaFieldString(mixed $value): string
+    {
+        if (\is_string($value)) {
+            $value = trim($value);
+
+            if ($value !== '' && ($value[0] === '{' || $value[0] === '[')) {
+                $decoded = json_decode($value, true);
+
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    return self::mediaFieldString($decoded);
+                }
+            }
+
+            return $value;
+        }
+
+        if ($value instanceof Registry) {
+            $value = $value->toArray();
+        } elseif (\is_object($value)) {
+            $value = get_object_vars($value);
+        }
+
+        if (\is_array($value)) {
+            foreach (['imagefile', 'image', 'file', 'src', 'url', 'path'] as $key) {
+                if (array_key_exists($key, $value)) {
+                    $candidate = self::mediaFieldString($value[$key]);
+
+                    if ($candidate !== '') {
+                        return $candidate;
+                    }
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Resolve Joomla media adapter prefixes and local paths to frontend URLs.
+     *
+     * @param   string  $path  Clean media path.
+     *
+     * @return  string
+     */
+    private static function normalizeMediaPath(string $path): string
+    {
+        $path = trim($path);
+
+        if ($path === '') {
+            return '';
+        }
+
+        if (preg_match('#^(?:https?:)?//#i', $path) || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+
+        if (preg_match('#^joomlaImage://local-([^/]+)/(.+)$#', $path, $matches) === 1) {
+            $path = $matches[1] . '/' . $matches[2];
+        } elseif (preg_match('#^local-([^:]+):/?(.*)$#', $path, $matches) === 1) {
+            $path = $matches[1] . '/' . ltrim($matches[2], '/');
+        }
+
+        return ltrim($path, '/');
+    }
+
+    /**
+     * Extract dimensions and fallback path from a Joomla image fragment.
+     *
+     * @param   string  $value  Stored media field value.
+     *
+     * @return  array{path: string, width: int, height: int}
+     */
+    private static function extractJoomlaImageFragmentData(string $value): array
+    {
+        $data = ['path' => '', 'width' => 0, 'height' => 0];
+        $hash = strpos($value, '#');
+
+        if ($hash === false) {
+            return $data;
+        }
+
+        $fragment = substr($value, $hash + 1);
+
+        if ($fragment === '') {
+            return $data;
+        }
+
+        $parts = parse_url($fragment);
+
+        if (!\is_array($parts)) {
+            return $data;
+        }
+
+        if (($parts['scheme'] ?? '') === 'joomlaImage' && str_starts_with((string) ($parts['host'] ?? ''), 'local-')) {
+            $adapter = substr((string) $parts['host'], 6);
+            $path    = ltrim((string) ($parts['path'] ?? ''), '/');
+
+            if ($adapter !== '' && $path !== '') {
+                $data['path'] = $adapter . '/' . $path;
+            }
+        }
+
+        $query = [];
+        parse_str((string) ($parts['query'] ?? ''), $query);
+
+        $data['width']  = CopyMyPageHelper::toInt($query['width'] ?? null, 0, 0);
+        $data['height'] = CopyMyPageHelper::toInt($query['height'] ?? null, 0, 0);
+
+        return $data;
+    }
+
+    /**
+     * Read intrinsic dimensions for local public image paths.
+     *
+     * @param   string  $src  Public local image path.
+     *
+     * @return  array{0: int, 1: int}
+     */
+    private static function resolveLocalImageDimensions(string $src): array
+    {
+        $path = parse_url($src, PHP_URL_PATH);
+
+        if (!\is_string($path) || $path === '') {
+            return [0, 0];
+        }
+
+        $absolutePath = JPATH_ROOT . '/' . ltrim($path, '/');
+
+        if (!is_file($absolutePath)) {
+            return [0, 0];
+        }
+
+        $size = @getimagesize($absolutePath);
+
+        if (!\is_array($size)) {
+            return [0, 0];
+        }
+
+        return [CopyMyPageHelper::toInt($size[0] ?? 0, 0, 0), CopyMyPageHelper::toInt($size[1] ?? 0, 0, 0)];
     }
 
     /**
@@ -317,6 +582,102 @@ final class HeroHelper
     }
 
     /**
+     * Build metadata from explicit Open Graph module params.
+     *
+     * @param   array<string, mixed>  $cfg  Flat module config array.
+     *
+     * @return  array<string, string>
+     */
+    private function resolveConfiguredOpenGraphMeta(array $cfg): array
+    {
+        $image       = $this->resolveSlideImage($cfg['og_image'] ?? '');
+        $imageWidth  = CopyMyPageHelper::cfgInt($cfg, 'og_image_width', 0, 0);
+        $imageHeight = CopyMyPageHelper::cfgInt($cfg, 'og_image_height', 0, 0);
+        $twitterCard = strtolower(trim(self::cfgString($cfg, 'og_twitter_card')));
+
+        if (!\in_array($twitterCard, ['summary', 'summary_large_image'], true)) {
+            $twitterCard = '';
+        }
+
+        if ($imageWidth === 0) {
+            $imageWidth = $image['width'];
+        }
+
+        if ($imageHeight === 0) {
+            $imageHeight = $image['height'];
+        }
+
+        return [
+            'title'       => self::htmlToPlainText(self::cfgString($cfg, 'og_title')),
+            'description' => self::htmlToPlainText(self::cfgString($cfg, 'og_description')),
+            'image'       => $this->toAbsoluteUrl($image['src']),
+            'imageWidth'  => $imageWidth > 0 ? (string) $imageWidth : '',
+            'imageHeight' => $imageHeight > 0 ? (string) $imageHeight : '',
+            'imageAlt'    => trim(self::cfgString($cfg, 'og_image_alt')),
+            'twitterCard' => $twitterCard,
+        ];
+    }
+
+    /**
+     * Return an empty metadata payload with all supported keys.
+     *
+     * @return  array<string, string>
+     */
+    private static function emptyOpenGraphMeta(): array
+    {
+        return [
+            'title'       => '',
+            'description' => '',
+            'image'       => '',
+            'imageWidth'  => '',
+            'imageHeight' => '',
+            'imageAlt'    => '',
+            'twitterCard' => '',
+        ];
+    }
+
+    /**
+     * Check whether metadata contains enough content to describe a section.
+     *
+     * @param   array<string, string>  $meta  Metadata payload.
+     *
+     * @return  bool
+     */
+    private static function hasOpenGraphContent(array $meta): bool
+    {
+        return trim($meta['title'] ?? '') !== ''
+            || trim($meta['description'] ?? '') !== ''
+            || trim($meta['image'] ?? '') !== '';
+    }
+
+    /**
+     * Merge non-empty explicit metadata values over fallback values.
+     *
+     * @param   array<string, string>  $fallback   Derived fallback metadata.
+     * @param   array<string, string>  $overrides  Explicit module param metadata.
+     *
+     * @return  array<string, string>
+     */
+    private static function mergeOpenGraphMeta(array $fallback, array $overrides): array
+    {
+        $meta = array_replace(self::emptyOpenGraphMeta(), $fallback);
+
+        foreach ($overrides as $key => $value) {
+            if (!\is_string($key) || !\array_key_exists($key, $meta)) {
+                continue;
+            }
+
+            $value = trim((string) $value);
+
+            if ($value !== '') {
+                $meta[$key] = $value;
+            }
+        }
+
+        return $meta;
+    }
+
+    /**
      * Build a stable metadata payload from the first available hero slide.
      *
      * @param   array<int, object>  $slides  Prepared hero slides.
@@ -325,21 +686,12 @@ final class HeroHelper
      */
     private function resolvePrimarySlideMeta(array $slides): array
     {
-        $defaults = $this->getDefaultSlides()[0] ?? [];
         $slide    = isset($slides[0]) && \is_object($slides[0]) ? $slides[0] : null;
         $image    = $this->toAbsoluteUrl(trim((string) ($slide->src ?? '')));
 
-        if ($image === '') {
-            $filename = trim((string) ($defaults['file'] ?? ''));
-
-            if ($filename !== '') {
-                $image = rtrim(Uri::root(), '/') . '/modules/mod_copymypage_hero/images/' . $filename;
-            }
-        }
-
-        $title = trim((string) ($slide->headline ?? ($defaults['headline'] ?? '')));
-        $imageWidth = (int) ($slide->width ?? ($defaults['width'] ?? 0));
-        $imageHeight = (int) ($slide->height ?? ($defaults['height'] ?? 0));
+        $title       = self::htmlToPlainText((string) ($slide->headline ?? ''));
+        $imageWidth  = (int) ($slide->width ?? 0);
+        $imageHeight = (int) ($slide->height ?? 0);
 
         if ($title === '') {
             $title = 'Hero';
@@ -347,11 +699,11 @@ final class HeroHelper
 
         return [
             'title'       => $title,
-            'description' => trim((string) ($slide->subline ?? ($defaults['subline'] ?? ''))),
+            'description' => self::htmlToPlainText((string) ($slide->subline ?? '')),
             'image'       => $image,
             'imageWidth'  => $imageWidth > 0 ? (string) $imageWidth : '',
             'imageHeight' => $imageHeight > 0 ? (string) $imageHeight : '',
-            'imageAlt'    => trim((string) ($slide->alt ?? ($defaults['alt'] ?? ''))),
+            'imageAlt'    => trim((string) ($slide->alt ?? '')),
         ];
     }
 
@@ -391,6 +743,20 @@ final class HeroHelper
         }
 
         return $root . '/' . ltrim($url, '/');
+    }
+
+    /**
+     * Convert filtered editor HTML into compact plain text for metadata.
+     *
+     * @param   string  $html  Filtered HTML or plain text.
+     *
+     * @return  string
+     */
+    private static function htmlToPlainText(string $html): string
+    {
+        $text = trim(html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+
+        return preg_replace('/\s+/u', ' ', $text) ?? $text;
     }
 
     /**
