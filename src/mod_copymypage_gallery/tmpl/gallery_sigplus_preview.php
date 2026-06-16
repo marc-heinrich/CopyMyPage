@@ -135,18 +135,22 @@ if ($lead === '') {
                         $filterLabel   = trim((string) ($item->filter_label ?? ''));
                         $filterClass   = trim((string) ($item->filter_class ?? ''));
                         $imageCount    = (int) ($item->image_count ?? 0);
-                        $previewImage  = trim((string) ($item->gallery_image ?? ''));
+                        $previewImage  = trim((string) ($item->gallery_start_image ?? $item->gallery_image ?? ''));
                         $previewSrc    = '';
                         $galleryLink   = '';
                         $cardTitle     = $title !== '' ? $title : ($filterLabel !== '' ? $filterLabel : $source);
                         $cardItemClass = trim('cmp-gallery-preview__item ' . $filterClass);
 
-                        if ($source !== '' && $previewImage !== '') {
-                            $imageRelativePath = 'images/' . trim($source, '/') . '/' . ltrim($previewImage, '/');
-                            $imageAbsolutePath = JPATH_ROOT . '/' . str_replace('/', DIRECTORY_SEPARATOR, $imageRelativePath);
+                        if ($previewImage !== '') {
+                            if (preg_match('#^(?:https?:)?//#i', $previewImage) || str_starts_with($previewImage, 'data:')) {
+                                $previewSrc = $previewImage;
+                            } else {
+                                $imageRelativePath = ltrim($previewImage, '/');
+                                $imageAbsolutePath = JPATH_ROOT . '/' . str_replace('/', DIRECTORY_SEPARATOR, $imageRelativePath);
 
-                            if (is_file($imageAbsolutePath)) {
-                                $previewSrc = Uri::root() . ltrim($imageRelativePath, '/');
+                                if (is_file($imageAbsolutePath)) {
+                                    $previewSrc = Uri::root() . $imageRelativePath;
+                                }
                             }
                         }
 

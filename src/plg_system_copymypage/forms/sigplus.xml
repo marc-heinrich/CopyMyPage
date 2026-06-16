@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+  <fields name="params">
+    <fieldset name="copymypage_app" label="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_TAB_LABEL">
+      <fieldset name="copymypage_gallery" label="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_FIELDSET_LABEL">
+        <field
+          name="copymypage_gallery_start_image"
+          type="media"
+          label="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_START_IMAGE_LABEL"
+          description="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_START_IMAGE_DESC"
+          directory="copymypage/module/mod_copymypage_gallery"
+          types="images"
+          schemes="http,https,data,file"
+          validate="url"
+          relative="true" />
+        <field
+          name="copymypage_gallery_filter_label"
+          type="text"
+          label="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_FILTER_LABEL_LABEL"
+          description="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_FILTER_LABEL_DESC"
+          filter="string" />
+        <field
+          name="copymypage_gallery_view_headline"
+          type="text"
+          label="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_VIEW_HEADLINE_LABEL"
+          description="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_VIEW_HEADLINE_DESC"
+          filter="string" />
+        <field
+          name="copymypage_gallery_view_subline"
+          type="textarea"
+          label="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_VIEW_SUBLINE_LABEL"
+          description="PLG_SYSTEM_COPYMYPAGE_SIGPLUS_GALLERY_VIEW_SUBLINE_DESC"
+          rows="3"
+          filter="string" />
+      </fieldset>
+    </fieldset>
+  </fields>
+</form>

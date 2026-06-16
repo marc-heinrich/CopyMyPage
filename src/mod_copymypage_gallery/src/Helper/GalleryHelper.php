@@ -637,19 +637,122 @@ final class GalleryHelper implements DatabaseAwareInterface
     {
         $moduleParams = new Registry((string) ($moduleRow->params ?? ''));
         $source       = $this->normalizeSource((string) $moduleParams->get('source', ''));
+        $filterLabel  = trim((string) $moduleParams->get('copymypage_gallery_filter_label', ''));
         $filterSeed   = (string) ($moduleParams->get('id') ?: ($moduleRow->title ?? ''));
+        $legacyImage  = trim((string) $moduleParams->get('settings', ''));
+        $startImage   = $this->resolveGalleryStartImage($moduleParams->get('copymypage_gallery_start_image', ''), $source);
+
+        if ($startImage === '') {
+            $startImage = $this->resolveGalleryStartImage($legacyImage, $source);
+        }
+
+        if ($filterLabel === '') {
+            $filterLabel = self::getTitle($filterSeed);
+        }
 
         $moduleRow->params_registry = $moduleParams;
         $moduleRow->params_array    = $moduleParams->toArray();
         $moduleRow->gallery_source  = $source;
-        $moduleRow->gallery_image   = trim((string) $moduleParams->get('settings', ''));
+        $moduleRow->gallery_image   = $startImage;
+        $moduleRow->gallery_start_image = $startImage;
+        $moduleRow->gallery_legacy_image = $legacyImage;
         $moduleRow->gallery_id      = trim((string) $moduleParams->get('id', ''));
-        $moduleRow->filter_label    = self::getTitle($filterSeed);
-        $moduleRow->filter_class    = self::getFilterClass($filterSeed);
+        $moduleRow->filter_label    = $filterLabel;
+        $moduleRow->filter_class    = self::getFilterClass($filterLabel);
+        $moduleRow->gallery_view_headline = $this->resolveSigplusParam(
+            $moduleParams,
+            'copymypage_gallery_view_headline',
+            'caption_title_template'
+        );
+        $moduleRow->gallery_view_subline = $this->resolveSigplusParam(
+            $moduleParams,
+            'copymypage_gallery_view_subline',
+            'caption_summary_template'
+        );
         $moduleRow->sigplus_data    = $this->countImagesInDirectory($source);
         $moduleRow->image_count     = (int) (($moduleRow->sigplus_data->image_count ?? 0));
 
         return $moduleRow;
+    }
+
+    /**
+     * Resolve a configured start image to the public path expected by the preview template.
+     *
+     * @param   mixed   $rawImage  Stored media field value or legacy filename.
+     * @param   string  $source    Normalized sigplus source path.
+     *
+     * @return  string
+     */
+    private function resolveGalleryStartImage(mixed $rawImage, string $source): string
+    {
+        $image = $this->resolveOpenGraphImage($rawImage);
+
+        return self::normalizeGalleryImageSource($image['src'], $source);
+    }
+
+    /**
+     * Normalize media-field paths and legacy filenames to a frontend image path.
+     *
+     * @param   string  $path    Raw or normalized media path.
+     * @param   string  $source  Normalized sigplus source path.
+     *
+     * @return  string
+     */
+    private static function normalizeGalleryImageSource(string $path, string $source): string
+    {
+        $path = str_replace('\\', '/', trim($path));
+
+        if ($path === '') {
+            return '';
+        }
+
+        if (preg_match('#^(?:https?:)?//#i', $path) || str_starts_with($path, 'data:')) {
+            return $path;
+        }
+
+        $path = ltrim($path, '/');
+
+        if ($path === '') {
+            return '';
+        }
+
+        if (str_starts_with($path, 'images/')) {
+            return $path;
+        }
+
+        $source = str_replace('\\', '/', trim($source, '/'));
+
+        if ($source !== '') {
+            if ($path === $source || str_starts_with($path, $source . '/')) {
+                return 'images/' . $path;
+            }
+
+            if (!str_contains($path, '/') || str_starts_with($path, 'start/')) {
+                return 'images/' . trim($source . '/' . $path, '/');
+            }
+        }
+
+        return 'images/' . $path;
+    }
+
+    /**
+     * Resolve a CopyMyPage sigplus parameter with a legacy sigplus fallback.
+     *
+     * @param   Registry  $params   Sigplus module params.
+     * @param   string    $primary  CopyMyPage parameter key.
+     * @param   string    $legacy   Legacy sigplus parameter key.
+     *
+     * @return  string
+     */
+    private function resolveSigplusParam(Registry $params, string $primary, string $legacy): string
+    {
+        $value = trim((string) $params->get($primary, ''));
+
+        if ($value !== '') {
+            return $value;
+        }
+
+        return trim((string) $params->get($legacy, ''));
     }
 
     /**
@@ -661,8 +764,8 @@ final class GalleryHelper implements DatabaseAwareInterface
      */
     public static function getFilterClass(string $filter): string
     {
-        $filter = self::getTitle($filter);
-        $filter = preg_replace('/\s+/', '', strtolower($filter)) ?? '';
+        $filter = preg_replace('/\s+/', '', strtolower(trim($filter))) ?? '';
+        $filter = preg_replace('/[^a-z0-9_-]/', '', $filter) ?? '';
 
         return 'filter-' . $filter;
     }

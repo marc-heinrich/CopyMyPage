@@ -121,7 +121,7 @@ class HtmlView extends BaseHtmlView
         $this->itemParams = new Registry((string) ($this->item->params ?? ''));
         $this->imageCount = $this->resolveImageCount();
         $this->headline   = $this->resolveHeadline();
-        $this->summary    = trim((string) $this->itemParams->get('caption_summary_template', ''));
+        $this->summary    = $this->resolveSummary();
         $this->backUrl    = Route::link('site', 'index.php?option=com_copymypage&view=onepage&section=gallery');
 
         $sigplusPlugin = null;
@@ -250,12 +250,34 @@ class HtmlView extends BaseHtmlView
     }
 
     /**
+     * Resolves the optional gallery summary with the legacy sigplus fallback.
+     *
+     * @return  string
+     */
+    private function resolveSummary(): string
+    {
+        $summary = trim((string) $this->itemParams?->get('copymypage_gallery_view_subline', ''));
+
+        if ($summary !== '') {
+            return $summary;
+        }
+
+        return trim((string) $this->itemParams?->get('caption_summary_template', ''));
+    }
+
+    /**
      * Resolves the gallery page headline with sensible fallbacks.
      *
      * @return  string
      */
     private function resolveHeadline(): string
     {
+        $headline = trim((string) $this->itemParams?->get('copymypage_gallery_view_headline', ''));
+
+        if ($headline !== '') {
+            return $headline;
+        }
+
         $headline = trim((string) $this->itemParams?->get('caption_title_template', ''));
 
         if ($headline !== '') {

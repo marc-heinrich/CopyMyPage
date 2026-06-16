@@ -129,7 +129,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     }
 
     /**
-     * Add CopyMyPage app settings to the contact edit form.
+     * Add CopyMyPage app settings to supported administrator forms.
      *
      * @param   Model\PrepareFormEvent  $event  The form preparation event.
      *
@@ -146,15 +146,49 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         }
 
         $form = $event->getForm();
+        $name = $form->getName();
 
-        if ($form->getName() !== 'com_contact.contact') {
+        if ($name === 'com_contact.contact') {
+            $this->loadLanguage();
+            $form->loadFile(JPATH_PLUGINS . '/system/copymypage/forms/contact.xml', false);
+
+            return true;
+        }
+
+        if ($name !== 'com_modules.module' || !$this->isSigplusModule($event->getData())) {
             return true;
         }
 
         $this->loadLanguage();
-
-        $form->loadFile(JPATH_PLUGINS . '/system/copymypage/forms/contact.xml', false);
+        $form->loadFile(JPATH_PLUGINS . '/system/copymypage/forms/sigplus.xml', false);
 
         return true;
+    }
+
+    /**
+     * Checks whether the prepared module form belongs to sigplus.
+     *
+     * @param   mixed  $data  The form data payload.
+     *
+     * @return  bool
+     *
+     * @since   0.0.14
+     */
+    private function isSigplusModule(mixed $data): bool
+    {
+        $module = '';
+
+        if (\is_array($data)) {
+            $module = (string) ($data['module'] ?? '');
+        } elseif (\is_object($data)) {
+            $module = (string) ($data->module ?? '');
+        }
+
+        if ($module === '') {
+            $jform = $this->getApplication()->getInput()->get('jform', [], 'array');
+            $module = \is_array($jform) ? (string) ($jform['module'] ?? '') : '';
+        }
+
+        return $module === 'mod_sigplus';
     }
 }
