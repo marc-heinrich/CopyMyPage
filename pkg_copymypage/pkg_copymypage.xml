@@ -23,6 +23,7 @@
     <file id="mod_copymypage_gallery" type="module" client="site">mod_copymypage_gallery.zip</file>
     <file id="mod_copymypage_navbar" type="module" client="site">mod_copymypage_navbar.zip</file>
     <file id="mod_copymypage_team" type="module" client="site">mod_copymypage_team.zip</file>
+    <file id="mod_copymypage_alert" type="module" client="site">mod_copymypage_alert.zip</file>
     <file id="copymypage" type="plugin" group="system">plg_system_copymypage.zip</file>
   </files>
   <!-- Language files for package description and system strings -->
