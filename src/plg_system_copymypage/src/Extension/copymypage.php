@@ -14,6 +14,7 @@ namespace Joomla\Plugin\System\CopyMyPage\Extension;
 use Joomla\CMS\Event\Model;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\CMSPlugin;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\ImageHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\PreloaderHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\TemplateTokenHelper;
@@ -81,10 +82,18 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
      *
      * @return  void
      *
-     * @since   0.0.14
+     * @since   0.0.15
      */
     private function registerHelperServices(Container $container): void
     {
+        if (!$container->has(ImageHelper::class)) {
+            $container->share(
+                ImageHelper::class,
+                static fn(Container $container): ImageHelper => new ImageHelper(),
+                true
+            );
+        }
+
         if (!$container->has(SigplusHelper::class)) {
             $container->share(
                 SigplusHelper::class,
@@ -122,6 +131,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             );
         }
 
+        $container->alias('copymypage.helper.image', ImageHelper::class);
         $container->alias('copymypage.helper.sigplus', SigplusHelper::class);
         $container->alias('copymypage.helper.preloader', PreloaderHelper::class);
         $container->alias('copymypage.helper.templateTokens', TemplateTokenHelper::class);

@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.15
  */
 
 namespace Joomla\Module\CopyMyPage\Team\Site\Helper;
@@ -12,10 +12,10 @@ namespace Joomla\Module\CopyMyPage\Team\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
-use Joomla\CMS\Helper\MediaHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\ImageHelper;
 use Joomla\Database\DatabaseAwareInterface;
 use Joomla\Database\DatabaseAwareTrait;
 use Joomla\Database\ParameterType;
@@ -62,6 +62,21 @@ final class TeamHelper implements DatabaseAwareInterface
      * @var int
      */
     private const DEFAULT_IMAGE_HEIGHT = 900;
+
+    /**
+     * Responsive widths generated for team card images.
+     *
+     * @var array<int, int>
+     */
+    private const CARD_IMAGE_VARIANT_WIDTHS = [320, 400, 640, 800, 960, 1200];
+
+    /**
+     * Browser sizing hint matching the one-, two- and four-column team grid.
+     *
+     * @var string
+     */
+    private const CARD_IMAGE_SIZES = '(min-width: 1200px) 290px, '
+        . '(min-width: 640px) calc(50vw - 30px), calc(100vw - 30px)';
 
     /**
      * Set the layout context resolved by the module dispatcher.
@@ -461,153 +476,7 @@ final class TeamHelper implements DatabaseAwareInterface
      */
     private function resolveOpenGraphImage(mixed $rawImage): array
     {
-        $raw = self::mediaFieldString($rawImage);
-
-        if ($raw === '') {
-            return ['src' => '', 'width' => 0, 'height' => 0];
-        }
-
-        $fragmentData = self::extractJoomlaImageFieldData($raw);
-        $clean        = trim((string) MediaHelper::getCleanMediaFieldValue($raw));
-
-        if ($clean === '' && $fragmentData['path'] !== '') {
-            $clean = $fragmentData['path'];
-        }
-
-        $src = self::normalizeMediaPath($clean);
-
-        if ($src === '') {
-            return ['src' => '', 'width' => 0, 'height' => 0];
-        }
-
-        $width  = self::toPositiveInt($fragmentData['width']);
-        $height = self::toPositiveInt($fragmentData['height']);
-
-        if (($width === 0 || $height === 0) && !preg_match('#^(?:[a-z][a-z0-9+.-]*:)?//#i', $src) && !str_starts_with($src, 'data:')) {
-            [$localWidth, $localHeight] = $this->resolveLocalImageDimensions($src);
-            $width  = $width > 0 ? $width : $localWidth;
-            $height = $height > 0 ? $height : $localHeight;
-        }
-
-        return ['src' => $src, 'width' => $width, 'height' => $height];
-    }
-
-    /**
-     * Extract a path-like string from possible media field value shapes.
-     *
-     * @param   mixed  $value  Raw media value.
-     *
-     * @return  string
-     */
-    private static function mediaFieldString(mixed $value): string
-    {
-        if (\is_string($value)) {
-            $value = trim($value);
-
-            if ($value !== '' && ($value[0] === '{' || $value[0] === '[')) {
-                $decoded = json_decode($value, true);
-
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    return self::mediaFieldString($decoded);
-                }
-            }
-
-            return $value;
-        }
-
-        if ($value instanceof Registry) {
-            $value = $value->toArray();
-        } elseif (\is_object($value)) {
-            $value = get_object_vars($value);
-        }
-
-        if (\is_array($value)) {
-            foreach (['imagefile', 'image', 'file', 'src', 'url', 'path'] as $key) {
-                if (array_key_exists($key, $value)) {
-                    $candidate = self::mediaFieldString($value[$key]);
-
-                    if ($candidate !== '') {
-                        return $candidate;
-                    }
-                }
-            }
-        }
-
-        return '';
-    }
-
-    /**
-     * Resolve Joomla media adapter prefixes and local paths to frontend URLs.
-     *
-     * @param   string  $path  Clean media path.
-     *
-     * @return  string
-     */
-    private static function normalizeMediaPath(string $path): string
-    {
-        $path = trim($path);
-
-        if ($path === '') {
-            return '';
-        }
-
-        if (preg_match('#^(?:https?:)?//#i', $path) || str_starts_with($path, 'data:')) {
-            return $path;
-        }
-
-        if (preg_match('#^joomlaImage://local-([^/]+)/(.+)$#', $path, $matches) === 1) {
-            $path = $matches[1] . '/' . $matches[2];
-        } elseif (preg_match('#^local-([^:]+):/?(.*)$#', $path, $matches) === 1) {
-            $path = $matches[1] . '/' . ltrim($matches[2], '/');
-        }
-
-        return ltrim($path, '/');
-    }
-
-    /**
-     * Extract dimensions and fallback path from a Joomla media field value.
-     *
-     * @param   string  $value  Stored media field value.
-     *
-     * @return  array{path: string, width: int, height: int}
-     */
-    private static function extractJoomlaImageFieldData(string $value): array
-    {
-        $data = ['path' => '', 'width' => 0, 'height' => 0];
-        $hash = strpos($value, '#');
-
-        if ($hash === false) {
-            return $data;
-        }
-
-        $fragment = substr($value, $hash + 1);
-
-        if ($fragment === '') {
-            return $data;
-        }
-
-        $parts = parse_url($fragment);
-
-        if (!\is_array($parts)) {
-            return $data;
-        }
-
-        if (($parts['scheme'] ?? '') === 'joomlaImage' && str_starts_with((string) ($parts['host'] ?? ''), 'local-')) {
-            $adapter = substr((string) $parts['host'], 6);
-            $path    = ltrim((string) ($parts['path'] ?? ''), '/');
-
-            if ($adapter !== '' && $path !== '') {
-                $data['path'] = $adapter . '/' . $path;
-            }
-        }
-
-        $query = [];
-        parse_str((string) ($parts['query'] ?? ''), $query);
-
-        $data['width']  = self::toPositiveInt($query['width'] ?? 0);
-        $data['height'] = self::toPositiveInt($query['height'] ?? 0);
-
-        return $data;
+        return $this->getImageHelper()->resolveMediaImage($rawImage);
     }
 
     /**
@@ -795,14 +664,18 @@ final class TeamHelper implements DatabaseAwareInterface
         }
 
         return (object) [
-            'name'        => $name,
-            'role'        => $role,
-            'description' => $description,
-            'image'       => $image['url'],
-            'imageAlt'    => $image['alt'],
-            'imageWidth'  => $image['width'],
-            'imageHeight' => $image['height'],
-            'social'      => $social,
+            'name'            => $name,
+            'role'            => $role,
+            'description'     => $description,
+            'image'           => $image['url'],
+            'imageAlt'        => $image['alt'],
+            'imageWidth'      => $image['width'],
+            'imageHeight'     => $image['height'],
+            'imageSrcset'     => $image['srcset'],
+            'imageWebpSrcset' => $image['webpSrcset'],
+            'imageAvifSrcset' => $image['avifSrcset'],
+            'imageSizes'      => $image['sizes'],
+            'social'          => $social,
         ];
     }
 
@@ -970,149 +843,37 @@ final class TeamHelper implements DatabaseAwareInterface
      * @param   string  $rawImage  Stored contact image value.
      * @param   string  $name      Contact name used as alt fallback.
      *
-     * @return  array{url: string, alt: string, width: int, height: int}
+     * @return  array{
+     *     url: string,
+     *     alt: string,
+     *     width: int,
+     *     height: int,
+     *     srcset: string,
+     *     webpSrcset: string,
+     *     avifSrcset: string,
+     *     sizes: string
+     * }
      */
     private function resolveContactImage(string $rawImage, string $name): array
     {
-        $rawImage = trim(html_entity_decode($rawImage, ENT_QUOTES, 'UTF-8'));
-
-        if ($rawImage === '') {
-            return [
-                'url'    => '',
-                'alt'    => '',
-                'width'  => 0,
-                'height' => 0,
-            ];
-        }
-
-        $path     = $rawImage;
-        $fragment = '';
-
-        if (str_contains($rawImage, '#')) {
-            [$path, $fragment] = explode('#', $rawImage, 2);
-            $path              = trim($path);
-            $fragment          = trim($fragment);
-        }
-
-        $fragmentData = $this->extractJoomlaImageFragmentData($fragment);
-
-        if ($path === '' && $fragmentData['path'] !== '') {
-            $path = $fragmentData['path'];
-        }
-
-        if ($path === '') {
-            return [
-                'url'    => '',
-                'alt'    => '',
-                'width'  => 0,
-                'height' => 0,
-            ];
-        }
-
-        $url    = $this->toAbsoluteUrl($path);
-        $width  = $fragmentData['width'];
-        $height = $fragmentData['height'];
-
-        if ($width <= 0 || $height <= 0) {
-            [$fileWidth, $fileHeight] = $this->resolveLocalImageDimensions($url);
-
-            $width  = $width > 0 ? $width : $fileWidth;
-            $height = $height > 0 ? $height : $fileHeight;
-        }
-
+        $imageHelper = $this->getImageHelper();
+        $image       = $imageHelper->resolveMediaImage($rawImage);
+        $picture     = $imageHelper->buildResponsiveImageData(
+            $image['src'],
+            self::CARD_IMAGE_VARIANT_WIDTHS,
+            self::CARD_IMAGE_SIZES
+        );
         $alt = trim($name) !== '' ? trim($name) : Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_IMAGE_ALT');
 
         return [
-            'url'    => $url,
-            'alt'    => $alt,
-            'width'  => $width,
-            'height' => $height,
-        ];
-    }
-
-    /**
-     * Extract media metadata from Joomla's joomlaImage URL fragment.
-     *
-     * @param   string  $fragment  Fragment after "#".
-     *
-     * @return  array{path: string, width: int, height: int}
-     */
-    private function extractJoomlaImageFragmentData(string $fragment): array
-    {
-        $path   = '';
-        $width  = 0;
-        $height = 0;
-
-        if ($fragment === '') {
-            return [
-                'path'   => '',
-                'width'  => 0,
-                'height' => 0,
-            ];
-        }
-
-        if (preg_match('#^joomlaImage://local-images/([^?]+)#', $fragment, $matches) === 1) {
-            $path = 'images/' . ltrim(rawurldecode((string) $matches[1]), '/');
-        }
-
-        $query = (string) parse_url($fragment, PHP_URL_QUERY);
-
-        if ($query !== '') {
-            parse_str($query, $params);
-
-            $width  = self::toPositiveInt($params['width'] ?? 0);
-            $height = self::toPositiveInt($params['height'] ?? 0);
-        }
-
-        return [
-            'path'   => $path,
-            'width'  => $width,
-            'height' => $height,
-        ];
-    }
-
-    /**
-     * Resolve image dimensions from a local URL or relative path.
-     *
-     * @param   string  $url  Absolute or relative image URL.
-     *
-     * @return  array{0: int, 1: int}
-     */
-    private function resolveLocalImageDimensions(string $url): array
-    {
-        $path = trim((string) parse_url($url, PHP_URL_PATH));
-
-        if ($path === '') {
-            $path = $url;
-        }
-
-        $rootPath = rtrim((string) parse_url(Uri::root(), PHP_URL_PATH), '/');
-
-        if ($rootPath !== '' && $rootPath !== '/' && str_starts_with($path, $rootPath . '/')) {
-            $path = substr($path, strlen($rootPath));
-        }
-
-        $path = ltrim(rawurldecode($path), '/');
-
-        if ($path === '') {
-            return [0, 0];
-        }
-
-        $file = JPATH_ROOT . '/' . str_replace('/', DIRECTORY_SEPARATOR, $path);
-
-        if (!is_file($file)) {
-            return [0, 0];
-        }
-
-        $size = @getimagesize($file);
-
-        if (!\is_array($size)) {
-            return [0, 0];
-        }
-
-        return [
-            self::toPositiveInt($size[0] ?? 0),
-            self::toPositiveInt($size[1] ?? 0),
+            'url'        => $picture['src'],
+            'alt'        => $picture['src'] !== '' ? $alt : '',
+            'width'      => $picture['width'] > 0 ? $picture['width'] : $image['width'],
+            'height'     => $picture['height'] > 0 ? $picture['height'] : $image['height'],
+            'srcset'     => $picture['srcset'],
+            'webpSrcset' => $picture['webpSrcset'],
+            'avifSrcset' => $picture['avifSrcset'],
+            'sizes'      => $picture['sizes'],
         ];
     }
 
@@ -1165,6 +926,20 @@ final class TeamHelper implements DatabaseAwareInterface
     }
 
     /**
+     * Resolve the shared image helper via the root DI container.
+     */
+    private function getImageHelper(): ImageHelper
+    {
+        $helper = Factory::getContainer()->get(ImageHelper::class);
+
+        if (!$helper instanceof ImageHelper) {
+            throw new \RuntimeException('The CopyMyPage image helper is not available.');
+        }
+
+        return $helper;
+    }
+
+    /**
      * Extract a prefixed subset from a flat config array.
      *
      * @param   array<string, mixed>  $cfg          Flat config array.
@@ -1200,17 +975,4 @@ final class TeamHelper implements DatabaseAwareInterface
         return $result;
     }
 
-    /**
-     * Normalize a value into a positive integer.
-     *
-     * @param   mixed  $value  Raw value.
-     *
-     * @return  int
-     */
-    private static function toPositiveInt(mixed $value): int
-    {
-        $value = CopyMyPageHelper::toInt($value, 0, 0);
-
-        return $value > 0 ? $value : 0;
-    }
 }

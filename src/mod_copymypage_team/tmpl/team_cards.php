@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.15
  */
 
 \defined('_JEXEC') or die;
@@ -109,6 +109,10 @@ if ($headline === '') {
                     $imageAlt    = trim((string) ($item->imageAlt ?? $name));
                     $imageWidth  = (int) ($item->imageWidth ?? 0);
                     $imageHeight = (int) ($item->imageHeight ?? 0);
+                    $imageSrcset = trim((string) ($item->imageSrcset ?? ''));
+                    $webpSrcset  = trim((string) ($item->imageWebpSrcset ?? ''));
+                    $avifSrcset  = trim((string) ($item->imageAvifSrcset ?? ''));
+                    $imageSizes  = trim((string) ($item->imageSizes ?? ''));
 
                     if ($name === '' && $description === '') {
                         continue;
@@ -122,18 +126,45 @@ if ($headline === '') {
                         <article class="<?php echo $escape($cardClass); ?>">
                             <?php if ($showImages && $image !== '') : ?>
                                 <div class="cmp-team__media uk-card-media-top">
-                                    <img
-                                        src="<?php echo $escape($image); ?>"
-                                        alt="<?php echo $escape($imageAlt); ?>"
-                                        <?php if ($imageWidth > 0) : ?>
-                                            width="<?php echo $imageWidth; ?>"
+                                    <picture class="cmp-team__picture">
+                                        <?php if ($avifSrcset !== '') : ?>
+                                            <source
+                                                type="image/avif"
+                                                srcset="<?php echo $escape($avifSrcset); ?>"
+                                                <?php if ($imageSizes !== '') : ?>
+                                                    sizes="<?php echo $escape($imageSizes); ?>"
+                                                <?php endif; ?>
+                                            >
                                         <?php endif; ?>
-                                        <?php if ($imageHeight > 0) : ?>
-                                            height="<?php echo $imageHeight; ?>"
+                                        <?php if ($webpSrcset !== '') : ?>
+                                            <source
+                                                type="image/webp"
+                                                srcset="<?php echo $escape($webpSrcset); ?>"
+                                                <?php if ($imageSizes !== '') : ?>
+                                                    sizes="<?php echo $escape($imageSizes); ?>"
+                                                <?php endif; ?>
+                                            >
                                         <?php endif; ?>
-                                        loading="lazy"
-                                        decoding="async"
-                                    >
+                                        <img
+                                            src="<?php echo $escape($image); ?>"
+                                            <?php if ($imageSrcset !== '') : ?>
+                                                srcset="<?php echo $escape($imageSrcset); ?>"
+                                                <?php if ($imageSizes !== '') : ?>
+                                                    sizes="<?php echo $escape($imageSizes); ?>"
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                            alt="<?php echo $escape($imageAlt); ?>"
+                                            <?php if ($imageWidth > 0) : ?>
+                                                width="<?php echo $imageWidth; ?>"
+                                            <?php endif; ?>
+                                            <?php if ($imageHeight > 0) : ?>
+                                                height="<?php echo $imageHeight; ?>"
+                                            <?php endif; ?>
+                                            loading="lazy"
+                                            decoding="async"
+                                            fetchpriority="low"
+                                        >
+                                    </picture>
                                 </div>
                             <?php endif; ?>
 

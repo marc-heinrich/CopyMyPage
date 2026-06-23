@@ -12,10 +12,10 @@ namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
-use Joomla\CMS\Helper\MediaHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
+use Joomla\Component\CopyMyPage\Site\Helper\Helpers\ImageHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
 use Joomla\Database\DatabaseAwareInterface;
 use Joomla\Database\DatabaseAwareTrait;
@@ -407,186 +407,7 @@ final class GalleryHelper implements DatabaseAwareInterface
      */
     private function resolveOpenGraphImage(mixed $rawImage): array
     {
-        $raw = self::mediaFieldString($rawImage);
-
-        if ($raw === '') {
-            return ['src' => '', 'width' => 0, 'height' => 0];
-        }
-
-        $fragmentData = self::extractJoomlaImageFragmentData($raw);
-        $clean        = trim((string) MediaHelper::getCleanMediaFieldValue($raw));
-
-        if ($clean === '' && $fragmentData['path'] !== '') {
-            $clean = $fragmentData['path'];
-        }
-
-        $src = self::normalizeMediaPath($clean);
-
-        if ($src === '') {
-            return ['src' => '', 'width' => 0, 'height' => 0];
-        }
-
-        $width  = self::cfgInt($fragmentData, 'width', 0, 0);
-        $height = self::cfgInt($fragmentData, 'height', 0, 0);
-
-        if (($width === 0 || $height === 0) && !preg_match('#^(?:[a-z][a-z0-9+.-]*:)?//#i', $src) && !str_starts_with($src, 'data:')) {
-            [$localWidth, $localHeight] = self::resolveLocalImageDimensions($src);
-            $width  = $width > 0 ? $width : $localWidth;
-            $height = $height > 0 ? $height : $localHeight;
-        }
-
-        return ['src' => $src, 'width' => $width, 'height' => $height];
-    }
-
-    /**
-     * Extract a path-like string from possible media field value shapes.
-     *
-     * @param   mixed  $value  Raw media value.
-     *
-     * @return  string
-     */
-    private static function mediaFieldString(mixed $value): string
-    {
-        if (\is_string($value)) {
-            $value = trim($value);
-
-            if ($value !== '' && ($value[0] === '{' || $value[0] === '[')) {
-                $decoded = json_decode($value, true);
-
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    return self::mediaFieldString($decoded);
-                }
-            }
-
-            return $value;
-        }
-
-        if ($value instanceof Registry) {
-            $value = $value->toArray();
-        } elseif (\is_object($value)) {
-            $value = get_object_vars($value);
-        }
-
-        if (\is_array($value)) {
-            foreach (['imagefile', 'image', 'file', 'src', 'url', 'path'] as $key) {
-                if (array_key_exists($key, $value)) {
-                    $candidate = self::mediaFieldString($value[$key]);
-
-                    if ($candidate !== '') {
-                        return $candidate;
-                    }
-                }
-            }
-        }
-
-        return '';
-    }
-
-    /**
-     * Resolve Joomla media adapter prefixes and local paths to frontend URLs.
-     *
-     * @param   string  $path  Clean media path.
-     *
-     * @return  string
-     */
-    private static function normalizeMediaPath(string $path): string
-    {
-        $path = trim($path);
-
-        if ($path === '') {
-            return '';
-        }
-
-        if (preg_match('#^(?:https?:)?//#i', $path) || str_starts_with($path, 'data:')) {
-            return $path;
-        }
-
-        if (preg_match('#^joomlaImage://local-([^/]+)/(.+)$#', $path, $matches) === 1) {
-            $path = $matches[1] . '/' . $matches[2];
-        } elseif (preg_match('#^local-([^:]+):/?(.*)$#', $path, $matches) === 1) {
-            $path = $matches[1] . '/' . ltrim($matches[2], '/');
-        }
-
-        return ltrim($path, '/');
-    }
-
-    /**
-     * Extract dimensions and fallback path from a Joomla image fragment.
-     *
-     * @param   string  $value  Stored media field value.
-     *
-     * @return  array{path: string, width: int, height: int}
-     */
-    private static function extractJoomlaImageFragmentData(string $value): array
-    {
-        $data = ['path' => '', 'width' => 0, 'height' => 0];
-        $hash = strpos($value, '#');
-
-        if ($hash === false) {
-            return $data;
-        }
-
-        $fragment = substr($value, $hash + 1);
-
-        if ($fragment === '') {
-            return $data;
-        }
-
-        $parts = parse_url($fragment);
-
-        if (!\is_array($parts)) {
-            return $data;
-        }
-
-        if (($parts['scheme'] ?? '') === 'joomlaImage' && str_starts_with((string) ($parts['host'] ?? ''), 'local-')) {
-            $adapter = substr((string) $parts['host'], 6);
-            $path    = ltrim((string) ($parts['path'] ?? ''), '/');
-
-            if ($adapter !== '' && $path !== '') {
-                $data['path'] = $adapter . '/' . $path;
-            }
-        }
-
-        $query = [];
-        parse_str((string) ($parts['query'] ?? ''), $query);
-
-        $data['width']  = CopyMyPageHelper::toInt($query['width'] ?? null, 0, 0);
-        $data['height'] = CopyMyPageHelper::toInt($query['height'] ?? null, 0, 0);
-
-        return $data;
-    }
-
-    /**
-     * Read intrinsic dimensions for local public image paths.
-     *
-     * @param   string  $src  Public local image path.
-     *
-     * @return  array{0: int, 1: int}
-     */
-    private static function resolveLocalImageDimensions(string $src): array
-    {
-        $path = parse_url($src, PHP_URL_PATH);
-
-        if (!\is_string($path) || $path === '') {
-            return [0, 0];
-        }
-
-        $absolutePath = JPATH_ROOT . '/' . ltrim($path, '/');
-
-        if (!is_file($absolutePath)) {
-            return [0, 0];
-        }
-
-        $size = @getimagesize($absolutePath);
-
-        if (!\is_array($size)) {
-            return [0, 0];
-        }
-
-        return [
-            CopyMyPageHelper::toInt($size[0] ?? 0, 0, 0),
-            CopyMyPageHelper::toInt($size[1] ?? 0, 0, 0),
-        ];
+        return $this->getImageHelper()->resolveMediaImage($rawImage);
     }
 
     /**
@@ -727,165 +548,12 @@ final class GalleryHelper implements DatabaseAwareInterface
      */
     private function buildGalleryStartImageData(string $src): array
     {
-        $data = [
-            'src'          => '',
-            'srcset'       => '',
-            'webpSrcset'   => '',
-            'avifSrcset'   => '',
-            'sizes'        => self::PREVIEW_IMAGE_SIZES,
-            'width'        => 0,
-            'height'       => 0,
-        ];
-        $src = trim($src);
-
-        if ($src === '') {
-            return $data;
-        }
-
-        if (preg_match('#^(?:https?:)?//#i', $src) || str_starts_with($src, 'data:')) {
-            $data['src'] = $src;
-
-            return $data;
-        }
-
-        $path = parse_url($src, PHP_URL_PATH);
-
-        if (!\is_string($path) || $path === '') {
-            return $data;
-        }
-
-        $publicPath   = ltrim($path, '/');
-        $absolutePath = JPATH_ROOT . DIRECTORY_SEPARATOR
-            . str_replace('/', DIRECTORY_SEPARATOR, $publicPath);
-
-        if (!is_file($absolutePath)) {
-            return $data;
-        }
-
-        [$width, $height] = self::resolveLocalImageDimensions($publicPath);
-
-        $data['src']    = $this->toAbsoluteUrl($publicPath);
-        $data['width']  = $width;
-        $data['height'] = $height;
-
-        $extension = strtolower((string) pathinfo($publicPath, PATHINFO_EXTENSION));
-
-        if ($extension === '') {
-            return $data;
-        }
-
-        $srcsetEntries       = [];
-        $webpSrcsetEntries   = [];
-        $avifSrcsetEntries   = [];
-        $hasIntrinsicVariant = false;
-
-        foreach (self::PREVIEW_IMAGE_VARIANT_WIDTHS as $variantWidth) {
-            $fallbackPath = self::findImageVariantPath($publicPath, $variantWidth, $extension);
-            $webpPath     = self::findImageVariantPath($publicPath, $variantWidth, 'webp');
-            $avifPath     = self::findImageVariantPath($publicPath, $variantWidth, 'avif');
-
-            if ($fallbackPath !== '') {
-                $fallbackUrl    = $this->toAbsoluteUrl($fallbackPath);
-                $srcsetEntries[] = $fallbackUrl . ' ' . $variantWidth . 'w';
-
-                if ($width > 0 && $variantWidth === $width) {
-                    $data['src']          = $fallbackUrl;
-                    $hasIntrinsicVariant = true;
-                }
-            }
-
-            if ($webpPath !== '') {
-                $webpSrcsetEntries[] = $this->toAbsoluteUrl($webpPath) . ' ' . $variantWidth . 'w';
-            }
-
-            if ($avifPath !== '') {
-                $avifSrcsetEntries[] = $this->toAbsoluteUrl($avifPath) . ' ' . $variantWidth . 'w';
-            }
-        }
-
-        if ($width > 0 && !$hasIntrinsicVariant) {
-            $srcsetEntries[] = $this->toAbsoluteUrl($publicPath) . ' ' . $width . 'w';
-        }
-
-        $data['srcset']     = implode(', ', array_unique($srcsetEntries));
-        $data['webpSrcset'] = implode(', ', array_unique($webpSrcsetEntries));
-        $data['avifSrcset'] = implode(', ', array_unique($avifSrcsetEntries));
-
-        return $data;
-    }
-
-    /**
-     * Build a same-directory responsive image variant path.
-     *
-     * @param   string  $publicPath  Public source image path.
-     * @param   int     $width       Variant width.
-     * @param   string  $extension   Variant file extension.
-     *
-     * @return  string
-     */
-    private static function buildImageVariantPath(string $publicPath, int $width, string $extension): string
-    {
-        $variantPath = preg_replace(
-            '/\.[^.]+$/',
-            '-' . $width . '.' . strtolower(trim($extension, '.')),
-            $publicPath
+        return $this->getImageHelper()->buildResponsiveImageData(
+            $src,
+            self::PREVIEW_IMAGE_VARIANT_WIDTHS,
+            self::PREVIEW_IMAGE_SIZES,
+            'start'
         );
-
-        return \is_string($variantPath) ? $variantPath : $publicPath;
-    }
-
-    /**
-     * Find a responsive variant without exposing generated files to Sigplus.
-     *
-     * For legacy start images stored in the gallery source directory, variants in
-     * the sibling `start` directory take precedence. Images already stored inside
-     * `start` keep their variants next to the selected source image.
-     *
-     * @param   string  $publicPath  Public source image path.
-     * @param   int     $width       Variant width.
-     * @param   string  $extension   Variant file extension.
-     *
-     * @return  string
-     */
-    private static function findImageVariantPath(string $publicPath, int $width, string $extension): string
-    {
-        $sameDirectoryPath = self::buildImageVariantPath($publicPath, $width, $extension);
-        $directory         = str_replace('\\', '/', (string) pathinfo($publicPath, PATHINFO_DIRNAME));
-        $candidates        = [];
-
-        if (strtolower((string) basename($directory)) !== 'start') {
-            $directoryPrefix = $directory !== '' && $directory !== '.' ? rtrim($directory, '/') . '/' : '';
-            $candidates[]     = $directoryPrefix . 'start/' . basename($sameDirectoryPath);
-        }
-
-        $candidates[] = $sameDirectoryPath;
-
-        foreach ($candidates as $candidate) {
-            if (self::isLocalImageFile($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return '';
-    }
-
-    /**
-     * Check whether a public image path resolves to a local file.
-     *
-     * @param   string  $publicPath  Public image path.
-     *
-     * @return  bool
-     */
-    private static function isLocalImageFile(string $publicPath): bool
-    {
-        if ($publicPath === '') {
-            return false;
-        }
-
-        $absolutePath = JPATH_ROOT . DIRECTORY_SEPARATOR
-            . str_replace('/', DIRECTORY_SEPARATOR, ltrim($publicPath, '/'));
-
-        return is_file($absolutePath);
     }
 
     /**
@@ -1043,6 +711,20 @@ final class GalleryHelper implements DatabaseAwareInterface
         $source = str_replace('\\', '/', trim($source));
 
         return trim($source, '/');
+    }
+
+    /**
+     * Resolve the shared image helper via the root DI container.
+     */
+    private function getImageHelper(): ImageHelper
+    {
+        $helper = Factory::getContainer()->get(ImageHelper::class);
+
+        if (!$helper instanceof ImageHelper) {
+            throw new \RuntimeException('The CopyMyPage image helper is not available.');
+        }
+
+        return $helper;
     }
 
     /**

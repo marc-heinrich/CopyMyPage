@@ -1816,6 +1816,12 @@ body.is-small .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__info::a
     background: var(--cmp-color-surface);
 }
 
+.cmp-module--team-cards .cmp-team__picture {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+}
+
 .cmp-module--team-cards .cmp-team__media img {
     display: block;
     inline-size: 100%;
