@@ -4,14 +4,13 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.15
  */
 
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
-use Joomla\CMS\Uri\Uri;
 use Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper;
 
 /**
@@ -135,24 +134,19 @@ if ($lead === '') {
                         $filterLabel   = trim((string) ($item->filter_label ?? ''));
                         $filterClass   = trim((string) ($item->filter_class ?? ''));
                         $imageCount    = (int) ($item->image_count ?? 0);
-                        $previewImage  = trim((string) ($item->gallery_start_image ?? $item->gallery_image ?? ''));
-                        $previewSrc    = '';
+                        $previewData   = \is_array($item->gallery_start_image_data ?? null)
+                            ? $item->gallery_start_image_data
+                            : [];
+                        $previewSrc    = trim((string) ($previewData['src'] ?? ''));
+                        $previewSrcset = trim((string) ($previewData['srcset'] ?? ''));
+                        $webpSrcset    = trim((string) ($previewData['webpSrcset'] ?? ''));
+                        $avifSrcset    = trim((string) ($previewData['avifSrcset'] ?? ''));
+                        $previewSizes  = trim((string) ($previewData['sizes'] ?? ''));
+                        $previewWidth  = (int) ($previewData['width'] ?? 0);
+                        $previewHeight = (int) ($previewData['height'] ?? 0);
                         $galleryLink   = '';
                         $cardTitle     = $title !== '' ? $title : ($filterLabel !== '' ? $filterLabel : $source);
                         $cardItemClass = trim('cmp-gallery-preview__item ' . $filterClass);
-
-                        if ($previewImage !== '') {
-                            if (preg_match('#^(?:https?:)?//#i', $previewImage) || str_starts_with($previewImage, 'data:')) {
-                                $previewSrc = $previewImage;
-                            } else {
-                                $imageRelativePath = ltrim($previewImage, '/');
-                                $imageAbsolutePath = JPATH_ROOT . '/' . str_replace('/', DIRECTORY_SEPARATOR, $imageRelativePath);
-
-                                if (is_file($imageAbsolutePath)) {
-                                    $previewSrc = Uri::root() . $imageRelativePath;
-                                }
-                            }
-                        }
 
                         if ($previewSrc === '') {
                             continue;
@@ -172,13 +166,46 @@ if ($lead === '') {
                                     tabindex="0"
                                 <?php endif; ?>
                             >
-                                <img
-                                    class="cmp-gallery-preview__image"
-                                    src="<?php echo $escape($previewSrc); ?>"
-                                    alt="<?php echo $escape($cardTitle); ?>"
-                                    loading="lazy"
-                                    decoding="async"
-                                >
+                                <picture class="cmp-gallery-preview__picture">
+                                    <?php if ($avifSrcset !== '') : ?>
+                                        <source
+                                            type="image/avif"
+                                            srcset="<?php echo $escape($avifSrcset); ?>"
+                                            <?php if ($previewSizes !== '') : ?>
+                                                sizes="<?php echo $escape($previewSizes); ?>"
+                                            <?php endif; ?>
+                                        >
+                                    <?php endif; ?>
+                                    <?php if ($webpSrcset !== '') : ?>
+                                        <source
+                                            type="image/webp"
+                                            srcset="<?php echo $escape($webpSrcset); ?>"
+                                            <?php if ($previewSizes !== '') : ?>
+                                                sizes="<?php echo $escape($previewSizes); ?>"
+                                            <?php endif; ?>
+                                        >
+                                    <?php endif; ?>
+                                    <img
+                                        class="cmp-gallery-preview__image"
+                                        src="<?php echo $escape($previewSrc); ?>"
+                                        <?php if ($previewSrcset !== '') : ?>
+                                            srcset="<?php echo $escape($previewSrcset); ?>"
+                                            <?php if ($previewSizes !== '') : ?>
+                                                sizes="<?php echo $escape($previewSizes); ?>"
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        <?php if ($previewWidth > 0) : ?>
+                                            width="<?php echo $previewWidth; ?>"
+                                        <?php endif; ?>
+                                        <?php if ($previewHeight > 0) : ?>
+                                            height="<?php echo $previewHeight; ?>"
+                                        <?php endif; ?>
+                                        alt="<?php echo $escape($cardTitle); ?>"
+                                        loading="lazy"
+                                        decoding="async"
+                                        fetchpriority="low"
+                                    >
+                                </picture>
 
                                 <div class="cmp-gallery-preview__info">
                                     <h3 class="cmp-gallery-preview__title">

@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.15
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -1382,6 +1382,12 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-header__lead {
 .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__card:focus-within::before {
     inset: 0;
     opacity: 1;
+}
+
+.cmp-module--gallery-sigplus-preview .cmp-gallery-preview__picture {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
 }
 
 .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__image {

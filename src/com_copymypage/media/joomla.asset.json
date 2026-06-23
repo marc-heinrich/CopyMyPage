@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "assets": [
@@ -26,7 +26,7 @@
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.min.css",
-      "version": "0.0.14",
+      "version": "0.0.15",
       "dependencies": [
         "uikit",
         "template.fonts"

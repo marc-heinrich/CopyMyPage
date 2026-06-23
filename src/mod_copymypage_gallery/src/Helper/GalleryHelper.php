@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.15
  */
 
 namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
@@ -35,6 +35,21 @@ final class GalleryHelper implements DatabaseAwareInterface
      * @var string
      */
     private const DEFAULT_OG_IMAGE = 'images/copymypage/module/mod_copymypage_gallery/2026/kinder/00_start_001.jpg';
+
+    /**
+     * Responsive widths generated for gallery preview images.
+     *
+     * @var array<int, int>
+     */
+    private const PREVIEW_IMAGE_VARIANT_WIDTHS = [320, 400, 640, 800, 960, 1200];
+
+    /**
+     * Browser sizing hint matching the one-, two- and three-column preview grid.
+     *
+     * @var string
+     */
+    private const PREVIEW_IMAGE_SIZES = '(min-width: 1200px) 400px, '
+        . '(min-width: 640px) calc(50vw - 45px), calc(100vw - 30px)';
 
     /**
      * Build Open Graph compatible tag data for the gallery section.
@@ -655,6 +670,7 @@ final class GalleryHelper implements DatabaseAwareInterface
         $moduleRow->gallery_source  = $source;
         $moduleRow->gallery_image   = $startImage;
         $moduleRow->gallery_start_image = $startImage;
+        $moduleRow->gallery_start_image_data = $this->buildGalleryStartImageData($startImage);
         $moduleRow->gallery_legacy_image = $legacyImage;
         $moduleRow->gallery_id      = trim((string) $moduleParams->get('id', ''));
         $moduleRow->filter_label    = $filterLabel;
@@ -688,6 +704,188 @@ final class GalleryHelper implements DatabaseAwareInterface
         $image = $this->resolveOpenGraphImage($rawImage);
 
         return self::normalizeGalleryImageSource($image['src'], $source);
+    }
+
+    /**
+     * Build responsive picture data for one normalized gallery start image.
+     *
+     * Local variants follow the Hero naming convention, for example
+     * `start-480.jpg`, `start-480.webp`, and `start-480.avif`.
+     * Remote and data URLs remain valid single-source fallbacks.
+     *
+     * @param   string  $src  Normalized gallery start image path or URL.
+     *
+     * @return  array{
+     *     src: string,
+     *     srcset: string,
+     *     webpSrcset: string,
+     *     avifSrcset: string,
+     *     sizes: string,
+     *     width: int,
+     *     height: int
+     * }
+     */
+    private function buildGalleryStartImageData(string $src): array
+    {
+        $data = [
+            'src'          => '',
+            'srcset'       => '',
+            'webpSrcset'   => '',
+            'avifSrcset'   => '',
+            'sizes'        => self::PREVIEW_IMAGE_SIZES,
+            'width'        => 0,
+            'height'       => 0,
+        ];
+        $src = trim($src);
+
+        if ($src === '') {
+            return $data;
+        }
+
+        if (preg_match('#^(?:https?:)?//#i', $src) || str_starts_with($src, 'data:')) {
+            $data['src'] = $src;
+
+            return $data;
+        }
+
+        $path = parse_url($src, PHP_URL_PATH);
+
+        if (!\is_string($path) || $path === '') {
+            return $data;
+        }
+
+        $publicPath   = ltrim($path, '/');
+        $absolutePath = JPATH_ROOT . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, $publicPath);
+
+        if (!is_file($absolutePath)) {
+            return $data;
+        }
+
+        [$width, $height] = self::resolveLocalImageDimensions($publicPath);
+
+        $data['src']    = $this->toAbsoluteUrl($publicPath);
+        $data['width']  = $width;
+        $data['height'] = $height;
+
+        $extension = strtolower((string) pathinfo($publicPath, PATHINFO_EXTENSION));
+
+        if ($extension === '') {
+            return $data;
+        }
+
+        $srcsetEntries       = [];
+        $webpSrcsetEntries   = [];
+        $avifSrcsetEntries   = [];
+        $hasIntrinsicVariant = false;
+
+        foreach (self::PREVIEW_IMAGE_VARIANT_WIDTHS as $variantWidth) {
+            $fallbackPath = self::findImageVariantPath($publicPath, $variantWidth, $extension);
+            $webpPath     = self::findImageVariantPath($publicPath, $variantWidth, 'webp');
+            $avifPath     = self::findImageVariantPath($publicPath, $variantWidth, 'avif');
+
+            if ($fallbackPath !== '') {
+                $fallbackUrl    = $this->toAbsoluteUrl($fallbackPath);
+                $srcsetEntries[] = $fallbackUrl . ' ' . $variantWidth . 'w';
+
+                if ($width > 0 && $variantWidth === $width) {
+                    $data['src']          = $fallbackUrl;
+                    $hasIntrinsicVariant = true;
+                }
+            }
+
+            if ($webpPath !== '') {
+                $webpSrcsetEntries[] = $this->toAbsoluteUrl($webpPath) . ' ' . $variantWidth . 'w';
+            }
+
+            if ($avifPath !== '') {
+                $avifSrcsetEntries[] = $this->toAbsoluteUrl($avifPath) . ' ' . $variantWidth . 'w';
+            }
+        }
+
+        if ($width > 0 && !$hasIntrinsicVariant) {
+            $srcsetEntries[] = $this->toAbsoluteUrl($publicPath) . ' ' . $width . 'w';
+        }
+
+        $data['srcset']     = implode(', ', array_unique($srcsetEntries));
+        $data['webpSrcset'] = implode(', ', array_unique($webpSrcsetEntries));
+        $data['avifSrcset'] = implode(', ', array_unique($avifSrcsetEntries));
+
+        return $data;
+    }
+
+    /**
+     * Build a same-directory responsive image variant path.
+     *
+     * @param   string  $publicPath  Public source image path.
+     * @param   int     $width       Variant width.
+     * @param   string  $extension   Variant file extension.
+     *
+     * @return  string
+     */
+    private static function buildImageVariantPath(string $publicPath, int $width, string $extension): string
+    {
+        $variantPath = preg_replace(
+            '/\.[^.]+$/',
+            '-' . $width . '.' . strtolower(trim($extension, '.')),
+            $publicPath
+        );
+
+        return \is_string($variantPath) ? $variantPath : $publicPath;
+    }
+
+    /**
+     * Find a responsive variant without exposing generated files to Sigplus.
+     *
+     * For legacy start images stored in the gallery source directory, variants in
+     * the sibling `start` directory take precedence. Images already stored inside
+     * `start` keep their variants next to the selected source image.
+     *
+     * @param   string  $publicPath  Public source image path.
+     * @param   int     $width       Variant width.
+     * @param   string  $extension   Variant file extension.
+     *
+     * @return  string
+     */
+    private static function findImageVariantPath(string $publicPath, int $width, string $extension): string
+    {
+        $sameDirectoryPath = self::buildImageVariantPath($publicPath, $width, $extension);
+        $directory         = str_replace('\\', '/', (string) pathinfo($publicPath, PATHINFO_DIRNAME));
+        $candidates        = [];
+
+        if (strtolower((string) basename($directory)) !== 'start') {
+            $directoryPrefix = $directory !== '' && $directory !== '.' ? rtrim($directory, '/') . '/' : '';
+            $candidates[]     = $directoryPrefix . 'start/' . basename($sameDirectoryPath);
+        }
+
+        $candidates[] = $sameDirectoryPath;
+
+        foreach ($candidates as $candidate) {
+            if (self::isLocalImageFile($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Check whether a public image path resolves to a local file.
+     *
+     * @param   string  $publicPath  Public image path.
+     *
+     * @return  bool
+     */
+    private static function isLocalImageFile(string $publicPath): bool
+    {
+        if ($publicPath === '') {
+            return false;
+        }
+
+        $absolutePath = JPATH_ROOT . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, ltrim($publicPath, '/'));
+
+        return is_file($absolutePath);
     }
 
     /**
