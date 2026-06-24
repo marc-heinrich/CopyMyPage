@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.15
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Model;
@@ -13,7 +13,6 @@ namespace Joomla\Component\CopyMyPage\Site\Model;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
-use Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper;
 use Joomla\Database\ParameterType;
 
 /**
@@ -86,17 +85,11 @@ class GalleryModel extends BaseDatabaseModel
     /**
      * Resolves the shared Sigplus helper via the root DI container.
      *
-     * @return  SigplusHelper
+     * @return  \Joomla\Component\CopyMyPage\Site\Helper\Helpers\SigplusHelper
      */
-    private function getSigplusHelper(): SigplusHelper
+    private function getSigplusHelper(): object
     {
-        $handler = Factory::getContainer()->get(SigplusHelper::class);
-
-        if (!$handler instanceof SigplusHelper) {
-            throw new \RuntimeException('The CopyMyPage sigplus helper is not available.');
-        }
-
-        return $handler;
+        return Factory::getContainer()->get('copymypage.helper.sigplus');
     }
 
     /**

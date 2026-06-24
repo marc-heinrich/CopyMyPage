@@ -15,7 +15,6 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
-use Joomla\Component\CopyMyPage\Site\Helper\Helpers\ImageHelper;
 use Joomla\Database\DatabaseAwareInterface;
 use Joomla\Database\DatabaseAwareTrait;
 use Joomla\Database\ParameterType;
@@ -927,16 +926,12 @@ final class TeamHelper implements DatabaseAwareInterface
 
     /**
      * Resolve the shared image helper via the root DI container.
+     *
+     * @return  \Joomla\Component\CopyMyPage\Site\Helper\Helpers\ImageHelper
      */
-    private function getImageHelper(): ImageHelper
+    private function getImageHelper(): object
     {
-        $helper = Factory::getContainer()->get(ImageHelper::class);
-
-        if (!$helper instanceof ImageHelper) {
-            throw new \RuntimeException('The CopyMyPage image helper is not available.');
-        }
-
-        return $helper;
+        return Factory::getContainer()->get('copymypage.helper.image');
     }
 
     /**
