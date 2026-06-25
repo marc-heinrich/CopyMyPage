@@ -224,13 +224,13 @@
       "name": "uikit",
       "type": "style",
       "uri": "com_copymypage/uikit/uikit.min.css",
-      "version": "3.25.16"
+      "version": "3.25.19"
     },
     {
       "name": "uikit",
       "type": "script",
       "uri": "com_copymypage/uikit/uikit.min.js",
-      "version": "3.25.16",
+      "version": "3.25.19",
       "attributes": {
         "defer": true
       }
@@ -239,7 +239,7 @@
       "name": "uikit.icons",
       "type": "script",
       "uri": "com_copymypage/uikit/uikit-icons.min.js",
-      "version": "3.25.16",
+      "version": "3.25.19",
       "dependencies": [
         "uikit"
       ],

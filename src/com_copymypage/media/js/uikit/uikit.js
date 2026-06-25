@@ -1,4 +1,4 @@
-/*! UIkit 3.25.16 | https://www.getuikit.com | (c) 2014 - 2026 YOOtheme | MIT License */
+/*! UIkit 3.25.19 | https://www.getuikit.com | (c) 2014 - 2026 YOOtheme | MIT License */
 
 (function (global, factory) {
     typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -509,9 +509,7 @@
       return off2;
     }
     function trigger(targets, event, detail2) {
-      return toEventTargets(targets).every(
-        (target) => target.dispatchEvent(createEvent(event, true, true, detail2))
-      );
+      return toEventTargets(targets).map((target) => target.dispatchEvent(createEvent(event, true, true, detail2))).every((result) => result);
     }
     function createEvent(e, bubbles = true, cancelable = false, detail2) {
       if (isString(e)) {
@@ -1512,8 +1510,8 @@
           element: options.attach.element.map(flipAttachAxis).reverse(),
           target: options.attach.target.map(flipAttachAxis).reverse()
         },
-        offset: options.offset.reverse(),
-        placement: options.placement.reverse(),
+        offset: [...options.offset].reverse(),
+        placement: [...options.placement].reverse(),
         recursion: true
       });
     }
@@ -2302,16 +2300,11 @@
     }
     function getPositionWithMargin(el) {
       const { height, width } = dimensions$1(el);
-      let { top, left } = position(el);
-      const viewport = offsetViewport(el.ownerDocument);
-      top = clamp(top, viewport.top - height - viewport.height, viewport.bottom + viewport.height);
-      left = clamp(left, viewport.left - width - viewport.width, viewport.right + viewport.width);
       return {
         height,
         width,
-        top,
-        left,
         transform: "",
+        ...position(el),
         ...css(el, ["marginTop", "marginLeft"])
       };
     }
@@ -2486,7 +2479,16 @@
     }
     function matchFilter(el, attr, { filter: stateFilter = { "": "" }, sort: [stateSort, stateOrder] }) {
       const { filter = "", group = "", sort, order = "asc" } = getFilter(el, attr);
-      return isUndefined(sort) ? group in stateFilter && filter === stateFilter[group] || !filter && group && !(group in stateFilter) && !stateFilter[""] : stateSort === sort && stateOrder === order;
+      const defaultFilterMatches = !group && filter === stateFilter[""];
+      const groupFilterMatches = group in stateFilter && filter === stateFilter[group];
+      const groupResetMatches = !filter && group && !(group in stateFilter) && !stateFilter[""];
+      const filterMatches = defaultFilterMatches || groupFilterMatches || groupResetMatches;
+      if (isUndefined(sort)) {
+        return filterMatches;
+      }
+      const sortMatches = stateSort === sort && stateOrder === order;
+      const hasFilter = filter || group;
+      return sortMatches && (!hasFilter || filterMatches);
     }
     function sortItems(nodes, sort, order) {
       return [...nodes].sort((a, b) => {
@@ -3394,7 +3396,7 @@
       return Math.atan2(Math.abs(pos2.y - pos1.y), Math.abs(pos2.x - pos1.x)) * 180 / Math.PI;
     }
 
-    var VERSION = '3.25.16';
+    var VERSION = '3.25.19';
 
     function initWatches(instance) {
       instance._watches = [];
@@ -3847,9 +3849,11 @@
           callDisconnected(instance);
         }
         callHook(instance, "destroy");
-        detachFromElement(el, instance);
-        if (removeEl) {
-          remove$1(instance.$el);
+        if (el) {
+          detachFromElement(el, instance);
+          if (removeEl) {
+            remove$1(el);
+          }
         }
       };
       App.prototype.$create = createComponent;
@@ -3965,7 +3969,7 @@
       update: [
         {
           write() {
-            this.navItems.concat(this.nav).forEach((el) => el && (el.hidden = !this.maxIndex));
+            this.navItems.concat(this.nav).forEach((el) => el && (el.hidden = this.maxIndex < 1));
             this.updateNav();
           },
           events: ["resize"]
@@ -5628,7 +5632,7 @@
       },
       observe: [
         resize({
-          target: ({ slides, $el }) => [$el, ...slides]
+          target: ({ list, $el }) => [$el, ...children(list)]
         }),
         intersection({
           handler(entries) {
@@ -5636,7 +5640,7 @@
               target.ariaHidden = target.inert = !isIntersecting;
             }
           },
-          target: ({ slides }) => slides,
+          target: ({ list }) => children(list),
           args: { intersecting: false },
           options: ({ $el }) => ({ root: $el, rootMargin: "0px -10px" })
         })
@@ -6505,6 +6509,9 @@
           if (!files.length) {
             return;
           }
+          if (!this.multiple) {
+            files = files.slice(0, 1);
+          }
           trigger(this.$el, "upload", [files]);
           for (const file of files) {
             if (this.maxSize && this.maxSize * 1e3 < file.size) {
@@ -6519,9 +6526,6 @@
               this.fail(this.t("invalidMime", this.mime));
               return;
             }
-          }
-          if (!this.multiple) {
-            files = files.slice(0, 1);
           }
           this.beforeAll(this, files);
           const chunks = chunk(files, this.concurrent);
@@ -6552,7 +6556,9 @@
                 this.completeAll(xhr);
               }
             } catch (e) {
-              this.error(e);
+              if (e.name !== "AbortError") {
+                this.error(e);
+              }
             }
           };
           await upload(chunks.shift());
@@ -6589,7 +6595,9 @@
         responseType: "",
         ...options
       };
-      await env.beforeSend(env);
+      if (await env.beforeSend(env) === false) {
+        throw abortError(env.xhr);
+      }
       return send(env.url, env);
     }
     function send(url, env) {
@@ -6621,8 +6629,12 @@
         });
         on(xhr, "error", () => reject(assign(Error("Network Error"), { xhr })));
         on(xhr, "timeout", () => reject(assign(Error("Network Timeout"), { xhr })));
+        on(xhr, "abort", () => reject(abortError(xhr)));
         xhr.send(env.data);
       });
+    }
+    function abortError(xhr) {
+      return assign(Error("Network Abort"), { xhr, name: "AbortError" });
     }
 
     var components$1 = /*#__PURE__*/Object.freeze({
