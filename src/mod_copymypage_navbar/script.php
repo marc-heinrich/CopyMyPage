@@ -673,10 +673,15 @@ return new class () implements ServiceProviderInterface
                 /**
                  * Migrate the navbar slot params to the new layout-prefixed naming scheme.
                  *
+                 * CopyMyPage 0.0.15 replaces the stored UIkit logo path with a
+                 * template-driven inner logo layout selector.
+                 *
                  * @param   array<string, mixed>  $normalized  Normalized params (by reference).
                  * @param   array<string, mixed>  $params       Raw params.
                  *
                  * @return  void
+                 *
+                 * @since   0.0.15  Adds navbar logo layout migration.
                  */
                 private function migrateNavbarSlotParams(array &$normalized, array $params): void
                 {
@@ -948,9 +953,14 @@ return new class () implements ServiceProviderInterface
                 /**
                  * Remove obsolete flat navbar param keys after migration.
                  *
+                 * CopyMyPage 0.0.15 removes the legacy logo path params because
+                 * logo rendering is now handled by template layout files.
+                 *
                  * @param   array<string, mixed>  $normalized  Normalized params (by reference).
                  *
                  * @return  void
+                 *
+                 * @since   0.0.15  Removes legacy navbar logo params.
                  */
                 private function removeLegacyNavbarParams(array &$normalized): void
                 {
