@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.14</version>
+  <version>0.0.15</version>
   <description>MOD_COPYMYPAGE_NAVBAR_XML_DESCRIPTION</description>
   <scriptfile>script.php</scriptfile>
   <namespace path="src">Joomla\Module\CopyMyPage\Navbar</namespace>
@@ -37,7 +37,10 @@
         </field>
       </fieldset>
       <fieldset name="navbar_uikit" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_NAV">
-        <field name="navbar_uikit_logo" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_DESC" default="media/com_copymypage/images/logo/logo-cmp.png" showon="layoutVariant:navbar_uikit"/>
+        <field name="navbar_uikit_logoLayout" type="list" label="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LAYOUT_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LAYOUT_DESC" default="image" showon="layoutVariant:navbar_uikit">
+          <option value="image">MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LAYOUT_OPTION_IMAGE</option>
+          <option value="image_title">MOD_COPYMYPAGE_NAVBAR_FIELD_LOGO_LAYOUT_OPTION_IMAGE_TITLE</option>
+        </field>
       </fieldset>
       <fieldset name="navbar_uikit_user_dropdown" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_USER_DROPDOWN">
         <field name="navbar_uikit_userDropdownHoldOpenEnabled" type="radio" label="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_ENABLED_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_DROPDOWN_ENABLED_DESC" default="1" class="btn-group btn-group-yesno" showon="layoutVariant:navbar_uikit">

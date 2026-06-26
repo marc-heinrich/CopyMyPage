@@ -4,13 +4,14 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.15
  */
 
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Filter\OutputFilter;
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
@@ -21,7 +22,7 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  *
  * @var array<string, mixed> $cfg Normalized/typed module configuration (from helper).
  *                                Document only the keys used in this layout:
- *                                - logo: string
+ *                                - logoLayout: string
  *                                - navOffcanvasId: string
  *                                - userOffcanvasId: string
  *                                - basketOffcanvasId: string
@@ -43,7 +44,8 @@ $escape = static fn(mixed $value): string => htmlspecialchars((string) $value, E
 
 // Read only the config keys used by this layout.
 // For type normalization (boolean or integer), use the component helper class CopyMyPage.
-$logo                   = (string) ($cfg['logo'] ?? '');
+$logoLayout             = strtolower(trim((string) ($cfg['logoLayout'] ?? 'image')));
+$logoLayout             = \in_array($logoLayout, ['image', 'image_title'], true) ? $logoLayout : 'image';
 $navOffcanvasId         = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId        = (string) ($cfg['userOffcanvasId'] ?? '');
 $basketOffcanvasId      = (string) ($cfg['basketOffcanvasId'] ?? '');
@@ -52,6 +54,10 @@ $moduleClass            = trim('cmp-module ' . $userDropdownRootClass);
 $onepageBase            = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
 $logoHref               = $isOnepage ? '#top' : $onepageBase;
 $navigationState        = is_array($navigationState ?? null) ? $navigationState : [];
+$renderLogo             = static fn(string $context): string => LayoutHelper::render(
+    'copymypage.navbar.logo.' . $logoLayout,
+    ['context' => $context]
+);
 
 if (!isset($navbarHelper) || !$navbarHelper instanceof \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper) {
     return;
@@ -94,30 +100,14 @@ if (!empty($warning)) {
                         ></mm-burger>
 
                         <a class="uk-navbar-item uk-logo uk-visible@m cmp-navbar-logo-link" href="<?php echo $escape($logoHref); ?>">
-                            <img
-                                class="cmp-navbar-logo"
-                                src="<?php echo $escape($logo); ?>"
-                                alt="CopyMyPage – Your website. Just copy it."
-                                width="140"
-                                height="32"
-                                loading="eager"
-                                decoding="async"
-                            >
+                            <?php echo $renderLogo('desktop'); ?>
                         </a>
                     </div>
 
                     <!-- CENTER: Desktop = Nav items, Mobile = Logo -->
                     <div class="uk-navbar-center">
                         <a class="uk-navbar-item uk-logo uk-hidden@m cmp-navbar-logo-link" href="<?php echo $escape($logoHref); ?>">
-                            <img
-                                class="cmp-navbar-logo"
-                                src="<?php echo $escape($logo); ?>"
-                                alt="CopyMyPage – Your website. Just copy it."
-                                width="140"
-                                height="32"
-                                loading="eager"
-                                decoding="async"
-                            >
+                            <?php echo $renderLogo('mobile'); ?>
                         </a>
 
                         <ul class="uk-navbar-nav uk-visible@m cmp-navbar-nav">

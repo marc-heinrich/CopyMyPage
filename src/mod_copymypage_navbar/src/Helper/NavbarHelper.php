@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.15
  */
 
 namespace Joomla\Module\CopyMyPage\Navbar\Site\Helper;
@@ -558,7 +558,7 @@ class NavbarHelper
                 'slot'                              => 'navbar',
                 'layoutPrefix'                      => 'navbar',
                 'layoutVariant'                     => $baseLayout,
-                'logo'                              => 'media/com_copymypage/images/logo/logo-cmp.png',
+                'logoLayout'                        => 'image',
                 'userDropdownHoldOpenEnabled'       => true,
                 'userDropdownCloseDelay'            => 180,
                 'userDropdownCloseOnNavClick'       => true,
@@ -609,7 +609,9 @@ class NavbarHelper
     private function getNavbarUIKitConfig(array $params): array
     {
         return [
-            'logo'                              => $this->readString($params, ['navbar_uikit_logo', 'logo'], 'media/com_copymypage/images/logo/logo-cmp.png'),
+            'logoLayout'                        => $this->normalizeLogoLayout(
+                $this->readString($params, ['navbar_uikit_logoLayout', 'logoLayout'], 'image')
+            ),
             'userDropdownHoldOpenEnabled'       => $this->readBool($params, ['navbar_uikit_userDropdownHoldOpenEnabled', 'userDropdownHoldOpenEnabled'], true),
             'userDropdownCloseDelay'            => $this->readInt($params, ['navbar_uikit_userDropdownCloseDelay', 'userDropdownCloseDelay'], 180, 0),
             'userDropdownCloseOnNavClick'       => $this->readBool($params, ['navbar_uikit_userDropdownCloseOnNavClick', 'userDropdownCloseOnNavClick'], true),
@@ -619,6 +621,20 @@ class NavbarHelper
             'userDropdownSelectorDropdown'      => $this->readString($params, ['navbar_uikit_userDropdownSelectorDropdown', 'userDropdownSelectorDropdown'], '.cmp-navbar-user .uk-navbar-dropdown'),
             'userDropdownSelectorNavbarDropdown'=> $this->readString($params, ['navbar_uikit_userDropdownSelectorNavbarDropdown', 'userDropdownSelectorNavbarDropdown'], '.cmp-navbar .uk-navbar-dropdown'),
         ];
+    }
+
+    /**
+     * Normalize the selected navbar logo inner layout.
+     *
+     * @param   string  $layout  Raw logo layout token.
+     *
+     * @return  string
+     */
+    private function normalizeLogoLayout(string $layout): string
+    {
+        $layout = strtolower(trim($layout));
+
+        return \in_array($layout, ['image', 'image_title'], true) ? $layout : 'image';
     }
 
     /**

@@ -683,9 +683,9 @@ return new class () implements ServiceProviderInterface
                     $this->migrateScalarParam(
                         $normalized,
                         $params,
-                        'navbar_uikit_logo',
-                        'media/com_copymypage/images/logo/logo-cmp.png',
-                        'logo'
+                        'navbar_uikit_logoLayout',
+                        'image',
+                        'logoLayout'
                     );
                     $this->migrateScalarParam(
                         $normalized,
@@ -956,6 +956,8 @@ return new class () implements ServiceProviderInterface
                 {
                     foreach ([
                         'logo',
+                        'logoLayout',
+                        'navbar_uikit_logo',
                         'navOffcanvasId',
                         'userOffcanvasId',
                         'basketOffcanvasId',
