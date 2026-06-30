@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.15
+ * @since       0.0.16
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -1304,6 +1304,102 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-header__headline {
 
 body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-header__lead {
     font-size: var(--cmp-font-size-sm);
+}
+
+/* COUNTS
+   ========================================================================== */
+
+.cmp-section--counts {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    padding-block-end: var(--cmp-section-spacing-top);
+}
+
+.cmp-module--counts-default {
+    color: var(--cmp-color-text-default);
+}
+
+.cmp-module--counts-default .cmp-counts__grid {
+    align-items: stretch;
+    padding-block-start: 1.65rem;
+}
+
+.cmp-module--counts-default .cmp-counts__card {
+    position: relative;
+    min-block-size: 100%;
+    justify-content: center;
+    gap: 0.65rem;
+    padding: clamp(2.75rem, 5vw, 3.25rem) clamp(1rem, 2.5vw, 1.5rem) clamp(1.35rem, 3vw, 1.75rem);
+    border-radius: var(--cmp-border-radius-lg);
+    background: var(--cmp-color-background-default);
+    box-shadow: 0 0.75rem 1.75rem rgba(var(--cmp-color-logo-dark-rgb), 0.12);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.cmp-module--counts-default .cmp-counts__card:hover,
+.cmp-module--counts-default .cmp-counts__card:focus-within {
+    box-shadow: var(--cmp-box-shadow-lg);
+    transform: translateY(-3px);
+}
+
+.cmp-module--counts-default .cmp-counts__icon {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 3.25rem;
+    block-size: 3.25rem;
+    transform: translate(-50%, -50%);
+    border: var(--cmp-border-width-lg) solid var(--cmp-color-background-default);
+    border-radius: 50%;
+    color: var(--cmp-color-strong);
+    background: var(--cmp-color-soft);
+    box-shadow: 0 0.4rem 1rem rgba(var(--cmp-color-logo-dark-rgb), 0.16);
+}
+
+.cmp-module--counts-default .cmp-counts__icon svg {
+    inline-size: 1.35rem;
+    block-size: 1.35rem;
+}
+
+.cmp-module--counts-default .cmp-counts__value {
+    display: block;
+    color: var(--cmp-color-logo-dark);
+    font-family: var(--cmp-font-family-ui);
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 800;
+    line-height: 1;
+}
+
+.cmp-module--counts-default .cmp-counts__label {
+    display: block;
+    max-inline-size: 14rem;
+    color: rgba(var(--cmp-color-logo-dark-rgb), 0.66);
+    font-family: var(--cmp-font-family-body-alt);
+    font-size: var(--cmp-font-size-sm);
+    line-height: 1.45;
+}
+
+body.is-small .cmp-module--counts-default .cmp-counts__card {
+    padding-block: 2.75rem 1.25rem;
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-counts__item.uk-grid-margin {
+    margin-block-start: 3.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cmp-module--counts-default .cmp-counts__card {
+        transition: none;
+    }
+
+    .cmp-module--counts-default .cmp-counts__card:hover,
+    .cmp-module--counts-default .cmp-counts__card:focus-within {
+        transform: none;
+    }
 }
 
 /* DEBUG

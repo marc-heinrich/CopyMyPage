@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.15
+ * @since       0.0.16
  */
 
 \defined('_JEXEC') or die;
@@ -63,10 +63,12 @@ if (!isset($navbarHelper) || !$navbarHelper instanceof \Joomla\Module\CopyMyPage
     return;
 }
 
-/** @var Joomla\CMS\WebAsset\WebAssetManager $wa */
-$wa = $app->getDocument()->getWebAssetManager();
-$wa->useScript('mburger');
-$wa->useScript('copymypage.dropdown');
+if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
+    $wa = $app->getDocument()->getWebAssetManager();
+    $wa->useScript('mburger');
+    $wa->useScript('copymypage.dropdown');
+}
 
 if (!empty($warning)) {
     echo $warning;

@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.16
  */
 
 window.CopyMyPage = window.CopyMyPage || {};
@@ -45,12 +45,36 @@ window.CopyMyPage = window.CopyMyPage || {};
                 return;
             }
 
+            this._placeTemplateComment();
+
             this._observer = new IntersectionObserver(
                 (entries) => this._handleIntersections(entries),
                 { threshold: constants.THRESHOLDS.mmenuIntersection }
             );
 
             this.listen(this._offcanvas, 'click', this._handleOffcanvasClick);
+        }
+
+        _placeTemplateComment() {
+            const renderedRoot = this._offcanvas?.closest?.('.mm-ocd');
+
+            if (!renderedRoot?.parentNode) {
+                return;
+            }
+
+            const commentText = 'Navbar Module Template: Mmenu Light JS-Plugin (https://mmenujs.com/mmenu-light)';
+            const walker = document.createTreeWalker(document, window.NodeFilter.SHOW_COMMENT);
+            let comment = walker.nextNode();
+
+            while (comment && comment.nodeValue.trim() !== commentText) {
+                comment = walker.nextNode();
+            }
+
+            if (!comment) {
+                comment = document.createComment(` ${commentText} `);
+            }
+
+            renderedRoot.parentNode.insertBefore(comment, renderedRoot);
         }
 
         destroy() {

@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.16
  */
 
 \defined('_JEXEC') or die;
@@ -69,21 +69,22 @@ if ($navOffcanvasId === '') {
     return;
 }
 
-/** @var Joomla\CMS\WebAsset\WebAssetManager $wa */
-$wa = $app->getDocument()->getWebAssetManager();
-$wa->useStyle('mmenu.light');
-$wa->useScript('mmenu.light');
-$wa->useScript('copymypage.mmenu.navigation');
-$wa->addInlineStyle(
-    ":root {\n"
-    . "    /* mmenu-light tokens */\n"
-    . "    --mm-spn-item-height: {$itemHeight};\n"
-    . "    --mm-ocd-width: {$ocdWidth};\n"
-    . "    --mm-ocd-min-width: {$ocdMinWidth};\n"
-    . "    --mm-ocd-max-width: {$ocdMaxWidth};\n"
-    . "}",
-    ['name' => 'mod-copymypage-navbar-mmenu-light-widths-' . (int) ($module->id ?? 0)]
-);
+if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
+    $wa = $app->getDocument()->getWebAssetManager();
+    $wa->useStyle('mmenu.light');
+    $wa->useScript('copymypage.mmenu.navigation');
+    $wa->addInlineStyle(
+        ":root {\n"
+        . "    /* mmenu-light tokens */\n"
+        . "    --mm-spn-item-height: {$itemHeight};\n"
+        . "    --mm-ocd-width: {$ocdWidth};\n"
+        . "    --mm-ocd-min-width: {$ocdMinWidth};\n"
+        . "    --mm-ocd-max-width: {$ocdMaxWidth};\n"
+        . "}",
+        ['name' => 'mod-copymypage-navbar-mmenu-light-widths-' . (int) ($module->id ?? 0)]
+    );
+}
 
 if (!empty($warning)) {
     echo $warning;

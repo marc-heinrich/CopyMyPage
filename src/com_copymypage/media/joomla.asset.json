@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "assets": [
@@ -26,7 +26,7 @@
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.min.css",
-      "version": "0.0.15",
+      "version": "0.0.16",
       "dependencies": [
         "uikit",
         "template.fonts"
@@ -119,8 +119,9 @@
       "name": "copymypage.mmenu.navigation",
       "type": "script",
       "uri": "com_copymypage/copymypage-mmenu-navigation.min.js",
-      "version": "0.0.14",
+      "version": "0.0.16",
       "dependencies": [
+        "mmenu.light",
         "copymypage.base"
       ],
       "attributes": {
@@ -242,6 +243,20 @@
       "version": "3.25.19",
       "dependencies": [
         "uikit"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "purecounter",
+      "type": "script",
+      "uri": "com_copymypage/purecounter/purecounter_vanilla.js",
+      "version": "1.5.0",
+      "class": "PureCounterAssetItem",
+      "dependencies": [
+        "core",
+        "uikit.icons"
       ],
       "attributes": {
         "defer": true

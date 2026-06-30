@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="module" client="site" method="upgrade">
+  <name>mod_copymypage_counts</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2026-06</creationDate>
+  <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
+  <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.16</version>
+  <description>MOD_COPYMYPAGE_COUNTS_XML_DESCRIPTION</description>
+  <scriptfile>script.php</scriptfile>
+  <namespace path="src">Joomla\Module\CopyMyPage\Counts</namespace>
+  <files>
+    <folder module="mod_copymypage_counts">services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+    <folder>language</folder>
+  </files>
+  <config>
+    <fields name="params">
+      <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
+        <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_COUNTS_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_COUNTS_LAYOUT_VARIANT_DESC" default="counts_default">
+          <option value="counts_default">MOD_COPYMYPAGE_COUNTS_LAYOUT_VARIANT_DEFAULT</option>
+        </field>
+
+        <field name="counts_default_members_label" type="text" label="MOD_COPYMYPAGE_COUNTS_COUNTER_LABEL_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_LABEL_DESC" showon="layoutVariant:counts_default" />
+        <field name="counts_default_members_value" type="number" label="MOD_COPYMYPAGE_COUNTS_COUNTER_VALUE_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_VALUE_DESC" default="158" min="0" step="1" filter="integer" showon="layoutVariant:counts_default" />
+        <field name="counts_default_members_duration" type="number" label="MOD_COPYMYPAGE_COUNTS_COUNTER_DURATION_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_DURATION_DESC" default="1" min="0" max="30" step="1" filter="integer" showon="layoutVariant:counts_default" />
+        <field name="counts_default_members_icon" type="list" label="MOD_COPYMYPAGE_COUNTS_COUNTER_ICON_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_ICON_DESC" default="users" showon="layoutVariant:counts_default">
+          <option value="users">MOD_COPYMYPAGE_COUNTS_ICON_USERS</option>
+          <option value="calendar">MOD_COPYMYPAGE_COUNTS_ICON_CALENDAR</option>
+          <option value="star">MOD_COPYMYPAGE_COUNTS_ICON_STAR</option>
+          <option value="happy">MOD_COPYMYPAGE_COUNTS_ICON_HAPPY</option>
+          <option value="world">MOD_COPYMYPAGE_COUNTS_ICON_WORLD</option>
+          <option value="bolt">MOD_COPYMYPAGE_COUNTS_ICON_BOLT</option>
+        </field>
+
+        <field name="counts_default_founded_label" type="text" label="MOD_COPYMYPAGE_COUNTS_COUNTER_LABEL_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_LABEL_DESC" showon="layoutVariant:counts_default" />
+        <field name="counts_default_founded_value" type="number" label="MOD_COPYMYPAGE_COUNTS_COUNTER_VALUE_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_VALUE_DESC" default="1971" min="0" step="1" filter="integer" showon="layoutVariant:counts_default" />
+        <field name="counts_default_founded_duration" type="number" label="MOD_COPYMYPAGE_COUNTS_COUNTER_DURATION_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_DURATION_DESC" default="1" min="0" max="30" step="1" filter="integer" showon="layoutVariant:counts_default" />
+        <field name="counts_default_founded_icon" type="list" label="MOD_COPYMYPAGE_COUNTS_COUNTER_ICON_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_ICON_DESC" default="calendar" showon="layoutVariant:counts_default">
+          <option value="users">MOD_COPYMYPAGE_COUNTS_ICON_USERS</option>
+          <option value="calendar">MOD_COPYMYPAGE_COUNTS_ICON_CALENDAR</option>
+          <option value="star">MOD_COPYMYPAGE_COUNTS_ICON_STAR</option>
+          <option value="happy">MOD_COPYMYPAGE_COUNTS_ICON_HAPPY</option>
+          <option value="world">MOD_COPYMYPAGE_COUNTS_ICON_WORLD</option>
+          <option value="bolt">MOD_COPYMYPAGE_COUNTS_ICON_BOLT</option>
+        </field>
+
+        <field name="counts_default_events_label" type="text" label="MOD_COPYMYPAGE_COUNTS_COUNTER_LABEL_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_LABEL_DESC" showon="layoutVariant:counts_default" />
+        <field name="counts_default_events_value" type="number" label="MOD_COPYMYPAGE_COUNTS_COUNTER_VALUE_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_VALUE_DESC" default="344" min="0" step="1" filter="integer" showon="layoutVariant:counts_default" />
+        <field name="counts_default_events_duration" type="number" label="MOD_COPYMYPAGE_COUNTS_COUNTER_DURATION_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_DURATION_DESC" default="1" min="0" max="30" step="1" filter="integer" showon="layoutVariant:counts_default" />
+        <field name="counts_default_events_icon" type="list" label="MOD_COPYMYPAGE_COUNTS_COUNTER_ICON_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_ICON_DESC" default="star" showon="layoutVariant:counts_default">
+          <option value="users">MOD_COPYMYPAGE_COUNTS_ICON_USERS</option>
+          <option value="calendar">MOD_COPYMYPAGE_COUNTS_ICON_CALENDAR</option>
+          <option value="star">MOD_COPYMYPAGE_COUNTS_ICON_STAR</option>
+          <option value="happy">MOD_COPYMYPAGE_COUNTS_ICON_HAPPY</option>
+          <option value="world">MOD_COPYMYPAGE_COUNTS_ICON_WORLD</option>
+          <option value="bolt">MOD_COPYMYPAGE_COUNTS_ICON_BOLT</option>
+        </field>
+
+        <field name="counts_default_guests_label" type="text" label="MOD_COPYMYPAGE_COUNTS_COUNTER_LABEL_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_LABEL_DESC" showon="layoutVariant:counts_default" />
+        <field name="counts_default_guests_value" type="number" label="MOD_COPYMYPAGE_COUNTS_COUNTER_VALUE_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_VALUE_DESC" default="70000" min="0" step="1" filter="integer" showon="layoutVariant:counts_default" />
+        <field name="counts_default_guests_duration" type="number" label="MOD_COPYMYPAGE_COUNTS_COUNTER_DURATION_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_DURATION_DESC" default="2" min="0" max="30" step="1" filter="integer" showon="layoutVariant:counts_default" />
+        <field name="counts_default_guests_icon" type="list" label="MOD_COPYMYPAGE_COUNTS_COUNTER_ICON_LABEL" description="MOD_COPYMYPAGE_COUNTS_COUNTER_ICON_DESC" default="happy" showon="layoutVariant:counts_default">
+          <option value="users">MOD_COPYMYPAGE_COUNTS_ICON_USERS</option>
+          <option value="calendar">MOD_COPYMYPAGE_COUNTS_ICON_CALENDAR</option>
+          <option value="star">MOD_COPYMYPAGE_COUNTS_ICON_STAR</option>
+          <option value="happy">MOD_COPYMYPAGE_COUNTS_ICON_HAPPY</option>
+          <option value="world">MOD_COPYMYPAGE_COUNTS_ICON_WORLD</option>
+          <option value="bolt">MOD_COPYMYPAGE_COUNTS_ICON_BOLT</option>
+        </field>
+      </fieldset>
+    </fields>
+  </config>
+</extension>
