@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="module" client="site" method="upgrade">
+  <name>mod_copymypage_contact</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2026-07</creationDate>
+  <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
+  <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.16</version>
+  <description>MOD_COPYMYPAGE_CONTACT_XML_DESCRIPTION</description>
+  <scriptfile>script.php</scriptfile>
+  <namespace path="src">Joomla\Module\CopyMyPage\Contact</namespace>
+  <files>
+    <folder module="mod_copymypage_contact">services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+    <folder>forms</folder>
+    <folder>privacy</folder>
+    <folder>language</folder>
+  </files>
+  <config>
+    <fields name="params">
+      <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
+        <field
+          name="layoutVariant"
+          type="list"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_VARIANT_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_VARIANT_DESC"
+          default="contact_default">
+          <option value="contact_default">MOD_COPYMYPAGE_CONTACT_LAYOUT_VARIANT_DEFAULT</option>
+        </field>
+        <field
+          name="contact_default_eyebrow"
+          type="text"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_EYEBROW_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_EYEBROW_DESC"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_headline"
+          type="text"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_HEADLINE_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_HEADLINE_DESC"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_lead"
+          type="textarea"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_LEAD_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_LEAD_DESC"
+          rows="4"
+          filter="safehtml"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_address"
+          type="textarea"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_ADDRESS_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_ADDRESS_DESC"
+          rows="3"
+          filter="safehtml"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_displayEmail"
+          type="email"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_DISPLAY_EMAIL_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_DISPLAY_EMAIL_DESC"
+          filter="string"
+          validate="email"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_phone"
+          type="tel"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_PHONE_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_PHONE_DESC"
+          filter="string"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_mapUrl"
+          type="url"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_MAP_URL_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_MAP_URL_DESC"
+          filter="url"
+          validate="url"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_mapTitle"
+          type="text"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_MAP_TITLE_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_MAP_TITLE_DESC"
+          filter="string"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_recipientEmail"
+          type="email"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_RECIPIENT_EMAIL_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_RECIPIENT_EMAIL_DESC"
+          filter="string"
+          validate="email"
+          showon="layoutVariant:contact_default" />
+        <field
+          name="contact_default_showCopy"
+          type="radio"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_SHOW_COPY_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_SHOW_COPY_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:contact_default">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="contact_default_confirmSubmission"
+          type="radio"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_CONFIRM_SUBMISSION_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_CONFIRM_SUBMISSION_DESC"
+          default="1"
+          class="btn-group btn-group-yesno"
+          showon="layoutVariant:contact_default">
+          <option value="1">JYES</option>
+          <option value="0">JNO</option>
+        </field>
+        <field
+          name="contact_default_confirmMessage"
+          type="text"
+          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_CONFIRM_MESSAGE_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_CONFIRM_MESSAGE_DESC"
+          filter="string"
+          showon="layoutVariant:contact_default[AND]contact_default_confirmSubmission:1" />
+      </fieldset>
+      <fieldset
+        name="ogtags"
+        label="MOD_COPYMYPAGE_CONTACT_OG_FIELDSET_LABEL"
+        description="MOD_COPYMYPAGE_CONTACT_OG_FIELDSET_DESC">
+        <field
+          name="og_title"
+          type="text"
+          label="MOD_COPYMYPAGE_CONTACT_OG_TITLE_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_OG_TITLE_DESC"
+          filter="string" />
+        <field
+          name="og_description"
+          type="textarea"
+          label="MOD_COPYMYPAGE_CONTACT_OG_DESCRIPTION_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_OG_DESCRIPTION_DESC"
+          rows="4"
+          filter="string" />
+        <field
+          name="og_image"
+          type="media"
+          label="MOD_COPYMYPAGE_CONTACT_OG_IMAGE_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_OG_IMAGE_DESC"
+          types="images"
+          schemes="http,https,data,file"
+          validate="url"
+          relative="true" />
+        <field
+          name="og_image_alt"
+          type="text"
+          label="MOD_COPYMYPAGE_CONTACT_OG_IMAGE_ALT_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_OG_IMAGE_ALT_DESC"
+          filter="string" />
+        <field
+          name="og_image_width"
+          type="number"
+          label="MOD_COPYMYPAGE_CONTACT_OG_IMAGE_WIDTH_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_OG_IMAGE_WIDTH_DESC"
+          min="0"
+          filter="integer" />
+        <field
+          name="og_image_height"
+          type="number"
+          label="MOD_COPYMYPAGE_CONTACT_OG_IMAGE_HEIGHT_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_OG_IMAGE_HEIGHT_DESC"
+          min="0"
+          filter="integer" />
+        <field
+          name="og_twitter_card"
+          type="list"
+          label="MOD_COPYMYPAGE_CONTACT_OG_TWITTER_CARD_LABEL"
+          description="MOD_COPYMYPAGE_CONTACT_OG_TWITTER_CARD_DESC"
+          default="">
+          <option value="">MOD_COPYMYPAGE_CONTACT_OG_TWITTER_CARD_AUTO</option>
+          <option value="summary_large_image">MOD_COPYMYPAGE_CONTACT_OG_TWITTER_CARD_SUMMARY_LARGE_IMAGE</option>
+          <option value="summary">MOD_COPYMYPAGE_CONTACT_OG_TWITTER_CARD_SUMMARY</option>
+        </field>
+      </fieldset>
+    </fields>
+  </config>
+</extension>

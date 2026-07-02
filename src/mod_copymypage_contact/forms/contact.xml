@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form addruleprefix="Joomla\Component\Contact\Site\Rule">
+  <fieldset name="contact">
+    <field
+      name="contact_name"
+      type="text"
+      label="COM_CONTACT_CONTACT_EMAIL_NAME_LABEL"
+      id="cmp-contact-name"
+      autocomplete="name"
+      filter="string"
+      required="true"
+      class="uk-input" />
+    <field
+      name="contact_email"
+      type="email"
+      label="COM_CONTACT_EMAIL_LABEL"
+      id="cmp-contact-email"
+      autocomplete="email"
+      filter="string"
+      validate="ContactEmail"
+      required="true"
+      class="uk-input" />
+    <field
+      name="contact_subject"
+      type="text"
+      label="COM_CONTACT_CONTACT_MESSAGE_SUBJECT_LABEL"
+      id="cmp-contact-subject"
+      filter="string"
+      validate="ContactEmailSubject"
+      required="true"
+      class="uk-input" />
+    <field
+      name="contact_message"
+      type="textarea"
+      label="COM_CONTACT_CONTACT_ENTER_MESSAGE_LABEL"
+      id="cmp-contact-message"
+      cols="50"
+      rows="7"
+      filter="safehtml"
+      validate="ContactEmailMessage"
+      required="true"
+      class="uk-textarea" />
+    <field
+      name="contact_copy"
+      type="checkbox"
+      label="COM_CONTACT_CONTACT_EMAIL_A_COPY_LABEL"
+      id="cmp-contact-copy"
+      default="0"
+      value="1"
+      class="uk-checkbox form-check-input" />
+  </fieldset>
+  <fieldset name="captcha">
+    <field
+      name="captcha"
+      type="captcha"
+      label="COM_CONTACT_CAPTCHA_LABEL"
+      validate="captcha"
+      namespace="contact" />
+  </fieldset>
+</form>
