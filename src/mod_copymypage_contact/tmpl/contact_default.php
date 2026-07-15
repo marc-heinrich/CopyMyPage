@@ -28,8 +28,6 @@ use Joomla\Module\CopyMyPage\Contact\Site\Helper\ContactHelper;
  * @var string                                                $mapTitle
  * @var \Joomla\CMS\Form\Form|null                            $form
  * @var bool                                                  $showCopy
- * @var bool                                                  $confirmSubmit
- * @var string                                                $confirmMessage
  * @var string                                                $warning
  * @var \Joomla\Module\CopyMyPage\Contact\Site\Helper\ContactHelper|null $contactHelper
  */
@@ -43,8 +41,6 @@ $infoItems      = \is_array($infoItems ?? null) ? $infoItems : [];
 $mapUrl         = trim((string) ($mapUrl ?? ''));
 $mapTitle       = trim((string) ($mapTitle ?? ''));
 $showCopy       = (bool) ($showCopy ?? false);
-$confirmSubmit  = (bool) ($confirmSubmit ?? false);
-$confirmMessage = trim((string) ($confirmMessage ?? ''));
 $warning        = (string) ($warning ?? '');
 
 if (!isset($contactHelper) || !$contactHelper instanceof ContactHelper) {
@@ -64,10 +60,15 @@ if (!isset($form) || !$form instanceof \Joomla\CMS\Form\Form) {
 /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $app->getDocument()->getWebAssetManager();
 $wa->useScript('copymypage.formcheck');
+$wa->useScript('copymypage.modal.content');
 
 Text::script('WARNING');
 Text::script('JNOTICE');
 Text::script('JGLOBAL_VALIDATION_FORM_FAILED');
+Text::script('JCLOSE');
+Text::script('COM_COPYMYPAGE_CONTENT_MODAL_LOADING');
+Text::script('COM_COPYMYPAGE_CONTENT_MODAL_ERROR');
+Text::script('MOD_COPYMYPAGE_CONTACT_ERROR_MAIL_INSTANTIATE');
 
 $moduleId   = max(0, (int) ($module->id ?? 0));
 $formId     = 'cmp-contact-form-' . $moduleId;
@@ -75,11 +76,13 @@ $currentUri = clone Uri::getInstance();
 $currentUri->setFragment('contact');
 $returnUrl  = base64_encode($currentUri->toString());
 $hasInfo    = $infoItems !== [] || $mapUrl !== '';
-$formWidth  = $hasInfo ? 'uk-width-3-5@l' : 'uk-width-1-1';
+$formWidth  = $hasInfo ? 'cmp-contact__form-column' : 'uk-width-1-1';
+$hasConsent = (bool) $form->getField('consentbox');
+$hasCopy    = $showCopy && (bool) $form->getField('contact_copy');
 ?>
 <!-- Contact Module Template: UIkit Framework and CopyMyPage formcheck behavior -->
 <div class="cmp-module cmp-module--contact cmp-module--contact-default">
-    <div class="uk-container">
+    <div class="uk-container cmp-contact__container">
         <?php if ($eyebrow !== '' || $headline !== '' || $lead !== '') : ?>
             <header class="cmp-section-header">
                 <?php if ($eyebrow !== '') : ?>
@@ -104,8 +107,8 @@ $formWidth  = $hasInfo ? 'uk-width-3-5@l' : 'uk-width-1-1';
 
         <div class="cmp-contact__grid uk-grid-large uk-grid-match" uk-grid>
             <?php if ($hasInfo) : ?>
-                <div class="uk-width-2-5@l">
-                    <aside class="cmp-contact__info uk-card uk-card-default uk-card-body">
+                <div class="cmp-contact__info-column">
+                    <aside class="cmp-contact__info">
                         <?php if ($infoItems !== []) : ?>
                             <div class="cmp-contact__info-list">
                                 <?php foreach ($infoItems as $item) : ?>
@@ -152,6 +155,8 @@ $formWidth  = $hasInfo ? 'uk-width-3-5@l' : 'uk-width-1-1';
                                 <iframe
                                     src="<?php echo $escape($mapUrl); ?>"
                                     title="<?php echo $escape($mapTitle); ?>"
+                                    width="640"
+                                    height="290"
                                     loading="lazy"
                                     referrerpolicy="no-referrer-when-downgrade"
                                     allowfullscreen
@@ -163,7 +168,7 @@ $formWidth  = $hasInfo ? 'uk-width-3-5@l' : 'uk-width-1-1';
             <?php endif; ?>
 
             <div class="<?php echo $escape($formWidth); ?>">
-                <div class="cmp-contact__form-card uk-card uk-card-default uk-card-body">
+                <div class="cmp-contact__form-panel">
                     <form
                         id="<?php echo $escape($formId); ?>"
                         action="<?php echo Route::_('index.php?option=com_copymypage'); ?>"
@@ -171,11 +176,7 @@ $formWidth  = $hasInfo ? 'uk-width-3-5@l' : 'uk-width-1-1';
                         class="cmp-contact__form form-validate"
                     >
                         <fieldset class="uk-fieldset">
-                            <legend class="uk-legend">
-                                <?php echo Text::_('MOD_COPYMYPAGE_CONTACT_FORM_LEGEND'); ?>
-                            </legend>
-
-                            <div class="uk-grid-small" uk-grid>
+                            <div class="cmp-contact__identity-grid uk-grid-small" uk-grid>
                                 <div class="uk-width-1-2@m">
                                     <?php echo $form->renderField('contact_name'); ?>
                                 </div>
@@ -187,12 +188,27 @@ $formWidth  = $hasInfo ? 'uk-width-3-5@l' : 'uk-width-1-1';
                             <?php echo $form->renderField('contact_subject'); ?>
                             <?php echo $form->renderField('contact_message'); ?>
 
-                            <?php if ($form->getField('consentbox')) : ?>
-                                <?php echo $form->renderField('consentbox'); ?>
-                            <?php endif; ?>
+                            <?php if ($hasConsent || $hasCopy) : ?>
+                                <div class="cmp-contact__options-grid uk-grid-small" uk-grid>
+                                    <?php if ($hasConsent) : ?>
+                                        <div class="<?php echo $hasCopy ? 'uk-width-1-2@m' : 'uk-width-1-1'; ?>">
+                                            <div class="cmp-contact__consent">
+                                                <?php echo $form->renderField('consentbox'); ?>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
 
-                            <?php if ($showCopy && $form->getField('contact_copy')) : ?>
-                                <?php echo $form->renderField('contact_copy'); ?>
+                                    <?php if ($hasCopy) : ?>
+                                        <div class="<?php echo $hasConsent ? 'uk-width-1-2@m' : 'uk-width-1-1'; ?>">
+                                            <div class="cmp-contact__copy">
+                                                <div class="form-check form-check-inline">
+                                                    <?php echo $form->getInput('contact_copy'); ?>
+                                                    <?php echo $form->getLabel('contact_copy'); ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
                             <?php endif; ?>
 
                             <?php if ($form->getField('captcha')) : ?>
@@ -212,9 +228,7 @@ $formWidth  = $hasInfo ? 'uk-width-3-5@l' : 'uk-width-1-1';
                                 class="uk-button uk-button-primary"
                                 data-submit-task="contact.submit"
                                 data-submit-form="#<?php echo $escape($formId); ?>"
-                                data-confirm="<?php echo $confirmSubmit ? 'true' : 'false'; ?>"
-                                data-confirm-title="<?php echo $escape(Text::_('MOD_COPYMYPAGE_CONTACT_FORM_CONFIRM_TITLE')); ?>"
-                                data-confirm-message="<?php echo $escape($confirmMessage); ?>"
+                                data-confirm="false"
                             >
                                 <?php echo Text::_('MOD_COPYMYPAGE_CONTACT_FORM_BUTTON_SUBMIT'); ?>
                             </button>

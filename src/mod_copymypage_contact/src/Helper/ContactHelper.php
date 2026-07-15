@@ -295,36 +295,6 @@ final class ContactHelper
     }
 
     /**
-     * Whether the custom formcheck flow should ask for confirmation.
-     *
-     * @param   array<string, mixed>  $cfg     Flat module parameters.
-     * @param   string                $layout  Validated layout.
-     *
-     * @return  bool
-     */
-    public function getConfirmSubmission(array $cfg, string $layout): bool
-    {
-        return self::cfgBool(self::getLayoutConfig($cfg, $layout), 'confirmSubmission', true);
-    }
-
-    /**
-     * Return the form submission confirmation prompt.
-     *
-     * @param   array<string, mixed>  $cfg     Flat module parameters.
-     * @param   string                $layout  Validated layout.
-     *
-     * @return  string
-     */
-    public function getConfirmMessage(array $cfg, string $layout): string
-    {
-        return self::translatedValue(
-            self::getLayoutConfig($cfg, $layout),
-            'confirmMessage',
-            'MOD_COPYMYPAGE_CONTACT_DEFAULT_CONFIRM_MESSAGE'
-        );
-    }
-
-    /**
      * Build the frontend contact form and let Joomla content plugins extend it.
      *
      * The form deliberately uses the supported com_contact.contact context so

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<form addruleprefix="Joomla\Component\Contact\Site\Rule">
+<form addruleprefix="Joomla\Component\CopyMyPage\Site\Rule">
   <fieldset name="contact">
     <field
       name="contact_name"
@@ -9,6 +9,7 @@
       autocomplete="name"
       filter="string"
       required="true"
+      hint="John Doe"
       class="uk-input" />
     <field
       name="contact_email"
@@ -17,7 +18,8 @@
       id="cmp-contact-email"
       autocomplete="email"
       filter="string"
-      validate="ContactEmail"
+      validate="CopyMyPageEmail"
+      message="COM_COPYMYPAGE_CONTACT_ERROR_EMAIL_INVALID_OR_BLOCKED"
       required="true"
       class="uk-input" />
     <field
@@ -26,7 +28,8 @@
       label="COM_CONTACT_CONTACT_MESSAGE_SUBJECT_LABEL"
       id="cmp-contact-subject"
       filter="string"
-      validate="ContactEmailSubject"
+      validate="CopyMyPageEmailSubject"
+      message="COM_COPYMYPAGE_CONTACT_ERROR_SUBJECT_BLOCKED"
       required="true"
       class="uk-input" />
     <field
@@ -37,7 +40,8 @@
       cols="50"
       rows="7"
       filter="safehtml"
-      validate="ContactEmailMessage"
+      validate="CopyMyPageEmailMessage"
+      message="COM_COPYMYPAGE_CONTACT_ERROR_MESSAGE_BLOCKED"
       required="true"
       class="uk-textarea" />
     <field
@@ -45,8 +49,7 @@
       type="checkbox"
       label="COM_CONTACT_CONTACT_EMAIL_A_COPY_LABEL"
       id="cmp-contact-copy"
-      default="0"
-      value="1"
+      default="1"
       class="uk-checkbox form-check-input" />
   </fieldset>
   <fieldset name="captcha">

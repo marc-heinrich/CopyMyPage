@@ -10,8 +10,8 @@
     'use strict';
 
     const buttonDataSelector = 'data-submit-task';
-    const defaultFormId = 'op-contactForm';
-    const checkboxSelector = 'input.form-check-input';
+    const defaultFormId = 'cmp-contact-form';
+    const messageContainerId = 'system-message-container';
 
     const getText = (key, fallback) => {
         if (Joomla && Joomla.Text && typeof Joomla.Text._ === 'function') {
@@ -21,9 +21,22 @@
         return fallback || key;
     };
 
-    const toggleCheckboxValue = (checkbox) => {
-        checkbox.value = checkbox.value === '0' ? '1' : '0';
+    const registerSystemMessageTranslations = () => {
+        if (
+            !window.CopyMyPageDialog
+            || typeof window.CopyMyPageDialog.setSystemMessageConfig !== 'function'
+        ) {
+            return;
+        }
+
+        window.CopyMyPageDialog.setSystemMessageConfig({
+            messageTranslations: {
+                'Could not instantiate mail function.': 'MOD_COPYMYPAGE_CONTACT_ERROR_MAIL_INSTANTIATE'
+            }
+        });
     };
+
+    registerSystemMessageTranslations();
 
     const resolveForm = (button) => {
         const customSelector = button.getAttribute('data-submit-form');
@@ -33,6 +46,35 @@
         }
 
         return button.closest('form') || document.getElementById(defaultFormId);
+    };
+
+    const ensureMessageContainer = () => {
+        let container = document.getElementById(messageContainerId);
+
+        if (container) {
+            return container;
+        }
+
+        container = document.createElement('div');
+        container.id = messageContainerId;
+        container.setAttribute('aria-live', 'polite');
+
+        const component = document.getElementById('component');
+
+        if (component && component.parentNode) {
+            component.parentNode.insertBefore(container, component);
+        } else {
+            document.body.appendChild(container);
+        }
+
+        if (
+            window.CopyMyPageDialog
+            && typeof window.CopyMyPageDialog.initSystemMessages === 'function'
+        ) {
+            window.CopyMyPageDialog.initSystemMessages();
+        }
+
+        return container;
     };
 
     const shouldConfirm = (button, form) => {
@@ -82,10 +124,18 @@
 
     const validateForm = (form) => {
         if (!document.formvalidator || typeof document.formvalidator.isValid !== 'function') {
-            return true;
+            return {
+                valid: typeof form.checkValidity !== 'function' || form.checkValidity(),
+                handled: false
+            };
         }
 
-        return document.formvalidator.isValid(form);
+        ensureMessageContainer();
+
+        return {
+            valid: document.formvalidator.isValid(form),
+            handled: true
+        };
     };
 
     const submitTask = async (task, button) => {
@@ -95,8 +145,13 @@
             return;
         }
 
-        if (!validateForm(form)) {
-            await showInvalidFormMessage();
+        const validation = validateForm(form);
+
+        if (!validation.valid) {
+            if (!validation.handled) {
+                await showInvalidFormMessage();
+            }
+
             return;
         }
 
@@ -108,16 +163,27 @@
             }
         }
 
-        submitForm(task, form);
+        if (typeof submitForm === 'function') {
+            submitForm(task, form);
+            return;
+        }
+
+        const taskInput = form.querySelector('input[name="task"]');
+
+        if (taskInput) {
+            taskInput.value = task;
+        }
+
+        form.submit();
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        const checkboxes = Array.from(document.querySelectorAll(checkboxSelector));
-        checkboxes.forEach((checkbox) => {
-            checkbox.addEventListener('click', () => toggleCheckboxValue(checkbox));
-        });
-
         const buttons = Array.from(document.querySelectorAll(`[${buttonDataSelector}]`));
+
+        if (buttons.length) {
+            ensureMessageContainer();
+        }
+
         buttons.forEach((button) => {
             button.addEventListener('click', async (event) => {
                 event.preventDefault();

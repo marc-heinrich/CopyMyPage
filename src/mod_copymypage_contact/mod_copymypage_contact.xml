@@ -107,24 +107,6 @@
           <option value="1">JYES</option>
           <option value="0">JNO</option>
         </field>
-        <field
-          name="contact_default_confirmSubmission"
-          type="radio"
-          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_CONFIRM_SUBMISSION_LABEL"
-          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_CONFIRM_SUBMISSION_DESC"
-          default="1"
-          class="btn-group btn-group-yesno"
-          showon="layoutVariant:contact_default">
-          <option value="1">JYES</option>
-          <option value="0">JNO</option>
-        </field>
-        <field
-          name="contact_default_confirmMessage"
-          type="text"
-          label="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_CONFIRM_MESSAGE_LABEL"
-          description="MOD_COPYMYPAGE_CONTACT_LAYOUT_DEFAULT_CONFIRM_MESSAGE_DESC"
-          filter="string"
-          showon="layoutVariant:contact_default[AND]contact_default_confirmSubmission:1" />
       </fieldset>
       <fieldset
         name="ogtags"

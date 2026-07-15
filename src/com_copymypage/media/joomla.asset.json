@@ -76,6 +76,21 @@
       }
     },
     {
+      "name": "copymypage.formcheck",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-formcheck.min.js",
+      "version": "0.0.16",
+      "dependencies": [
+        "core",
+        "keepalive",
+        "form.validate",
+        "copymypage.modal.dialogs"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
       "name": "copymypage.alertbar",
       "type": "script",
       "uri": "com_copymypage/copymypage-alertbar.min.js",
@@ -132,10 +147,25 @@
       "name": "copymypage.modal.dialog",
       "type": "script",
       "uri": "com_copymypage/copymypage-dialog.min.js",
-      "version": "0.0.6",
+      "version": "0.0.16",
       "dependencies": [
         "core",
         "uikit"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.modal.content",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-content-modal.min.js",
+      "version": "0.0.16",
+      "dependencies": [
+        "core",
+        "uikit",
+        "uikit.icons",
+        "copymypage.modal.dialog"
       ],
       "attributes": {
         "defer": true
@@ -187,7 +217,7 @@
       "name": "copymypage.modal.dialogs",
       "type": "script",
       "uri": "com_copymypage/copymypage-modal-dialogs.min.js",
-      "version": "0.0.6",
+      "version": "0.0.16",
       "dependencies": [
         "core",
         "messages",

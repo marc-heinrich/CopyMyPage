@@ -52,6 +52,10 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             closable: true,
             cancelValue: false,
             className: '',
+            panelClassName: '',
+            bodyClassName: '',
+            overflowAuto: false,
+            onReady: null,
             buttons: [],
             stack: true
         }, options);
@@ -83,7 +87,10 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             );
 
             const panel = document.createElement('div');
-            panel.className = 'uk-modal-dialog uk-margin-auto-vertical cmp-uikit-dialog__panel';
+            panel.className = [
+                'uk-modal-dialog uk-margin-auto-vertical cmp-uikit-dialog__panel',
+                settings.panelClassName
+            ].join(' ').trim();
             modalElement.appendChild(panel);
 
             const closeButton = document.createElement('button');
@@ -108,7 +115,15 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             panel.appendChild(header);
 
             const body = document.createElement('div');
-            body.className = 'uk-modal-body cmp-uikit-dialog__body';
+            body.className = [
+                'uk-modal-body cmp-uikit-dialog__body',
+                settings.bodyClassName
+            ].join(' ').trim();
+
+            if (settings.overflowAuto === true) {
+                body.setAttribute('uk-overflow-auto', '');
+            }
+
             body.innerHTML = toBodyHtml(settings.body, settings.isHtml);
             panel.appendChild(body);
 
@@ -150,6 +165,20 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             document.body.appendChild(modalElement);
             modalInstance = UIkit.modal(modalElement);
             modalInstance.show();
+
+            if (typeof settings.onReady === 'function') {
+                Promise.resolve(settings.onReady({
+                    modalElement,
+                    modalInstance,
+                    panel,
+                    header,
+                    title,
+                    body,
+                    footer
+                })).catch(() => {
+                    // Feature adapters own their visible error state.
+                });
+            }
         });
     };
 
@@ -161,6 +190,10 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             closable: true,
             cancelValue: false,
             className: '',
+            panelClassName: '',
+            bodyClassName: '',
+            overflowAuto: false,
+            onReady: null,
             buttons: [],
             stack: true
         }, options);

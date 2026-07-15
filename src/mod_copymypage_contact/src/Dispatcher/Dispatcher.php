@@ -215,8 +215,6 @@ final class Dispatcher extends AbstractModuleDispatcher implements HelperFactory
         $data['mapTitle']      = '';
         $data['form']          = null;
         $data['showCopy']      = false;
-        $data['confirmSubmit'] = false;
-        $data['confirmMessage'] = '';
         $data['warning']       = '';
 
         return $data;
@@ -248,9 +246,6 @@ final class Dispatcher extends AbstractModuleDispatcher implements HelperFactory
         $displayData['mapUrl']        = $helper->getMapUrl($displayData['cfg'], $layout);
         $displayData['mapTitle']      = $helper->getMapTitle($displayData['cfg'], $layout);
         $displayData['showCopy']      = $helper->getShowCopy($displayData['cfg'], $layout);
-        $displayData['confirmSubmit'] = $helper->getConfirmSubmission($displayData['cfg'], $layout);
-        $displayData['confirmMessage'] = $helper->getConfirmMessage($displayData['cfg'], $layout);
-
         $this->checkRuntimeRequirements($displayData, $helper, $layout);
 
         if ($this->warnings === []) {

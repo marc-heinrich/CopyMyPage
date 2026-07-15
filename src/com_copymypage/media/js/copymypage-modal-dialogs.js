@@ -34,6 +34,7 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             alert: 'alert',
             emergency: 'alert'
         },
+        messageTranslations: {},
         forceDialogTags: ['header', 'section', 'article', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'form', 'fieldset', 'pre', 'blockquote', 'figure'],
         alertAllowedTags: ['p', 'span', 'strong', 'b', 'em', 'i', 'u', 'small', 'a', 'code', 'mark', 'br'],
         alertMaxTextLength: 240,
@@ -71,6 +72,14 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             {},
             baseConfig.typeRenderer || {},
             overrideConfig && overrideConfig.typeRenderer ? overrideConfig.typeRenderer : {}
+        );
+
+        merged.messageTranslations = Object.assign(
+            {},
+            baseConfig.messageTranslations || {},
+            overrideConfig && overrideConfig.messageTranslations
+                ? overrideConfig.messageTranslations
+                : {}
         );
 
         merged.forceDialogTags = normalizeTagList(
@@ -178,6 +187,17 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
         return map[key] || 'info';
     };
 
+    const translateSystemMessage = (message, config) => {
+        const lookupValue = toPlainText(message).replace(/\s+/g, ' ').trim();
+        const translationKey = config.messageTranslations[lookupValue];
+
+        if (!translationKey) {
+            return message;
+        }
+
+        return escapeHtml(getText(translationKey, lookupValue));
+    };
+
     const getTypeTitle = (type) => {
         switch (type) {
             case 'danger':
@@ -282,9 +302,20 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
         };
     };
 
+    const normalizeCompactMessageMarkup = (html) => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = String(html || '');
+
+        wrapper.querySelectorAll('br').forEach((lineBreak) => {
+            lineBreak.replaceWith(document.createTextNode(' '));
+        });
+
+        return wrapper.innerHTML.trim();
+    };
+
     const renderCompactBatchBody = (entries) => entries.map((entry) => {
         const messageHtml = entry.messages
-            .map((message) => `<div class="cmp-uikit-dialog__message-text">${message}</div>`)
+            .map((message) => `<div class="cmp-uikit-dialog__message-text">${normalizeCompactMessageMarkup(message)}</div>`)
             .join('');
 
         return [
@@ -330,6 +361,8 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
                     messages = [fallbackMessage];
                 }
             }
+
+            messages = messages.map((message) => translateSystemMessage(message, config));
 
             const analyses = messages.map((message) => analyzeMessageMarkup(message, config));
             const prefersDialog = analyses.some((analysis) => analysis.preferDialog);
