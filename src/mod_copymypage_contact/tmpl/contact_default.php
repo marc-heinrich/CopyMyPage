@@ -19,7 +19,7 @@ use Joomla\Module\CopyMyPage\Contact\Site\Helper\ContactHelper;
  * Extracted variables
  * -----------------
  * @var \stdClass                                             $module
- * @var \Joomla\CMS\Application\CMSApplicationInterface      $app
+ * @var \Joomla\CMS\Application\CMSApplicationInterface       $app
  * @var string                                                $eyebrow
  * @var string                                                $headline
  * @var string                                                $lead
@@ -34,14 +34,14 @@ use Joomla\Module\CopyMyPage\Contact\Site\Helper\ContactHelper;
 
 $escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
-$eyebrow        = trim((string) ($eyebrow ?? ''));
-$headline       = trim((string) ($headline ?? ''));
-$lead           = trim((string) ($lead ?? ''));
-$infoItems      = \is_array($infoItems ?? null) ? $infoItems : [];
-$mapUrl         = trim((string) ($mapUrl ?? ''));
-$mapTitle       = trim((string) ($mapTitle ?? ''));
-$showCopy       = (bool) ($showCopy ?? false);
-$warning        = (string) ($warning ?? '');
+$eyebrow    = trim((string) ($eyebrow ?? ''));
+$headline   = trim((string) ($headline ?? ''));
+$lead       = trim((string) ($lead ?? ''));
+$infoItems  = \is_array($infoItems ?? null) ? $infoItems : [];
+$mapUrl     = trim((string) ($mapUrl ?? ''));
+$mapTitle   = trim((string) ($mapTitle ?? ''));
+$showCopy   = (bool) ($showCopy ?? false);
+$warning    = (string) ($warning ?? '');
 
 if (!isset($contactHelper) || !$contactHelper instanceof ContactHelper) {
     return;
@@ -57,10 +57,12 @@ if (!isset($form) || !$form instanceof \Joomla\CMS\Form\Form) {
     return;
 }
 
-/** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
-$wa = $app->getDocument()->getWebAssetManager();
-$wa->useScript('copymypage.formcheck');
-$wa->useScript('copymypage.modal.content');
+if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
+    $wa = $app->getDocument()->getWebAssetManager();
+    $wa->useScript('copymypage.formcheck');
+    $wa->useScript('copymypage.modal.content');
+}
 
 Text::script('WARNING');
 Text::script('JNOTICE');
@@ -80,7 +82,7 @@ $formWidth  = $hasInfo ? 'cmp-contact__form-column' : 'uk-width-1-1';
 $hasConsent = (bool) $form->getField('consentbox');
 $hasCopy    = $showCopy && (bool) $form->getField('contact_copy');
 ?>
-<!-- Contact Module Template: UIkit Framework and CopyMyPage formcheck behavior -->
+<!-- Contact Module Template: UIkit Framework (https://getuikit.com/docs/form) and CopyMyPage formcheck behavior -->
 <div class="cmp-module cmp-module--contact cmp-module--contact-default">
     <div class="uk-container cmp-contact__container">
         <?php if ($eyebrow !== '' || $headline !== '' || $lead !== '') : ?>

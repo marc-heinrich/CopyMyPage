@@ -36,8 +36,8 @@ return new class () implements ServiceProviderInterface
             new class () implements InstallerScriptInterface
             {
                 private const CATEGORY_ALIAS = 'copymypage-privacy';
-                private const ARTICLE_ALIAS = 'datenschutzerklaerung-copymypage';
-                private const ARTICLE_NOTE = 'system: mod_copymypage_contact privacy-policy';
+                private const ARTICLE_ALIAS  = 'datenschutzerklaerung-copymypage';
+                private const ARTICLE_NOTE   = 'system: mod_copymypage_contact privacy-policy';
 
                 /**
                  * Runs before install or update.
@@ -161,11 +161,11 @@ return new class () implements ServiceProviderInterface
                                 'category_layout' => '',
                                 'image'           => '',
                             ],
-                            'metadata'    => [
+                            'metadata' => [
                                 'author' => '',
                                 'robots' => '',
                             ],
-                            'note'        => Text::_('MOD_COPYMYPAGE_CONTACT_INSTALL_PRIVACY_CATEGORY_NOTE'),
+                            'note' => Text::_('MOD_COPYMYPAGE_CONTACT_INSTALL_PRIVACY_CATEGORY_NOTE'),
                         ];
 
                         if (!$categoryModel || !$categoryModel->save($categoryData)) {
@@ -255,18 +255,18 @@ return new class () implements ServiceProviderInterface
                             'float_fulltext'         => '',
                             'image_fulltext_caption' => '',
                         ],
-                        'urls'             => [
-                            'urla'    => '',
-                            'urlatext' => '',
-                            'targeta' => '',
-                            'urlb'    => '',
-                            'urlbtext' => '',
-                            'targetb' => '',
-                            'urlc'    => '',
-                            'urlctext' => '',
-                            'targetc' => '',
+                        'urls' => [
+                            'urla'      => '',
+                            'urlatext'  => '',
+                            'targeta'   => '',
+                            'urlb'      => '',
+                            'urlbtext'  => '',
+                            'targetb'   => '',
+                            'urlc'      => '',
+                            'urlctext'  => '',
+                            'targetc'   => '',
                         ],
-                        'attribs'           => json_encode(
+                        'attribs' => json_encode(
                             [
                                 'show_title'            => 1,
                                 'link_titles'           => 0,
@@ -281,7 +281,7 @@ return new class () implements ServiceProviderInterface
                             ],
                             JSON_UNESCAPED_SLASHES
                         ),
-                        'metadata'          => json_encode(
+                        'metadata' => json_encode(
                             [
                                 'robots' => 'noindex, follow',
                                 'author' => '',
