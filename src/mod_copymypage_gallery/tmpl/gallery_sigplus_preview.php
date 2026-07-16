@@ -79,6 +79,7 @@ if ($lead === '') {
     $lead = $defaultLead;
 }
 ?>
+<!-- Gallery Module Template: UIkit Framework (https://getuikit.com/docs/filter) and Sigplus Gallery (https://hunyadi.info.hu/sigplus/) -->
 <div class="<?php echo $escape($moduleClass); ?>">
     <?php if ($list !== []) : ?>
         <div class="uk-container">
