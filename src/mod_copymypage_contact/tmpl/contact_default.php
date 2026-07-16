@@ -32,8 +32,10 @@ use Joomla\Module\CopyMyPage\Contact\Site\Helper\ContactHelper;
  * @var \Joomla\Module\CopyMyPage\Contact\Site\Helper\ContactHelper|null $contactHelper
  */
 
+// Closure for escaping plain-text output.
 $escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
+// Normalize dispatcher input so the template works with predictable value types.
 $eyebrow    = trim((string) ($eyebrow ?? ''));
 $headline   = trim((string) ($headline ?? ''));
 $lead       = trim((string) ($lead ?? ''));
@@ -43,20 +45,24 @@ $mapTitle   = trim((string) ($mapTitle ?? ''));
 $showCopy   = (bool) ($showCopy ?? false);
 $warning    = (string) ($warning ?? '');
 
+// Stop rendering when the module helper is unavailable.
 if (!isset($contactHelper) || !$contactHelper instanceof ContactHelper) {
     return;
 }
 
+// Render helper-generated warnings instead of an incomplete contact form.
 if ($warning !== '') {
     echo $warning;
 
     return;
 }
 
+// The Joomla contact form instance is required for all fields rendered below.
 if (!isset($form) || !$form instanceof \Joomla\CMS\Form\Form) {
     return;
 }
 
+// Activate the shared form validation and modal behavior used by this layout.
 if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
     /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
     $wa = $app->getDocument()->getWebAssetManager();
@@ -64,6 +70,7 @@ if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterfa
     $wa->useScript('copymypage.modal.content');
 }
 
+// Expose server-side language strings to the JavaScript form handlers.
 Text::script('WARNING');
 Text::script('JNOTICE');
 Text::script('JGLOBAL_VALIDATION_FORM_FAILED');
@@ -72,11 +79,14 @@ Text::script('COM_COPYMYPAGE_CONTENT_MODAL_LOADING');
 Text::script('COM_COPYMYPAGE_CONTENT_MODAL_ERROR');
 Text::script('MOD_COPYMYPAGE_CONTACT_ERROR_MAIL_INSTANTIATE');
 
+// Build stable form identifiers and preserve the current page as the return target.
 $moduleId   = max(0, (int) ($module->id ?? 0));
 $formId     = 'cmp-contact-form-' . $moduleId;
 $currentUri = clone Uri::getInstance();
 $currentUri->setFragment('contact');
 $returnUrl  = base64_encode($currentUri->toString());
+
+// Derive layout flags from the available contact information and form fields.
 $hasInfo    = $infoItems !== [] || $mapUrl !== '';
 $formWidth  = $hasInfo ? 'cmp-contact__form-column' : 'uk-width-1-1';
 $hasConsent = (bool) $form->getField('consentbox');
