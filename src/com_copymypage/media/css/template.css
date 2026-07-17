@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.16
+ * @since       0.0.17
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -181,6 +181,49 @@ body {
 
 .cmp-footer {
     margin-block-start: auto;
+    color: var(--cmp-color-text-default);
+    background-color: var(--cmp-color-surface);
+}
+
+.cmp-module--footer-default {
+    padding-block: clamp(
+        var(--cmp-spacing-xl),
+        4vw,
+        calc(var(--cmp-spacing-xl) * 1.75)
+    );
+}
+
+.cmp-module--footer-default .uk-container {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--cmp-spacing-xl);
+}
+
+.cmp-module--footer-default .cmp-footer__item {
+    flex: 0 1 48%;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.cmp-module--footer-default .cmp-footer__item:last-child {
+    text-align: end;
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--footer-default .uk-container {
+    flex-direction: column;
+    gap: var(--cmp-spacing-md);
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--footer-default .cmp-footer__item {
+    flex-basis: auto;
+    inline-size: 100%;
+    text-align: center;
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--footer-default .cmp-footer__item + .cmp-footer__item {
+    padding-block-start: var(--cmp-spacing-md);
+    border-block-start: var(--cmp-border-width) solid color-mix(in srgb, var(--cmp-color-text-default) 20%, transparent);
 }
 
 body.is-preloader-active {
@@ -1665,8 +1708,7 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
     margin: 0;
 }
 
-.cmp-module--contact-default .cmp-contact__form .form-check-input,
-.cmp-module--contact-default .cmp-contact__form .uk-checkbox {
+.cmp-module--contact-default .cmp-contact__form .form-check-input {
     flex: 0 0 auto;
     inline-size: 1rem;
     block-size: 1rem;
@@ -1677,9 +1719,7 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
 }
 
 .cmp-module--contact-default .cmp-contact__form .form-check-input:checked,
-.cmp-module--contact-default .cmp-contact__form .form-check-input:checked:focus,
-.cmp-module--contact-default .cmp-contact__form .uk-checkbox:checked,
-.cmp-module--contact-default .cmp-contact__form .uk-checkbox:checked:focus {
+.cmp-module--contact-default .cmp-contact__form .form-check-input:checked:focus {
     border-color: var(--cmp-color-strong);
     background-color: var(--cmp-color-strong);
 }
@@ -2046,7 +2086,7 @@ body.is-small .cmp-module--contact-default .cmp-contact__map iframe {
     block-size: 1.15rem;
 }
 
-/* Component view
+/* Component gallery view
    -------------------------------------------------------------------------- */
 
 .cmp-gallery-view {

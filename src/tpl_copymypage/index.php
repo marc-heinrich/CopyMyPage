@@ -1,4 +1,5 @@
-﻿<?php
+<?php
+
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
@@ -175,28 +176,36 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                 aria-hidden="true"
             >
                 <div class="cmp-preloader__content">
-                    <?php switch ($preloaderType) :
-                        case 'ring': ?>
+                    <?php
+                    switch ($preloaderType) :
+                        case 'ring':
+                            ?>
                             <span class="cmp-preloader__ring"></span>
-                            <?php break; ?>
+                            <?php
+                            break;
 
-                        <?php case 'bars': ?>
+                        case 'bars':
+                            ?>
                             <div class="cmp-preloader__bars">
                                 <span class="cmp-preloader__bar"></span>
                                 <span class="cmp-preloader__bar"></span>
                                 <span class="cmp-preloader__bar"></span>
                                 <span class="cmp-preloader__bar"></span>
                             </div>
-                            <?php break; ?>
+                            <?php
+                            break;
 
-                        <?php case 'pulse': ?>
+                        case 'pulse':
+                            ?>
                             <div class="cmp-preloader__pulse">
                                 <span class="cmp-preloader__pulse-halo"></span>
                                 <span class="cmp-preloader__pulse-core"></span>
                             </div>
-                            <?php break; ?>
+                            <?php
+                            break;
 
-                        <?php case 'logo': ?>
+                        case 'logo':
+                            ?>
                             <div class="cmp-preloader__logo-wrap">
                                 <img
                                     class="cmp-preloader__logo"
@@ -206,10 +215,12 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
                                     decoding="async"
                                 >
                             </div>
-                            <?php break; ?>
+                            <?php
+                            break;
 
-                        <?php case 'dots':
-                        default: ?>
+                        case 'dots':
+                        default:
+                            ?>
                             <div class="cmp-preloader__dots">
                                 <span class="cmp-preloader__dot"></span>
                                 <span class="cmp-preloader__dot"></span>
@@ -270,7 +281,6 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
             <main id="<?php echo $escape($mainContentID); ?>" class="cmp-main" role="main">
 
                 <?php if ($isOnepage) : ?>
-
                     <?php foreach (CopyMyPageHelper::getOnepageSections() as $sectionSlot => $section) : ?>
                         <?php if ($this->countModules($sectionSlot)) : ?>
                             <?php

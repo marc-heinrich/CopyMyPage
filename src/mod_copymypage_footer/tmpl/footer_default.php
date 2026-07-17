@@ -33,7 +33,7 @@ if ($warning !== '') {
     return;
 }
 ?>
-<!-- CopyMyPage Footer Module: neutral scaffold; final presentation follows during live-system fine-tuning. -->
+<!-- CopyMyPage Footer Module: responsive project and license information. -->
 <div class="cmp-module cmp-module--footer cmp-module--footer-default">
     <div class="uk-container">
         <?php foreach ($items as $item) : ?>
