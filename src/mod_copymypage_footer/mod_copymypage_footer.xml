@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="module" client="site" method="upgrade">
+  <name>mod_copymypage_footer</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2026-07</creationDate>
+  <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
+  <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
+  <authorEmail>heinrich-marc@gmx.de</authorEmail>
+  <authorUrl>https://copymypage.de</authorUrl>
+  <version>0.0.17</version>
+  <description>MOD_COPYMYPAGE_FOOTER_XML_DESCRIPTION</description>
+  <scriptfile>script.php</scriptfile>
+  <namespace path="src">Joomla\Module\CopyMyPage\Footer</namespace>
+  <files>
+    <folder module="mod_copymypage_footer">services</folder>
+    <folder>src</folder>
+    <folder>tmpl</folder>
+    <folder>language</folder>
+  </files>
+  <config>
+    <fields name="params">
+      <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">
+        <field name="layoutVariant" type="list" label="MOD_COPYMYPAGE_FOOTER_LAYOUT_VARIANT_LABEL" description="MOD_COPYMYPAGE_FOOTER_LAYOUT_VARIANT_DESC" default="footer_default">
+          <option value="footer_default">MOD_COPYMYPAGE_FOOTER_LAYOUT_VARIANT_DEFAULT</option>
+        </field>
+      </fieldset>
+    </fields>
+  </config>
+</extension>

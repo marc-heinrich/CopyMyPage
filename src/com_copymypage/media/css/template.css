@@ -163,6 +163,26 @@ body {
     font-family: var(--cmp-font-family-body);
 }
 
+/* Keep the template footer at the viewport edge on short pages. */
+.cmp-site,
+.cmp-page {
+    min-block-size: 100vh;
+    min-block-size: 100dvh;
+}
+
+.cmp-page {
+    display: flex;
+    flex-direction: column;
+}
+
+.cmp-main {
+    flex: 1 0 auto;
+}
+
+.cmp-footer {
+    margin-block-start: auto;
+}
+
 body.is-preloader-active {
     overflow: hidden;
 }

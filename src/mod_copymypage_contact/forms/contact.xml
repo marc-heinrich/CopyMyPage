@@ -47,10 +47,9 @@
     <field
       name="contact_copy"
       type="checkbox"
-      label="COM_CONTACT_CONTACT_EMAIL_A_COPY_LABEL"
+      label="MOD_COPYMYPAGE_CONTACT_EMAIL_COPY_LABEL"
       id="cmp-contact-copy"
-      default="1"
-      class="uk-checkbox form-check-input" />
+      default="1" />
   </fieldset>
   <fieldset name="captcha">
     <field
