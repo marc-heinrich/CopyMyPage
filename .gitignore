@@ -20,6 +20,9 @@ dist/
 tmp/
 cache/
 
+# Local agent instructions
+AGENTS.md
+
 # Local-only media & design drafts
 media_local/
 blueprints/
