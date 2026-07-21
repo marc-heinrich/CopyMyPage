@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.16</version>
+  <version>0.0.17</version>
   <!-- Short description via language constant -->
   <description>TPL_COPYMYPAGE_XML_DESCRIPTION</description>
   <!-- Template files -->
@@ -31,8 +31,6 @@
     <position>contact</position>
     <position>footer</position>
     <position>debug</position>
-    <!-- used directly in the error.php -->
-    <position>error</position>
   </positions>
   <!-- Language files -->
   <languages>
