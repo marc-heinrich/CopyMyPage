@@ -189,11 +189,17 @@ window.CopyMyPage = window.CopyMyPage || {};
         }
 
         _toInteger(value, fallback) {
-            return Number.parseInt(value, 10) || fallback;
+            const parsed = Number.parseInt(value, 10);
+
+            return Number.isFinite(parsed) ? parsed : fallback;
         }
 
         _toNumber(value, fallback) {
-            return Number(value ?? fallback);
+            const parsed = value === null || value === undefined
+                ? Number.NaN
+                : Number(value);
+
+            return Number.isFinite(parsed) ? parsed : fallback;
         }
 
         _select(element, all = false) {

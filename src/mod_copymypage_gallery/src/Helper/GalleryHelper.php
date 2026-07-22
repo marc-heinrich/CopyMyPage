@@ -103,6 +103,48 @@ final class GalleryHelper implements DatabaseAwareInterface
     }
 
     /**
+     * Build the normalized client-side configuration for gallery integrations.
+     *
+     * These values are the authoritative Isotope defaults until dedicated module
+     * parameters are available and normalized here.
+     *
+     * @return  array<string, mixed>
+     */
+    public function getClientConfig(): array
+    {
+        // TODO: Resolve the published mod_copymypage_gallery instance for the
+        // current site context. Account for menu assignment, access level,
+        // language, publication dates and the fixed `gallery` system position.
+
+        // TODO: Read the module Registry, resolve `layoutVariant` with the same
+        // fallback rules as the dispatcher and extract the
+        // `gallery_sigplus_isotope_` subset through getLayoutConfig().
+
+        // TODO: Whitelist and normalize every stored option before replacing a
+        // default below. Keep `itemSelector` server-owned; validate booleans,
+        // non-negative timings, layout mode names and nested option arrays.
+
+        // TODO: Define deterministic handling for multiple rendered gallery
+        // modules before supporting instance-specific database values.
+
+        // TODO: Add tests for absent modules, defaults, malformed values,
+        // unsupported layouts and multiple module instances before exposing the
+        // first Isotope option in the backend form.
+
+        return [
+            'itemSelector'       => '.cmp-gallery-preview__item',
+            'layoutMode'         => 'fitRows',
+            'percentPosition'    => true,
+            'originLeft'         => true,
+            'originTop'          => true,
+            'transitionDuration' => '350ms',
+            'stagger'            => 0,
+            'resize'             => true,
+            'initLayout'         => true,
+        ];
+    }
+
+    /**
      * Loads all published Sigplus site modules from #__modules.
      *
      * The module rows are enriched with decoded params and normalized gallery metadata

@@ -1,0 +1,254 @@
+<?php
+/**
+ * @package     Joomla.Site
+ * @subpackage  Modules.CopyMyPage
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
+ * @license     GNU General Public License version 3 or later
+ * @since       0.0.17
+ */
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Router\Route;
+use Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper;
+
+/**
+ * Extracted variables
+ * -----------------
+ * @var \Joomla\CMS\Application\CMSApplicationInterface $app
+ * @var array<string, mixed>                            $cfg
+ * @var array<int, object>                              $list
+ * @var array<int, string>                              $filters
+ * @var string                                          $warning
+ * @var string                                          $hint
+ * @var \Joomla\Module\CopyMyPage\Gallery\Site\Helper\GalleryHelper|null $galleryHelper
+ */
+
+// Closure for escaping output.
+$escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+
+// Normalize the raw inputs received from the dispatcher.
+$cfg     = \is_array($cfg ?? null) ? $cfg : [];
+$layout  = strtolower(trim((string) ($layout ?? '')));
+$list    = \is_array($list ?? null) ? $list : [];
+$filters = \is_array($filters ?? null) ? $filters : [];
+$warning = (string) ($warning ?? '');
+$hint    = (string) ($hint ?? '');
+
+if (!isset($galleryHelper) || !$galleryHelper instanceof GalleryHelper) {
+    return;
+}
+
+if ($warning !== '') {
+    echo $warning;
+
+    return;
+}
+
+// Reuse the Isotope item selector from the shared client configuration.
+$clientConfig = $galleryHelper->getClientConfig();
+$itemSelector = trim(GalleryHelper::cfgString($clientConfig, 'itemSelector'));
+
+if (preg_match('/^\.[A-Za-z_][A-Za-z0-9_-]*$/D', $itemSelector) !== 1) {
+    return;
+}
+
+$itemClass       = substr($itemSelector, 1);
+$scrollspyTarget = '> ' . $itemSelector . ' > .cmp-gallery-preview__card';
+
+if ($list !== [] && isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    $app->getDocument()->getWebAssetManager()->useScript('copymypage.gallery.isotope');
+}
+
+// Extract the layout-specific parameter subset for the active template.
+$layoutConfig = GalleryHelper::getLayoutConfig($cfg, $layout);
+
+// Keep template defaults together so fallback behavior stays easy to scan.
+$moduleClass     = 'cmp-module cmp-module--gallery cmp-module--gallery-sigplus-preview cmp-module--gallery-sigplus-isotope';
+$defaultHeadline = Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE');
+$defaultLead     = Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_DESC');
+
+// Apply layout overrides on top of the template defaults.
+$headline    = trim(GalleryHelper::cfgString($layoutConfig, 'headline', $defaultHeadline));
+$lead        = trim(GalleryHelper::cfgString($layoutConfig, 'lead', $defaultLead));
+$showFilters = GalleryHelper::cfgBool($layoutConfig, 'showFilters', true) && \count($filters) > 1;
+
+// Collect the static UI labels used by the rendered markup.
+$filterAllLabel = Text::_('MOD_COPYMYPAGE_GALLERY_FILTER_ALL');
+$imagesLabel    = Text::_('MOD_COPYMYPAGE_GALLERY_IMAGES');
+$galleryLabel   = Text::_('MOD_COPYMYPAGE_GALLERY_TO_GALLERY');
+
+if ($headline === '') {
+    $headline = $defaultHeadline;
+}
+
+if ($lead === '') {
+    $lead = $defaultLead;
+}
+?>
+<!-- Gallery Module Template: Isotope (https://isotope.metafizzy.co/) with UIkit presentation and Sigplus Gallery (https://hunyadi.info.hu/sigplus/) -->
+<div class="<?php echo $escape($moduleClass); ?>">
+    <?php if ($list !== []) : ?>
+        <div class="uk-container">
+            <div class="cmp-gallery-preview__header cmp-section-header">
+                <h2 class="cmp-gallery-preview__headline cmp-section-header__headline">
+                    <?php echo $escape($headline); ?>
+                </h2>
+                <p class="cmp-gallery-preview__lead cmp-section-header__lead">
+                    <?php echo $escape($lead); ?>
+                </p>
+            </div>
+
+            <div class="cmp-gallery-preview__browser" data-cmp-gallery-isotope>
+                <?php if ($showFilters) : ?>
+                    <ul class="cmp-gallery-preview__filters uk-subnav uk-flex-center uk-margin-medium-bottom">
+                        <li class="uk-active">
+                            <a href="#" data-cmp-gallery-isotope-filter="*" aria-current="true">
+                                <?php echo $escape($filterAllLabel); ?>
+                            </a>
+                        </li>
+                        <?php foreach ($filters as $filter) : ?>
+                            <?php
+                            $filterLabel = trim((string) $filter);
+                            $filterClass = trim((string) GalleryHelper::getFilterClass($filterLabel));
+
+                            if ($filterLabel === '' || $filterClass === 'filter-') {
+                                continue;
+                            }
+                            ?>
+                            <li>
+                                <a
+                                    href="#"
+                                    data-cmp-gallery-isotope-filter=".<?php echo $escape($filterClass); ?>"
+                                >
+                                    <?php echo $escape($filterLabel); ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+
+                <div
+                    class="cmp-gallery-preview__grid uk-grid uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-3@l"
+                    data-cmp-gallery-isotope-grid
+                    uk-scrollspy="target: <?php echo $escape($scrollspyTarget); ?>; cls: uk-animation-scale-up; delay: 160; repeat: true"
+                >
+                    <?php foreach ($list as $item) : ?>
+                        <?php
+                        if (!\is_object($item)) {
+                            continue;
+                        }
+
+                        // Build normalized gallery data for the current item.
+                        $title         = trim((string) ($item->title ?? ''));
+                        $source        = trim((string) ($item->gallery_source ?? ''));
+                        $filterLabel   = trim((string) ($item->filter_label ?? ''));
+                        $filterClass   = trim((string) ($item->filter_class ?? ''));
+                        $imageCount    = (int) ($item->image_count ?? 0);
+                        $previewData   = \is_array($item->gallery_start_image_data ?? null)
+                            ? $item->gallery_start_image_data
+                            : [];
+                        $previewSrc    = trim((string) ($previewData['src'] ?? ''));
+                        $previewSrcset = trim((string) ($previewData['srcset'] ?? ''));
+                        $webpSrcset    = trim((string) ($previewData['webpSrcset'] ?? ''));
+                        $avifSrcset    = trim((string) ($previewData['avifSrcset'] ?? ''));
+                        $previewSizes  = trim((string) ($previewData['sizes'] ?? ''));
+                        $previewWidth  = (int) ($previewData['width'] ?? 0);
+                        $previewHeight = (int) ($previewData['height'] ?? 0);
+                        $galleryLink   = '';
+                        $cardTitle     = $title !== '' ? $title : ($filterLabel !== '' ? $filterLabel : $source);
+                        $cardItemClass = trim($itemClass . ' ' . $filterClass);
+
+                        if ($previewSrc === '') {
+                            continue;
+                        }
+
+                        if ((int) ($item->id ?? 0) > 0) {
+                            $galleryLink = Route::link(
+                                'site',
+                                'index.php?option=com_copymypage&view=gallery&id=' . (int) $item->id . '&imageCount=' . $imageCount
+                            );
+                        }
+                        ?>
+                        <div class="<?php echo $escape($cardItemClass); ?>">
+                            <div
+                                class="cmp-gallery-preview__card"
+                                <?php if ($galleryLink !== '') : ?>
+                                    tabindex="0"
+                                <?php endif; ?>
+                            >
+                                <picture class="cmp-gallery-preview__picture">
+                                    <?php if ($avifSrcset !== '') : ?>
+                                        <source
+                                            type="image/avif"
+                                            srcset="<?php echo $escape($avifSrcset); ?>"
+                                            <?php if ($previewSizes !== '') : ?>
+                                                sizes="<?php echo $escape($previewSizes); ?>"
+                                            <?php endif; ?>
+                                        >
+                                    <?php endif; ?>
+                                    <?php if ($webpSrcset !== '') : ?>
+                                        <source
+                                            type="image/webp"
+                                            srcset="<?php echo $escape($webpSrcset); ?>"
+                                            <?php if ($previewSizes !== '') : ?>
+                                                sizes="<?php echo $escape($previewSizes); ?>"
+                                            <?php endif; ?>
+                                        >
+                                    <?php endif; ?>
+                                    <img
+                                        class="cmp-gallery-preview__image"
+                                        src="<?php echo $escape($previewSrc); ?>"
+                                        <?php if ($previewSrcset !== '') : ?>
+                                            srcset="<?php echo $escape($previewSrcset); ?>"
+                                            <?php if ($previewSizes !== '') : ?>
+                                                sizes="<?php echo $escape($previewSizes); ?>"
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                        <?php if ($previewWidth > 0) : ?>
+                                            width="<?php echo $previewWidth; ?>"
+                                        <?php endif; ?>
+                                        <?php if ($previewHeight > 0) : ?>
+                                            height="<?php echo $previewHeight; ?>"
+                                        <?php endif; ?>
+                                        alt="<?php echo $escape($cardTitle); ?>"
+                                        loading="lazy"
+                                        decoding="async"
+                                        fetchpriority="low"
+                                    >
+                                </picture>
+
+                                <div class="cmp-gallery-preview__info">
+                                    <h3 class="cmp-gallery-preview__title">
+                                        <?php echo $escape($cardTitle); ?>
+                                    </h3>
+                                    <p class="cmp-gallery-preview__meta">
+                                        <span class="cmp-gallery-preview__meta-icon" uk-icon="icon: album" aria-hidden="true"></span>
+                                        <span>
+                                            <?php echo $imageCount; ?>
+                                            <?php echo $escape($imagesLabel); ?>
+                                        </span>
+                                    </p>
+
+                                    <?php if ($galleryLink !== '') : ?>
+                                        <a
+                                            class="cmp-gallery-preview__action"
+                                            href="<?php echo $escape($galleryLink); ?>"
+                                            aria-label="<?php echo $escape($galleryLabel); ?>"
+                                            title="<?php echo $escape($galleryLabel); ?>"
+                                        >
+                                            <span uk-icon="icon: search"></span>
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    <?php elseif ($hint !== '') : ?>
+        <?php echo $hint; ?>
+    <?php endif; ?>
+</div>

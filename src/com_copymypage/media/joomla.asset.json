@@ -91,6 +91,15 @@
       }
     },
     {
+      "name": "copymypage.gallery.isotope",
+      "type": "script",
+      "class": "IsotopeAssetItem",
+      "dependencies": [
+        "core",
+        "isotope"
+      ]
+    },
+    {
       "name": "copymypage.alertbar",
       "type": "script",
       "uri": "com_copymypage/copymypage-alertbar.min.js",
@@ -288,6 +297,15 @@
         "core",
         "uikit.icons"
       ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "isotope",
+      "type": "script",
+      "uri": "com_copymypage/isotope/isotope.pkgd.min.js",
+      "version": "3.0.6",
       "attributes": {
         "defer": true
       }

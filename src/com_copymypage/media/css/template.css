@@ -1902,6 +1902,10 @@ body.is-small .cmp-module--contact-default .cmp-contact__map iframe {
     min-inline-size: 0;
 }
 
+.cmp-module--gallery-sigplus-isotope .cmp-gallery-preview__item {
+    margin-bottom: 12px;
+}
+
 .cmp-module--gallery-sigplus-preview .cmp-gallery-preview__item.uk-scrollspy-inview:not([class*="uk-animation-"]) {
     opacity: 1 !important;
     transform: none !important;
