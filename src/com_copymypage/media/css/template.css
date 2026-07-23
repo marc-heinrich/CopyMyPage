@@ -1603,15 +1603,18 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
     border: 0;
 }
 
-.cmp-module--contact-default .cmp-contact__form {
+.cmp-form {
     inline-size: 100%;
 }
 
-.cmp-module--contact-default .cmp-contact__form .uk-fieldset {
+.cmp-form fieldset {
     min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
 }
 
-.cmp-module--contact-default .cmp-contact__form .control-group {
+.cmp-form .control-group {
     margin-block-end: 1rem;
 }
 
@@ -1624,7 +1627,7 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
     margin-block-end: 1rem;
 }
 
-.cmp-module--contact-default .cmp-contact__form .control-label {
+.cmp-form .control-label {
     margin-block-end: 0.3rem;
     color: rgba(var(--cmp-color-logo-dark-rgb), 0.72);
     font-family: var(--cmp-font-family-body-alt);
@@ -1632,41 +1635,94 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
     line-height: 1.4;
 }
 
-.cmp-module--contact-default .cmp-contact__form .control-label label {
+.cmp-form .control-label label {
     color: inherit;
 }
 
-.cmp-module--contact-default .cmp-contact__form :is(.uk-input, .uk-textarea) {
+.cmp-form :is(.uk-input, .uk-textarea, .form-control, .form-select, select) {
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    min-block-size: 2.75rem;
+    padding: 0.55rem 0.75rem;
     border: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.18);
     border-radius: var(--cmp-border-radius);
     color: var(--cmp-color-text-default);
+    font: inherit;
     background: var(--cmp-color-background-default);
     box-shadow: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.cmp-module--contact-default .cmp-contact__form .uk-input {
+.cmp-form :is(.uk-input, .form-control:not(textarea), .form-select, select) {
     block-size: 2.75rem;
 }
 
-.cmp-module--contact-default .cmp-contact__form .uk-textarea {
+.cmp-form :is(.uk-textarea, textarea.form-control) {
     min-block-size: 11.25rem;
     padding-block: 0.7rem;
     resize: vertical;
 }
 
-.cmp-module--contact-default .cmp-contact__form :is(.uk-input, .uk-textarea):hover {
+.cmp-form :is(.uk-input, .uk-textarea, .form-control, .form-select, select):hover {
     border-color: rgba(var(--cmp-color-rgb), 0.65);
 }
 
-.cmp-module--contact-default .cmp-contact__form :is(.uk-input, .uk-textarea):focus {
+.cmp-form :is(.uk-input, .uk-textarea, .form-control, .form-select, select):focus {
+    outline: 0;
     border-color: var(--cmp-color);
     box-shadow: 0 0 0 3px rgba(var(--cmp-color-rgb), 0.14);
 }
 
-.cmp-module--contact-default .cmp-contact__form :is(.uk-input, .uk-textarea).invalid,
-.cmp-module--contact-default .cmp-contact__form :is(.uk-input, .uk-textarea)[aria-invalid="true"] {
+.cmp-form :is(.uk-input, .uk-textarea, .form-control, .form-select, select).invalid,
+.cmp-form :is(.uk-input, .uk-textarea, .form-control, .form-select, select)[aria-invalid="true"] {
     border-color: var(--cmp-dialog-message-color-danger);
+}
+
+.cmp-form .input-group {
+    display: flex;
+    align-items: stretch;
+    inline-size: 100%;
+}
+
+.cmp-form .input-group > .form-control {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+}
+
+.cmp-form .input-password-toggle {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 2.75rem;
+    padding: 0.5rem 0.75rem;
+    color: var(--cmp-color-text-default);
+    background: var(--cmp-color-surface);
+    border: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.18);
+    border-inline-start: 0;
+    border-radius: 0 var(--cmp-border-radius) var(--cmp-border-radius) 0;
+    cursor: pointer;
+}
+
+.cmp-form .input-password-toggle:hover,
+.cmp-form .input-password-toggle:focus-visible {
+    color: var(--cmp-color-logo-dark);
+    background: var(--cmp-color-soft);
+}
+
+.cmp-form .form-text {
+    display: block;
+    margin-block-start: 0.35rem;
+    color: var(--cmp-color-text-muted);
+    font-size: var(--cmp-font-size-sm);
+    line-height: 1.5;
+}
+
+.cmp-form .red {
+    color: var(--cmp-dialog-message-color-danger);
 }
 
 .cmp-module--contact-default .cmp-contact__options-grid {
@@ -1683,7 +1739,7 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
     display: none !important;
 }
 
-.cmp-module--contact-default .cmp-contact__form .visually-hidden {
+.cmp-form .visually-hidden {
     position: absolute !important;
     inline-size: 1px !important;
     block-size: 1px !important;
@@ -1715,14 +1771,14 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
     border: 0;
 }
 
-.cmp-module--contact-default .cmp-contact__form .form-check {
+.cmp-form .form-check {
     display: flex;
     align-items: flex-start;
     gap: 0.55rem;
     margin: 0;
 }
 
-.cmp-module--contact-default .cmp-contact__form .form-check-input {
+.cmp-form .form-check-input {
     flex: 0 0 auto;
     inline-size: 1rem;
     block-size: 1rem;
@@ -1732,31 +1788,31 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
     accent-color: var(--cmp-color-strong);
 }
 
-.cmp-module--contact-default .cmp-contact__form .form-check-input:checked,
-.cmp-module--contact-default .cmp-contact__form .form-check-input:checked:focus {
+.cmp-form .form-check-input:checked,
+.cmp-form .form-check-input:checked:focus {
     border-color: var(--cmp-color-strong);
     background-color: var(--cmp-color-strong);
 }
 
-.cmp-module--contact-default .cmp-contact__form .form-check-label,
-.cmp-module--contact-default .cmp-contact__form .form-check label {
+.cmp-form .form-check-label,
+.cmp-form .form-check label {
     color: rgba(var(--cmp-color-logo-dark-rgb), 0.72);
     font-family: var(--cmp-font-family-body-alt);
     font-size: var(--cmp-font-size-sm);
     line-height: 1.55;
 }
 
-.cmp-module--contact-default .cmp-contact__form fieldset.invalid {
+.cmp-form fieldset.invalid {
     padding: 0.65rem;
     border: var(--cmp-border-width) solid var(--cmp-dialog-message-color-danger);
     border-radius: var(--cmp-border-radius);
 }
 
-.cmp-module--contact-default .cmp-contact__actions {
+.cmp-form__actions {
     margin-block-start: 1.5rem;
 }
 
-.cmp-module--contact-default .cmp-contact__actions .uk-button {
+.cmp-form__actions .uk-button {
     min-inline-size: 8.75rem;
     border-radius: var(--cmp-border-radius);
     font-weight: 600;
@@ -1790,7 +1846,7 @@ body.is-small .cmp-module--contact-default .cmp-contact__map iframe {
 
 @media (prefers-reduced-motion: reduce) {
     .cmp-module--contact-default .cmp-contact__info-icon,
-    .cmp-module--contact-default .cmp-contact__form :is(.uk-input, .uk-textarea) {
+    .cmp-form :is(.uk-input, .uk-textarea, .form-control, .form-select, select) {
         transition: none;
     }
 
@@ -2962,11 +3018,11 @@ body.is-small .cmp-uikit-dialog .cmp-uikit-dialog__header {
     padding-inline-end: 0.01rem;
 }
 
-/* ========================================================================== 
-   COMPONENTS - Error page
+/* ==========================================================================
+   COMPONENTS - Focused system pages
    ========================================================================== */
 
-body.cmp-error-page {
+body:is(.cmp-error-page, .is-authpage) {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -2986,17 +3042,17 @@ body.cmp-error-page {
         );
 }
 
-body.cmp-error-page,
-body.cmp-error-page::before,
-body.cmp-error-page::after,
-body.cmp-error-page *,
-body.cmp-error-page *::before,
-body.cmp-error-page *::after {
+body:is(.cmp-error-page, .is-authpage),
+body:is(.cmp-error-page, .is-authpage)::before,
+body:is(.cmp-error-page, .is-authpage)::after,
+body:is(.cmp-error-page, .is-authpage) *,
+body:is(.cmp-error-page, .is-authpage) *::before,
+body:is(.cmp-error-page, .is-authpage) *::after {
     box-sizing: border-box;
 }
 
-body.cmp-error-page::before,
-body.cmp-error-page::after {
+body:is(.cmp-error-page, .is-authpage)::before,
+body:is(.cmp-error-page, .is-authpage)::after {
     position: fixed;
     z-index: 0;
     inline-size: clamp(11rem, 26vw, 24rem);
@@ -3007,13 +3063,13 @@ body.cmp-error-page::after {
     pointer-events: none;
 }
 
-body.cmp-error-page::before {
+body:is(.cmp-error-page, .is-authpage)::before {
     inset-block-start: -8rem;
     inset-inline-start: -6rem;
     transform: rotate(18deg);
 }
 
-body.cmp-error-page::after {
+body:is(.cmp-error-page, .is-authpage)::after {
     inset-block-end: -10rem;
     inset-inline-end: -7rem;
     transform: rotate(-24deg);
@@ -3029,6 +3085,215 @@ body.cmp-error-page::after {
     justify-content: center;
     inline-size: 100%;
     padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 4vw, 2.5rem);
+}
+
+body.is-authpage.is-preloader-active {
+    overflow-x: clip;
+    overflow-y: auto;
+}
+
+body.is-authpage #page {
+    position: relative;
+    z-index: 1;
+    padding-block-start: 0;
+    background: transparent;
+}
+
+body.is-authpage :is(.cmp-alert-slot, .cmp-header, .cmp-preloader, .cmp-back-to-top) {
+    display: none !important;
+}
+
+body.is-authpage .cmp-main {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    inline-size: 100%;
+    padding-block: clamp(2.5rem, 9vh, 6.5rem);
+    padding-inline: clamp(1rem, 4vw, 2.5rem);
+    gap: 1rem;
+}
+
+body.is-authpage :is(#system-message-container, .cmp-section--component) {
+    inline-size: min(100%, 26rem);
+}
+
+body.is-authpage.view-registration :is(#system-message-container, .cmp-section--component) {
+    inline-size: min(100%, 32rem);
+}
+
+body.is-authpage #system-message-container {
+    margin: 0;
+}
+
+body.is-authpage #system-message-container:empty {
+    display: none;
+}
+
+body.is-authpage .cmp-section--component {
+    padding-block-start: 0;
+}
+
+.cmp-auth {
+    inline-size: 100%;
+    color: var(--cmp-color-text-default);
+    animation: cmp-auth-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cmp-auth__header {
+    text-align: center;
+}
+
+.cmp-auth__title {
+    margin: 0;
+    color: var(--cmp-color-logo-dark);
+    font-family: var(--cmp-font-family-ui);
+    font-size: clamp(1.55rem, 5vw, 1.85rem);
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+}
+
+.cmp-auth__lead,
+.cmp-auth__fieldset-intro {
+    color: var(--cmp-color-text-muted);
+    font-family: var(--cmp-font-family-body-alt);
+    font-size: 0.95rem;
+    font-weight: 400;
+    line-height: 1.6;
+    text-wrap: pretty;
+}
+
+.cmp-auth__lead {
+    margin-block-start: 0.85rem;
+}
+
+.cmp-auth__lead > :first-child {
+    margin-block-start: 0;
+}
+
+.cmp-auth__lead > :last-child {
+    margin-block-end: 0;
+}
+
+.cmp-auth__image {
+    display: block;
+    max-inline-size: min(100%, 18rem);
+    block-size: auto;
+    margin: 1rem auto 0;
+}
+
+.cmp-auth__form {
+    margin-block-start: 1.75rem;
+}
+
+.cmp-auth__fieldset + .cmp-auth__fieldset {
+    margin-block-start: 1.5rem;
+}
+
+.cmp-auth__legend,
+.cmp-auth__fieldset-intro {
+    display: block;
+    float: none;
+    inline-size: 100%;
+    padding: 0;
+}
+
+.cmp-auth__legend {
+    margin: 0 0 0.85rem;
+    color: var(--cmp-color-logo-dark);
+    font-family: var(--cmp-font-family-ui);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.cmp-auth__fieldset-intro {
+    margin: 0 0 1.25rem;
+    text-align: center;
+}
+
+.cmp-auth__form .password-group {
+    inline-size: 100%;
+}
+
+.cmp-auth__remember {
+    margin-block: 0.25rem 0;
+}
+
+.cmp-auth__extra-button {
+    margin-block: 0.75rem 0;
+}
+
+.cmp-auth__secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 100%;
+    min-block-size: 2.75rem;
+    padding: 0.55rem 0.9rem;
+    gap: 0.5rem;
+    color: var(--cmp-color-text-default);
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.25;
+    background: var(--cmp-color-background-default);
+    border: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.18);
+    border-radius: var(--cmp-border-radius);
+    cursor: pointer;
+}
+
+.cmp-auth__secondary-button:hover,
+.cmp-auth__secondary-button:focus-visible {
+    color: var(--cmp-color-logo-dark);
+    text-decoration: none;
+    background: var(--cmp-color-soft);
+    border-color: rgba(var(--cmp-color-rgb), 0.65);
+}
+
+.cmp-auth__actions {
+    margin-block-end: 0;
+}
+
+.cmp-auth__actions .controls,
+.cmp-auth__actions .uk-button {
+    inline-size: 100%;
+}
+
+.cmp-auth__actions .uk-button {
+    min-block-size: 2.75rem;
+}
+
+.cmp-auth__options {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-block-start: 1.35rem;
+    gap: 0.55rem 1rem;
+    font-family: var(--cmp-font-family-body-alt);
+    font-size: var(--cmp-font-size-sm);
+    line-height: 1.5;
+    text-align: center;
+}
+
+.cmp-auth__options a {
+    color: var(--cmp-color-text-default);
+    text-decoration: none;
+}
+
+.cmp-auth__options a:hover,
+.cmp-auth__options a:focus-visible {
+    color: var(--cmp-color);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+
+.cmp-auth--complete {
+    text-align: center;
 }
 
 .cmp-error-page__messages,
@@ -3232,6 +3497,18 @@ body.cmp-error-page::after {
     inline-size: 100%;
 }
 
+@keyframes cmp-auth-enter {
+    from {
+        opacity: 0;
+        transform: translateY(0.65rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes cmp-error-page-enter {
     from {
         opacity: 0;
@@ -3252,6 +3529,11 @@ body.cmp-error-page::after {
         padding-block: clamp(1rem, 4svh, 2rem);
     }
 
+    body.is-authpage .cmp-main {
+        justify-content: center;
+        padding-block: clamp(1rem, 4svh, 2rem);
+    }
+
     .cmp-error-page__panel {
         padding-inline: 1.1rem;
         border-radius: 1.1rem;
@@ -3261,24 +3543,24 @@ body.cmp-error-page::after {
         inline-size: 100%;
     }
 
-    body.cmp-error-page .cmp-module--footer-default .uk-container {
+    body:is(.cmp-error-page, .is-authpage) .cmp-module--footer-default .uk-container {
         flex-direction: column;
         align-items: stretch;
         gap: var(--cmp-spacing-md);
     }
 
-    body.cmp-error-page .cmp-module--footer-default .uk-container::after {
+    body:is(.cmp-error-page, .is-authpage) .cmp-module--footer-default .uk-container::after {
         display: none;
     }
 
-    body.cmp-error-page .cmp-module--footer-default .cmp-footer__item,
-    body.cmp-error-page .cmp-module--footer-default .cmp-footer__item:last-child {
+    body:is(.cmp-error-page, .is-authpage) .cmp-module--footer-default .cmp-footer__item,
+    body:is(.cmp-error-page, .is-authpage) .cmp-module--footer-default .cmp-footer__item:last-child {
         flex-basis: auto;
         inline-size: 100%;
         text-align: center;
     }
 
-    body.cmp-error-page .cmp-module--footer-default .cmp-footer__item + .cmp-footer__item {
+    body:is(.cmp-error-page, .is-authpage) .cmp-module--footer-default .cmp-footer__item + .cmp-footer__item {
         padding-block-start: var(--cmp-spacing-md);
         border-block-start: var(--cmp-border-width) solid color-mix(in srgb, var(--cmp-color-text-default) 20%, transparent);
     }

@@ -5,7 +5,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.17
  */
 
 \defined('_JEXEC') or die;
@@ -84,6 +84,10 @@ $layout = $input->getCmd('layout', '');
 $task   = $input->getCmd('task', '');
 $itemId = (int) $input->getInt('Itemid', 0);
 
+// Authentication views use the shared template shell with a focused body state.
+$isAuthPage = $option === 'com_users'
+    && \in_array($view, ['login', 'registration', 'remind', 'reset'], true);
+
 // Onepage context is determined by view or menu item; it enables scrollspy-nav and section tracking.
 $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
 
@@ -112,19 +116,25 @@ $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
 $wa->usePreset($this->template . '.site')
    ->addInlineStyle($templateTokenStyle);
 
+// Load Font Awesome for auth pages (login, registration, remind, reset).
+if ($isAuthPage) {
+    $wa->useStyle('joomla.fontawesome');
+}
+
 // Onepage script adds scrollspy-nav behavior and active section tracking.
 if ($isOnepage) {
     $wa->useScript('copymypage.onepage');
 }
 
 // Enable modal dev harness if in debug mode or URL param is set.
-if ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmpdev', 0) === 1) {
+if (!$isAuthPage && ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmpdev', 0) === 1)) {
     $wa->useScript('copymypage.modal.dev');
 }
 
 // Build body classes and navbar attributes.
 $bodyClasses = [
     'cmp-site',
+    $isAuthPage ? 'is-authpage' : 'no-authpage',
     $preloaderEnabled ? 'is-preloader-active' : '',
     $option ?: 'no-option',
     'view-' . ($view ?: 'no-view'),

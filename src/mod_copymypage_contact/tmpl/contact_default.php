@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.16
+ * @since       0.0.17
  */
 
 \defined('_JEXEC') or die;
@@ -185,7 +185,7 @@ $hasCopy    = $showCopy && (bool) $form->getField('contact_copy');
                         id="<?php echo $escape($formId); ?>"
                         action="<?php echo Route::_('index.php?option=com_copymypage'); ?>"
                         method="post"
-                        class="cmp-contact__form form-validate"
+                        class="cmp-form cmp-contact__form form-validate"
                     >
                         <fieldset class="uk-fieldset">
                             <div class="cmp-contact__identity-grid uk-grid-small" uk-grid>
@@ -234,7 +234,7 @@ $hasCopy    = $showCopy && (bool) $form->getField('contact_copy');
                         <input type="hidden" name="return" value="<?php echo $escape($returnUrl); ?>">
                         <?php echo HTMLHelper::_('form.token'); ?>
 
-                        <div class="cmp-contact__actions uk-text-center">
+                        <div class="cmp-form__actions cmp-contact__actions uk-text-center">
                             <button
                                 type="button"
                                 class="uk-button uk-button-primary"

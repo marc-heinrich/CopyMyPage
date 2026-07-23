@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.15
+ * @since       0.0.17
  */
 
 namespace Joomla\Module\CopyMyPage\Navbar\Site\Helper;
@@ -258,7 +258,7 @@ class NavbarHelper
     public function getUserItems(Registry $params, CMSApplicationInterface $app): array
     {
         $user   = $app->getIdentity();
-        $return = rawurlencode(base64_encode(Uri::base()));
+        $return = rawurlencode(base64_encode(Uri::root() . 'index.php'));
 
         if ($user->guest) {
             return [
