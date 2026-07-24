@@ -10,21 +10,31 @@
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 
 /** @var \Joomla\Component\Users\Site\View\Reset\HtmlView $this */
 
+$app = Factory::getApplication();
+
 /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $this->getDocument()->getWebAssetManager();
 $wa->useScript('keepalive')
-    ->useScript('form.validate');
+   ->useScript('form.validate');
 
-$escape      = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-$pageHeading = trim((string) $this->params->get('page_heading', ''));
-$heading     = $this->params->get('show_page_heading') && $pageHeading !== ''
+$escape        = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$pageTitle     = Text::_('COM_USERS_RESET');
+$pageHeading   = trim((string) $this->params->get('page_heading', ''));
+$heading       = $this->params->get('show_page_heading') && $pageHeading !== ''
     ? $pageHeading
-    : Text::_('COM_USERS_RESET');
+    : $pageTitle;
+$siteName      = trim((string) $app->get('sitename', ''));
+$documentTitle = $siteName !== ''
+    ? $pageTitle . ' | ' . $siteName
+    : $pageTitle;
+
+$this->getDocument()->setTitle($documentTitle);
 ?>
 <div class="cmp-auth cmp-auth--reset-confirm com-users-reset-confirm reset-confirm">
     <header class="cmp-auth__header">

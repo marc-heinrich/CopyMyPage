@@ -87,10 +87,16 @@ $currentUri->setFragment('contact');
 $returnUrl  = base64_encode($currentUri->toString());
 
 // Derive layout flags from the available contact information and form fields.
-$hasInfo    = $infoItems !== [] || $mapUrl !== '';
-$formWidth  = $hasInfo ? 'cmp-contact__form-column' : 'uk-width-1-1';
-$hasConsent = (bool) $form->getField('consentbox');
-$hasCopy    = $showCopy && (bool) $form->getField('contact_copy');
+$hasInfo      = $infoItems !== [] || $mapUrl !== '';
+$formWidth    = $hasInfo ? 'cmp-contact__form-column' : 'uk-width-1-1';
+$hasConsent   = (bool) $form->getField('consentbox');
+$hasCopy      = $showCopy && (bool) $form->getField('contact_copy');
+$captchaField = $form->getField('captcha');
+
+// The captcha plugin loads its language during field setup, so restore template overrides afterwards.
+if ($captchaField && isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    $app->getLanguage()->load('tpl_copymypage', JPATH_SITE, null, true);
+}
 ?>
 <!-- Contact Module Template: UIkit Framework (https://getuikit.com/docs/form) and CopyMyPage formcheck behavior -->
 <div class="cmp-module cmp-module--contact cmp-module--contact-default">
@@ -223,8 +229,10 @@ $hasCopy    = $showCopy && (bool) $form->getField('contact_copy');
                                 </div>
                             <?php endif; ?>
 
-                            <?php if ($form->getField('captcha')) : ?>
-                                <?php echo $form->renderField('captcha'); ?>
+                            <?php if ($captchaField) : ?>
+                                <div class="cmp-contact__captcha">
+                                    <?php echo $captchaField->renderField(); ?>
+                                </div>
                             <?php endif; ?>
                         </fieldset>
 

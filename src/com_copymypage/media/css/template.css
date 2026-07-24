@@ -1730,6 +1730,10 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-module--counts-default .cmp-coun
     margin-block-start: 0.25rem;
 }
 
+.cmp-module--contact-default .cmp-contact__captcha {
+    margin-block-start: 1.5rem;
+}
+
 .cmp-module--contact-default .cmp-contact__consent,
 .cmp-module--contact-default .cmp-contact__copy {
     min-block-size: 100%;
@@ -2829,8 +2833,10 @@ body.is-small .cmp-module--hero-slideshow .cmp-hero-overlay__subline {
 }
 
 .cmp-uikit-content-modal__article {
+    overflow-wrap: anywhere;
     color: var(--cmp-color-text-default);
     font-family: var(--cmp-font-family-body-alt);
+    hyphens: auto;
     line-height: 1.7;
 }
 
@@ -2842,9 +2848,14 @@ body.is-small .cmp-module--hero-slideshow .cmp-hero-overlay__subline {
     margin-block-end: 0;
 }
 
-.cmp-uikit-content-modal__article :is(h2, h3, h4) {
+.cmp-uikit-content-modal__article :is(h1, h2, h3, h4) {
     color: var(--cmp-color-logo-dark);
     font-family: var(--cmp-font-family-ui);
+}
+
+.cmp-uikit-content-modal__article h1 {
+    font-size: clamp(1.85rem, 5vw, 2.65rem);
+    line-height: 1.15;
 }
 
 .cmp-uikit-content-modal__article a {
@@ -2876,6 +2887,10 @@ body.is-small .cmp-uikit-content-modal .cmp-uikit-content-modal__panel {
 body.is-small .cmp-uikit-content-modal .cmp-uikit-content-modal__body {
     min-block-size: min(52vh, 22rem);
     padding: 1rem;
+}
+
+body.is-small .cmp-uikit-content-modal__article h1 {
+    font-size: clamp(1.75rem, 9vw, 2.15rem);
 }
 
 .cmp-uikit-dialog--alert .cmp-uikit-dialog__header,
@@ -3022,7 +3037,7 @@ body.is-small .cmp-uikit-dialog .cmp-uikit-dialog__header {
    COMPONENTS - Focused system pages
    ========================================================================== */
 
-body:is(.cmp-error-page, .is-authpage) {
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage) {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -3042,17 +3057,17 @@ body:is(.cmp-error-page, .is-authpage) {
         );
 }
 
-body:is(.cmp-error-page, .is-authpage),
-body:is(.cmp-error-page, .is-authpage)::before,
-body:is(.cmp-error-page, .is-authpage)::after,
-body:is(.cmp-error-page, .is-authpage) *,
-body:is(.cmp-error-page, .is-authpage) *::before,
-body:is(.cmp-error-page, .is-authpage) *::after {
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage),
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage)::before,
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage)::after,
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage) *,
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage) *::before,
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage) *::after {
     box-sizing: border-box;
 }
 
-body:is(.cmp-error-page, .is-authpage)::before,
-body:is(.cmp-error-page, .is-authpage)::after {
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage)::before,
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage)::after {
     position: fixed;
     z-index: 0;
     inline-size: clamp(11rem, 26vw, 24rem);
@@ -3063,13 +3078,13 @@ body:is(.cmp-error-page, .is-authpage)::after {
     pointer-events: none;
 }
 
-body:is(.cmp-error-page, .is-authpage)::before {
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage)::before {
     inset-block-start: -8rem;
     inset-inline-start: -6rem;
     transform: rotate(18deg);
 }
 
-body:is(.cmp-error-page, .is-authpage)::after {
+body:is(.cmp-component-page, .cmp-error-page, .is-authpage)::after {
     inset-block-end: -10rem;
     inset-inline-end: -7rem;
     transform: rotate(-24deg);
@@ -3085,6 +3100,39 @@ body:is(.cmp-error-page, .is-authpage)::after {
     justify-content: center;
     inline-size: 100%;
     padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 4vw, 2.5rem);
+}
+
+.cmp-component-page__main {
+    position: relative;
+    z-index: 1;
+    inline-size: min(100%, 72rem);
+    margin-inline: auto;
+    padding: clamp(2rem, 6vw, 5rem) clamp(1rem, 4vw, 2.5rem);
+}
+
+.cmp-component-page__main > #system-message-container:empty {
+    display: none;
+}
+
+.cmp-component-page__main > #system-message-container:not(:empty) {
+    margin-block-end: 1rem;
+}
+
+.cmp-component-page__content {
+    padding: clamp(1.25rem, 4vw, 3rem);
+    color: var(--cmp-color-text-default);
+    background: color-mix(in srgb, var(--cmp-color-background-default) 94%, transparent);
+    border: 1px solid rgba(var(--cmp-color-logo-dark-rgb), 0.08);
+    border-radius: clamp(0.85rem, 2vw, 1.5rem);
+    box-shadow: 0 1.25rem 3.5rem rgba(var(--cmp-color-logo-dark-rgb), 0.1);
+}
+
+.cmp-component-page__content > :first-child {
+    margin-block-start: 0;
+}
+
+.cmp-component-page__content > :last-child {
+    margin-block-end: 0;
 }
 
 body.is-authpage.is-preloader-active {

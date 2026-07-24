@@ -169,7 +169,7 @@
       "name": "copymypage.modal.content",
       "type": "script",
       "uri": "com_copymypage/copymypage-content-modal.min.js",
-      "version": "0.0.16",
+      "version": "0.0.17",
       "dependencies": [
         "core",
         "uikit",

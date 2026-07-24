@@ -19,17 +19,27 @@ use Joomla\CMS\Router\Route;
 
 /** @var \Joomla\Component\Users\Site\View\Login\HtmlView $this */
 
+$app = Factory::getApplication();
+
 /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $this->getDocument()->getWebAssetManager();
 $wa->useScript('keepalive')
-    ->useScript('form.validate');
+   ->useScript('form.validate');
 
-$usersConfig = ComponentHelper::getParams('com_users');
-$escape      = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-$pageHeading = trim((string) $this->params->get('page_heading', ''));
-$heading     = $this->params->get('show_page_heading') && $pageHeading !== ''
+$usersConfig   = ComponentHelper::getParams('com_users');
+$escape        = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$pageTitle     = Text::_('JLOGIN');
+$pageHeading   = trim((string) $this->params->get('page_heading', ''));
+$heading       = $this->params->get('show_page_heading') && $pageHeading !== ''
     ? $pageHeading
-    : Text::_('JLOGIN');
+    : $pageTitle;
+$siteName      = trim((string) $app->get('sitename', ''));
+$documentTitle = $siteName !== ''
+    ? $pageTitle . ' | ' . $siteName
+    : $pageTitle;
+
+$this->getDocument()->setTitle($documentTitle);
+
 $hasDescription = (
     (int) $this->params->get('logindescription_show', 0) === 1
     && trim((string) $this->params->get('login_description', '')) !== ''

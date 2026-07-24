@@ -10,21 +10,34 @@
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 
 /** @var \Joomla\Component\Users\Site\View\Registration\HtmlView $this */
 
+$app = Factory::getApplication();
+
+// Component layouts render before Joomla loads the outer template language file.
+$app->getLanguage()->load('tpl_copymypage', JPATH_SITE, null, true);
+
 /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $this->getDocument()->getWebAssetManager();
 $wa->useScript('keepalive')
-    ->useScript('form.validate');
+   ->useScript('form.validate');
 
-$escape      = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-$pageHeading = trim((string) $this->params->get('page_heading', ''));
-$heading     = $this->params->get('show_page_heading') && $pageHeading !== ''
+$escape        = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$pageTitle     = Text::_('COM_USERS_REGISTRATION');
+$pageHeading   = trim((string) $this->params->get('page_heading', ''));
+$heading       = $this->params->get('show_page_heading') && $pageHeading !== ''
     ? $pageHeading
-    : Text::_('COM_USERS_REGISTRATION');
+    : $pageTitle;
+$siteName      = trim((string) $app->get('sitename', ''));
+$documentTitle = $siteName !== ''
+    ? $pageTitle . ' | ' . $siteName
+    : $pageTitle;
+
+$this->getDocument()->setTitle($documentTitle);
 ?>
 <div class="cmp-auth cmp-auth--registration com-users-registration registration">
     <header class="cmp-auth__header">

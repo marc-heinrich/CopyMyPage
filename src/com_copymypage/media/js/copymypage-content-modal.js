@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.16
+ * @since       0.0.17
  */
 
 window.CopyMyPageContentModal = window.CopyMyPageContentModal || {};
@@ -15,6 +15,7 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
     const api = window.CopyMyPageContentModal;
     const modalNs = window.CopyMyPageModal;
     const initializedTriggers = new WeakSet();
+    let titleId = 0;
 
     const getText = (key, fallback) => {
         if (modalNs.utils && typeof modalNs.utils.getText === 'function') {
@@ -49,8 +50,16 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
         }
     };
 
+    const getComponentUrl = (url) => {
+        const componentUrl = new URL(url.href);
+
+        componentUrl.searchParams.set('tmpl', 'component');
+
+        return componentUrl;
+    };
+
     const removeUnsafeMarkup = (root, sourceUrl) => {
-        root.querySelectorAll('script, style, link, meta, base, noscript, object, embed')
+        root.querySelectorAll('script, style, link, meta, base, noscript, iframe, object, embed')
             .forEach((element) => element.remove());
 
         root.querySelectorAll('*').forEach((element) => {
@@ -99,7 +108,8 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
 
     const extractContent = (html, sourceUrl) => {
         const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
-        const source = parsed.querySelector('.com-content-article__body')
+        const source = parsed.querySelector('[data-cmp-component-content]')
+            || parsed.querySelector('.com-content-article__body')
             || parsed.querySelector('[itemprop="articleBody"]')
             || parsed.querySelector('.item-page')
             || parsed.querySelector('article')
@@ -121,9 +131,11 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             throw new Error('Only same-origin modal content can be loaded.');
         }
 
-        const response = await window.fetch(url.href, {
+        const componentUrl = getComponentUrl(url);
+        const response = await window.fetch(componentUrl.href, {
             credentials: 'same-origin',
             headers: {
+                'Accept': 'text/html',
                 'X-Requested-With': 'XMLHttpRequest'
             },
             signal
@@ -133,7 +145,13 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
             throw new Error(`Content request failed with status ${response.status}.`);
         }
 
-        return extractContent(await response.text(), url.href);
+        const contentType = response.headers.get('content-type') || '';
+
+        if (!contentType.toLowerCase().includes('text/html')) {
+            throw new Error('Content request did not return HTML.');
+        }
+
+        return extractContent(await response.text(), response.url || componentUrl.href);
     };
 
     const open = (options = {}) => {
@@ -147,6 +165,11 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
         const dialogAdapter = modalNs.adapters && modalNs.adapters.dialog;
 
         if (!url) {
+            return Promise.resolve(false);
+        }
+
+        if (url.origin !== window.location.origin) {
+            window.open(url.href, '_blank', 'noopener,noreferrer');
             return Promise.resolve(false);
         }
 
@@ -186,7 +209,10 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
                 className: 'uk-button uk-button-primary',
                 value: true
             }],
-            onReady: async ({ modalElement, body }) => {
+            onReady: async ({ modalElement, title, body }) => {
+                titleId += 1;
+                title.id = `cmp-content-modal-title-${titleId}`;
+                modalElement.setAttribute('aria-labelledby', title.id);
                 modalElement.addEventListener('hidden', () => abortController.abort(), { once: true });
                 modalElement.addEventListener('hidden.uk.modal', () => abortController.abort(), { once: true });
                 body.setAttribute('aria-busy', 'true');
@@ -225,16 +251,26 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
         const legacyModal = targetSelector && targetSelector.startsWith('#')
             ? document.getElementById(targetSelector.slice(1))
             : null;
-        const url = normalizeUrl(legacyModal && legacyModal.dataset.url);
+        const url = normalizeUrl(
+            legacyModal && legacyModal.dataset.url
+                ? legacyModal.dataset.url
+                : targetSelector
+        );
 
         if (!url) {
             return;
         }
 
+        const fallbackUrl = new URL(url.href);
+
+        fallbackUrl.searchParams.delete('tmpl');
+
         initializedTriggers.add(trigger);
         trigger.removeAttribute('data-bs-toggle');
-        trigger.dataset.cmpContentModal = 'privacy';
-        trigger.setAttribute('href', url.href);
+        trigger.removeAttribute('data-bs-target');
+        trigger.dataset.cmpContentModal = trigger.dataset.cmpContentModal || 'privacy';
+        trigger.setAttribute('aria-haspopup', 'dialog');
+        trigger.setAttribute('href', fallbackUrl.href);
 
         if (legacyModal) {
             legacyModal.hidden = true;
@@ -246,17 +282,45 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
                 return;
             }
 
+            const dialogAdapter = modalNs.adapters && modalNs.adapters.dialog;
+
+            if (
+                url.origin !== window.location.origin
+                || !UIkit
+                || typeof UIkit.modal !== 'function'
+                || typeof dialogAdapter !== 'function'
+            ) {
+                return;
+            }
+
             event.preventDefault();
             open({
-                title: trigger.textContent.trim(),
-                url: url.href
+                title: trigger.dataset.cmpContentModalTitle || trigger.textContent.trim(),
+                url: fallbackUrl.href
+            }).finally(() => {
+                if (trigger.isConnected) {
+                    trigger.focus({ preventScroll: true });
+                }
             });
         });
     };
 
     const initConsentLinks = (root = document) => {
-        root.querySelectorAll('.cmp-contact__consent a[data-bs-toggle="modal"][href^="#"]')
-            .forEach(initializeConsentTrigger);
+        const selector = [
+            'a[data-cmp-content-modal]',
+            '.cmp-contact__consent a[data-bs-toggle="modal"][href^="#"]'
+        ].join(',');
+        const triggers = [];
+
+        if (root instanceof Element && root.matches(selector)) {
+            triggers.push(root);
+        }
+
+        if (root && typeof root.querySelectorAll === 'function') {
+            triggers.push(...root.querySelectorAll(selector));
+        }
+
+        triggers.forEach(initializeConsentTrigger);
     };
 
     api.open = open;
@@ -267,4 +331,8 @@ window.CopyMyPageModal = window.CopyMyPageModal || {};
     } else {
         initConsentLinks();
     }
+
+    document.addEventListener('joomla:updated', (event) => {
+        initConsentLinks(event.target || document);
+    });
 })(window, document, window.Joomla, window.UIkit);
