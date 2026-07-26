@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.17
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper;
@@ -12,6 +12,8 @@ namespace Joomla\Component\CopyMyPage\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Document\HtmlDocument;
+use Joomla\CMS\Form\Form;
+use Joomla\CMS\Form\FormField;
 use Joomla\CMS\Language\Language;
 
 /**
@@ -106,6 +108,28 @@ abstract class CopyMyPageHelper
         $language->load('com_users', JPATH_ADMINISTRATOR, null, true);
         $language->load('com_contact', JPATH_SITE, null, true);
         $language->load('com_contact', JPATH_ADMINISTRATOR, null, true);
+    }
+
+    /**
+     * Initialize a configured captcha field before restoring the template language overrides.
+     *
+     * @param   Form      $form      The form containing the captcha field.
+     * @param   Language  $language  The active site language object.
+     *
+     * @return  FormField|null  The initialized captcha field, or null when captcha is unavailable.
+     */
+    public static function prepareCaptchaLanguageOverrides(Form $form, Language $language): ?FormField
+    {
+        $captchaField = $form->getField('captcha');
+
+        if (!$captchaField instanceof FormField) {
+            return null;
+        }
+
+        // Captcha plugins autoload their language during field setup and may overwrite template strings.
+        $language->load('tpl_copymypage', JPATH_SITE, null, true);
+
+        return $captchaField;
     }
 
     /**
