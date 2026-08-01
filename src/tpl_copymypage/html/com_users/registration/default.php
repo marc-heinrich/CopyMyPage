@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
@@ -13,13 +12,14 @@
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 /** @var \Joomla\Component\Users\Site\View\Registration\HtmlView $this */
 
 $app = Factory::getApplication();
 
-// Component layouts render before Joomla loads the outer template language file.
-$app->getLanguage()->load('tpl_copymypage', JPATH_SITE, null, true);
+// Initialize the CAPTCHA before rendering so template translations override the plugin fallback.
+CopyMyPageHelper::prepareCaptchaLanguageOverrides($this->form, $app->getLanguage());
 
 /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
 $wa = $this->getDocument()->getWebAssetManager();
@@ -76,7 +76,7 @@ $this->getDocument()->setTitle($documentTitle);
 
         <div class="cmp-form__actions cmp-auth__actions com-users-registration__submit control-group">
             <div class="controls">
-                <button type="submit" class="uk-button uk-button-primary validate">
+                <button type="submit" class="uk-button uk-button-primary cmp-button cmp-button--primary validate">
                     <?php echo Text::_('JREGISTER'); ?>
                 </button>
                 <input type="hidden" name="option" value="com_users">

@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
@@ -61,7 +60,7 @@ $this->getDocument()->setTitle($documentTitle);
 
         <div class="cmp-form__actions cmp-auth__actions com-users-reset-complete__submit control-group">
             <div class="controls">
-                <button type="submit" class="uk-button uk-button-primary validate">
+                <button type="submit" class="uk-button uk-button-primary cmp-button cmp-button--primary validate">
                     <?php echo Text::_('JSUBMIT'); ?>
                 </button>
             </div>
