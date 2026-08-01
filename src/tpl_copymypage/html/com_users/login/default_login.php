@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
@@ -112,7 +111,7 @@ $this->form->addControlField(
                     <div class="controls">
                         <button
                             type="button"
-                            class="cmp-auth__secondary-button btn btn-secondary w-100 <?php echo $escape($button['class'] ?? ''); ?>"
+                            class="cmp-auth__secondary-button btn btn-secondary cmp-button cmp-button--secondary w-100 <?php echo $escape($button['class'] ?? ''); ?>"
                             <?php foreach ($dataAttributeKeys as $key) : ?>
                                 <?php $dataKey = preg_replace('/[^a-z0-9:_-]/i', '', (string) $key); ?>
                                 <?php if ($dataKey !== '') : ?>
@@ -148,7 +147,7 @@ $this->form->addControlField(
 
             <div class="cmp-form__actions cmp-auth__actions com-users-login__submit control-group">
                 <div class="controls">
-                    <button type="submit" class="uk-button uk-button-primary">
+                    <button type="submit" class="uk-button uk-button-primary cmp-button cmp-button--primary">
                         <?php echo Text::_('JLOGIN'); ?>
                     </button>
                 </div>
