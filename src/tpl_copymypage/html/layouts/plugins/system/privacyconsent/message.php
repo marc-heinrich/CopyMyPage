@@ -1,14 +1,13 @@
 <?php
-
 /**
- * @package     Joomla.Plugin
- * @subpackage  System.privacyconsent
- *
- * @copyright   (C) 2019 Open Source Matters, Inc. <https://www.joomla.org>
- * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ * @package     Joomla.Site
+ * @subpackage  Templates.CopyMyPage
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
+ * @license     GNU General Public License version 3 or later
+ * @since       0.0.17
  */
 
-defined('_JEXEC') or die;
+\defined('_JEXEC') or die;
 
 extract($displayData);
 

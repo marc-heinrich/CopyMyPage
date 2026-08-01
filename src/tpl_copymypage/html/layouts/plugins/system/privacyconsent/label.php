@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
@@ -74,21 +73,24 @@ if ($privacyLink) {
     );
 
     $wa->getRegistry()->addExtensionRegistryFile('com_copymypage');
-    $wa->useScript('copymypage.modal.content');
+    $wa->useScript('copymypage.content.drawer');
 
-    Text::script('JCLOSE');
-    Text::script('COM_COPYMYPAGE_CONTENT_MODAL_ERROR');
-    Text::script('COM_COPYMYPAGE_CONTENT_MODAL_LOADING');
+    Text::script('COM_COPYMYPAGE_CONTENT_DRAWER_CLOSE');
+    Text::script('COM_COPYMYPAGE_CONTENT_DRAWER_ERROR');
+    Text::script('COM_COPYMYPAGE_CONTENT_DRAWER_GENERIC_TITLE');
+    Text::script('COM_COPYMYPAGE_CONTENT_DRAWER_LOADING');
+    Text::script('COM_COPYMYPAGE_CONTENT_DRAWER_OPEN_NORMALLY');
 
     $attribs = [
-        'aria-haspopup'                => 'dialog',
-        'class'                        => $class,
-        'data-cmp-content-modal'       => 'privacy',
-        'data-cmp-content-modal-title' => $text,
+        'aria-haspopup'             => 'dialog',
+        'class'                     => $class,
+        'data-cmp-content-drawer'   => 'privacy',
+        'data-cmp-drawer-title'     => $text,
+        'data-cmp-drawer-transport' => 'fragment',
     ];
 
     // Keep the ordinary article URL as progressive fallback. JavaScript adds
-    // tmpl=component only to the background request used by the dialog.
+    // tmpl=component only to the background request used by the drawer.
     $link = HTMLHelper::_(
         'link',
         Route::_((string) $privacyLink),
