@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
@@ -16,22 +15,30 @@ use Joomla\CMS\Factory;
 
 $app    = Factory::getApplication();
 $di     = Factory::getContainer();
+$input  = $app->getInput();
 $wa     = $this->getWebAssetManager();
 $escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
+$componentContext = $input->getCmd('cmp_context', '') === 'drawer'
+    ? 'drawer'
+    : 'standalone';
+$bodyClass         = 'cmp-component-page'
+    . ($componentContext === 'drawer' ? ' cmp-component-page--drawer' : '');
 $headerOffset       = (int) $this->params->get('headerOffset', 80);
 $templateTokenStyle = $di->get('copymypage.helper.templateTokens')
     ->buildRootTokenStyle($this->params, $headerOffset);
 
 // Component documents are both a usable no-JavaScript fallback and the stable
-// same-origin response format consumed by CopyMyPage content dialogs.
+// same-origin response format consumed by CopyMyPage content drawers.
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
 $wa->useStyle('template')
-    ->addInlineStyle($templateTokenStyle);
+   ->useScript('uikit')
+   ->useScript('uikit.icons')
+   ->addInlineStyle($templateTokenStyle);
 
 $this->setHtml5(true);
 $this->setMetaData('viewport', 'width=device-width, initial-scale=1.0')
-    ->setMetaData('robots', 'noindex, nofollow');
+     ->setMetaData('robots', 'noindex, nofollow');
 
 if ($this->getTitle() === '') {
     $this->setTitle((string) $app->get('sitename'));
@@ -44,11 +51,20 @@ if ($this->getTitle() === '') {
         <jdoc:include type="styles" />
         <jdoc:include type="scripts" />
     </head>
-    <body class="cmp-component-page">
-        <main id="main-content" class="cmp-component-page__main" role="main">
+    <body
+        class="<?php echo $escape($bodyClass); ?>"
+        data-cmp-component-document
+        data-cmp-component-context="<?php echo $escape($componentContext); ?>"
+    >
+        <main
+            id="cmp-component-main"
+            class="cmp-component-page__main"
+            role="main"
+            data-cmp-component-content
+        >
             <jdoc:include type="message" />
 
-            <div class="cmp-component-page__content" data-cmp-component-content>
+            <div class="cmp-component-page__content">
                 <jdoc:include type="component" />
             </div>
         </main>

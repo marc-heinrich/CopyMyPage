@@ -1,5 +1,4 @@
 <?php
-
 /**
  * @package     Joomla.Site
  * @subpackage  Templates.CopyMyPage
@@ -59,9 +58,8 @@ if ($this->getTitle() === '') {
     $this->setTitle($app->get('sitename'));
 }
 
-// Global, non-changeable meta tags.
-$this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no')
-     ->setMetaData('robots', 'index, follow');
+// Global, non-changeable viewport metadata.
+$this->setMetaData('viewport', 'width=device-width, initial-scale=1.0, shrink-to-fit=no');
 
 // Provide global Open Graph defaults unless a view has already defined them.
 $siteName = trim((string) $app->get('sitename'));
@@ -86,7 +84,19 @@ $itemId = (int) $input->getInt('Itemid', 0);
 
 // Authentication views use the shared template shell with a focused body state.
 $isAuthPage = $option === 'com_users'
-    && \in_array($view, ['login', 'registration', 'remind', 'reset'], true);
+    && \in_array($view, ['captive', 'login', 'registration', 'remind', 'reset'], true);
+
+// Authenticated personal pages must not be indexed or served from shared caches.
+$isPersonalPage = ($option === 'com_copymypage' && $view === 'dashboard')
+    || ($option === 'com_users' && \in_array($view, ['captive', 'profile'], true));
+
+$this->setMetaData('robots', $isPersonalPage ? 'noindex, nofollow' : 'index, follow');
+
+if ($isPersonalPage) {
+    $app->allowCache(false);
+    $app->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0', true);
+    $app->setHeader('Pragma', 'no-cache', true);
+}
 
 // Onepage context is determined by view or menu item; it enables scrollspy-nav and section tracking.
 $isOnepage = CopyMyPageHelper::isOnepage($option, $view);
@@ -116,7 +126,7 @@ $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
 $wa->usePreset($this->template . '.site')
    ->addInlineStyle($templateTokenStyle);
 
-// Load Font Awesome for auth pages (login, registration, remind, reset).
+// Load Font Awesome for focused com_users authentication pages.
 if ($isAuthPage) {
     $wa->useStyle('joomla.fontawesome');
 }
@@ -134,7 +144,7 @@ if (!$isAuthPage && ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmp
 // Build body classes and navbar attributes.
 $bodyClasses = [
     'cmp-site',
-    $isAuthPage ? 'is-authpage' : 'no-authpage',
+    $isAuthPage ? 'is-authpage' : '',
     $preloaderEnabled ? 'is-preloader-active' : '',
     $option ?: 'no-option',
     'view-' . ($view ?: 'no-view'),
