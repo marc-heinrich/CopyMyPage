@@ -13,6 +13,7 @@ use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Module\CopyMyPage\Contact\Site\Helper\ContactHelper;
 
 /**
@@ -91,12 +92,9 @@ $hasInfo      = $infoItems !== [] || $mapUrl !== '';
 $formWidth    = $hasInfo ? 'cmp-contact__form-column' : 'uk-width-1-1';
 $hasConsent   = (bool) $form->getField('consentbox');
 $hasCopy      = $showCopy && (bool) $form->getField('contact_copy');
-$captchaField = $form->getField('captcha');
-
-// The captcha plugin loads its language during field setup, so restore template overrides afterwards.
-if ($captchaField && isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
-    $app->getLanguage()->load('tpl_copymypage', JPATH_SITE, null, true);
-}
+$captchaField = isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface
+    ? CopyMyPageHelper::prepareCaptchaLanguageOverrides($form, $app->getLanguage())
+    : $form->getField('captcha');
 ?>
 <!-- Contact Module Template: UIkit Framework (https://getuikit.com/docs/form) and CopyMyPage formcheck behavior -->
 <div class="cmp-module cmp-module--contact cmp-module--contact-default">
