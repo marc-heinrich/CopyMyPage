@@ -29,7 +29,7 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  *                                - userDropdownSelectorRoot: string
  *
  * @var array<int, object> $list
- * @var array<int, object> $userItems
+ * @var array<string, mixed> $accountMenu
  * @var array<int, int>    $path
  * @var object             $active
  * @var int                $active_id
@@ -54,10 +54,92 @@ $moduleClass            = trim('cmp-module ' . $userDropdownRootClass);
 $onepageBase            = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
 $logoHref               = $isOnepage ? '#top' : $onepageBase;
 $navigationState        = is_array($navigationState ?? null) ? $navigationState : [];
+$accountMenu            = is_array($accountMenu ?? null) ? $accountMenu : [];
+$accountItems           = is_array($accountMenu['items'] ?? null) ? $accountMenu['items'] : [];
+$isAuthenticated        = !(bool) ($accountMenu['guest'] ?? true);
+$accountAction          = $isAuthenticated
+    ? ($accountMenu['logout'] ?? null)
+    : ($accountMenu['login'] ?? null);
+$accountAction          = is_array($accountAction) ? $accountAction : null;
+$userIconClass          = 'cmp-navbar-user-icon'
+    . ($isAuthenticated ? ' cmp-navbar-user-icon--authenticated' : '');
 $renderLogo             = static fn(string $context): string => LayoutHelper::render(
     'copymypage.navbar.logo.' . $logoLayout,
     ['context' => $context]
 );
+$renderAccountItems = static function (array $nodes) use (&$renderAccountItems, $escape): string {
+    ob_start();
+
+    foreach ($nodes as $item) {
+        if (!\is_array($item)) {
+            continue;
+        }
+
+        $type = \in_array(($item['type'] ?? ''), ['link', 'heading', 'separator'], true)
+            ? (string) $item['type']
+            : 'link';
+
+        if ($type === 'separator') {
+            echo '<li class="uk-nav-divider" role="separator"></li>';
+
+            continue;
+        }
+
+        $title       = trim((string) ($item['label'] ?? ''));
+        $children    = \is_array($item['children'] ?? null) ? $item['children'] : [];
+        $isCurrent   = (bool) ($item['current'] ?? false);
+        $activeTrail = (bool) ($item['activeTrail'] ?? false);
+        $ariaCurrent = \in_array(($item['ariaCurrent'] ?? ''), ['page', 'location'], true)
+            ? (string) $item['ariaCurrent']
+            : '';
+
+        if ($title === '') {
+            continue;
+        }
+
+        $classes = [];
+
+        if ($isCurrent || $activeTrail) {
+            $classes[] = 'uk-active';
+        }
+
+        if ($children !== []) {
+            $classes[] = 'uk-parent';
+        }
+
+        if ($type === 'heading') {
+            $classes[] = 'cmp-navbar-account-heading';
+        }
+
+        $classAttribute = $classes !== []
+            ? ' class="' . $escape(implode(' ', $classes)) . '"'
+            : '';
+
+        echo '<li' . $classAttribute . '>';
+
+        if ($type === 'heading') {
+            echo '<span class="uk-nav-header">' . $escape($title) . '</span>';
+        } else {
+            echo '<a class="cmp-navbar-link" href="' . $escape($item['url'] ?? '#') . '"';
+
+            if ($ariaCurrent !== '') {
+                echo ' aria-current="' . $ariaCurrent . '"';
+            }
+
+            echo '>' . $escape($title) . '</a>';
+        }
+
+        if ($children !== []) {
+            echo '<ul class="uk-nav-sub">';
+            echo $renderAccountItems($children);
+            echo '</ul>';
+        }
+
+        echo '</li>';
+    }
+
+    return (string) ob_get_clean();
+};
 
 if (!isset($navbarHelper) || !$navbarHelper instanceof \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper) {
     return;
@@ -371,7 +453,7 @@ if (!empty($warning)) {
                             aria-label="Open user menu"
                             data-cmp-mmenulight-open="#<?php echo $escape($userOffcanvasId); ?>"
                         >
-                            <span uk-icon="user"></span>
+                            <span class="<?php echo $escape($userIconClass); ?>" uk-icon="user"></span>
                         </a>
 
                         <!-- Mobile: Basket offcanvas -->
@@ -398,40 +480,28 @@ if (!empty($warning)) {
                                         aria-expanded="false"
                                         onclick="return false;"
                                     >
-                                        <span uk-icon="icon: user"></span>
+                                        <span class="<?php echo $escape($userIconClass); ?>" uk-icon="icon: user"></span>
                                     </a>
 
                                     <div class="uk-navbar-dropdown cmp-navbar-user-dropdown" uk-drop="pos: bottom-center">
                                         <ul class="uk-nav uk-navbar-dropdown-nav">
-                                            <?php if (empty($userItems)) : ?>
-                                                <li class="uk-disabled"><a class="cmp-navbar-link" href="#" onclick="return false;">—</a></li>
+                                            <?php if ($accountItems === [] && $accountAction === null) : ?>
+                                                <li class="uk-disabled"><a class="cmp-navbar-link" href="#" onclick="return false;">&mdash;</a></li>
                                             <?php else : ?>
-                                                <?php foreach ($userItems as $item) : ?>
-                                                    <?php
-                                                    $type      = (string) ($item->type ?? 'link');
-                                                    $isDivider = (bool) ($item->divider ?? false);
-
-                                                    if ($type === 'divider' || $isDivider) :
-                                                        ?>
-                                                        <li class="uk-nav-divider" role="separator"></li>
-                                                        <?php
-                                                        continue;
-                                                    endif;
-
-                                                    $title   = (string) ($item->title ?? '');
-                                                    $href    = (string) ($item->link ?? '#');
-                                                    $liClass = trim((string) ($item->class ?? ''));
-
-                                                    if ($title === '') {
-                                                        continue;
-                                                    }
-                                                    ?>
-                                                    <li<?php echo $liClass !== '' ? ' class="' . $escape($liClass) . '"' : ''; ?>>
-                                                        <a class="cmp-navbar-link" href="<?php echo $escape($href); ?>">
-                                                            <?php echo $escape($title); ?>
+                                                <?php echo $renderAccountItems($accountItems); ?>
+                                                <?php if ($accountItems !== [] && $accountAction !== null) : ?>
+                                                    <li class="uk-nav-divider" role="separator"></li>
+                                                <?php endif; ?>
+                                                <?php if ($accountAction !== null) : ?>
+                                                    <li>
+                                                        <a
+                                                            class="cmp-navbar-link"
+                                                            href="<?php echo $escape($accountAction['url'] ?? '#'); ?>"
+                                                        >
+                                                            <?php echo $escape($accountAction['label'] ?? ''); ?>
                                                         </a>
                                                     </li>
-                                                <?php endforeach; ?>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </ul>
                                     </div>

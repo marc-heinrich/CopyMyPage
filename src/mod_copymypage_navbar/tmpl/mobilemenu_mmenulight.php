@@ -32,7 +32,7 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  * @var \stdClass                                      $module
  * @var \Joomla\CMS\Application\CMSApplicationInterface $app
  * @var array<int, object>                             $list
- * @var array<int, object>                             $userItems
+ * @var array<string, mixed>                           $accountMenu
  * @var string                                         $warning
  * @var array<string, mixed>                           $navigationState
  * @var \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper $navbarHelper
@@ -54,11 +54,80 @@ $itemHeight  = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightItemHeight', 50, 0) . '
 $ocdWidth    = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdWidth', 80, 0) . '%';
 $ocdMinWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMinWidth', 200, 0) . 'px';
 $ocdMaxWidth = CopyMyPageHelper::cfgInt($cfg, 'mmenuLightOcdMaxWidth', 440, 0) . 'px';
-$navigationState   = is_array($navigationState ?? null) ? $navigationState : [];
-$onepageBase       = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
-$navModuleClass    = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-nav uk-hidden@m';
-$userModuleClass   = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-user uk-hidden@m';
-$basketModuleClass = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-basket uk-hidden@m';
+$navigationState    = is_array($navigationState ?? null) ? $navigationState : [];
+$accountMenu        = is_array($accountMenu ?? null) ? $accountMenu : [];
+$accountItems       = is_array($accountMenu['items'] ?? null) ? $accountMenu['items'] : [];
+$accountAction      = (bool) ($accountMenu['guest'] ?? true)
+    ? ($accountMenu['login'] ?? null)
+    : ($accountMenu['logout'] ?? null);
+$accountAction      = is_array($accountAction) ? $accountAction : null;
+$onepageBase        = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
+$navModuleClass     = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-nav uk-hidden@m';
+$userModuleClass    = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-user uk-hidden@m';
+$basketModuleClass  = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-basket uk-hidden@m';
+$renderAccountItems = static function (array $nodes) use (
+    &$renderAccountItems,
+    $escape,
+    $selectedClass
+): string {
+    ob_start();
+
+    foreach ($nodes as $item) {
+        if (!\is_array($item)) {
+            continue;
+        }
+
+        $type = \in_array(($item['type'] ?? ''), ['link', 'heading', 'separator'], true)
+            ? (string) $item['type']
+            : 'link';
+
+        if ($type === 'separator') {
+            echo '<li role="separator"></li>';
+
+            continue;
+        }
+
+        $title       = trim((string) ($item['label'] ?? ''));
+        $children    = \is_array($item['children'] ?? null) ? $item['children'] : [];
+        $isCurrent   = (bool) ($item['current'] ?? false);
+        $activeTrail = (bool) ($item['activeTrail'] ?? false);
+        $ariaCurrent = \in_array(($item['ariaCurrent'] ?? ''), ['page', 'location'], true)
+            ? (string) $item['ariaCurrent']
+            : '';
+
+        if ($title === '') {
+            continue;
+        }
+
+        $classAttribute = $isCurrent || $activeTrail
+            ? ' class="' . $escape($selectedClass) . '"'
+            : '';
+
+        echo '<li' . $classAttribute . '>';
+
+        if ($type === 'heading') {
+            echo '<span>' . $escape($title) . '</span>';
+        } else {
+            echo '<a href="' . $escape($item['url'] ?? '#') . '"';
+
+            if ($ariaCurrent !== '') {
+                echo ' aria-current="' . $ariaCurrent . '"';
+            }
+
+            echo '>' . $escape($title) . '</a>';
+        }
+
+        if ($children !== []) {
+            echo '<ul>';
+            echo $renderAccountItems($children);
+            echo '</ul>';
+        }
+
+        echo '</li>';
+    }
+
+    return (string) ob_get_clean();
+};
 
 if (!isset($navbarHelper) || !$navbarHelper instanceof \Joomla\Module\CopyMyPage\Navbar\Site\Helper\NavbarHelper) {
     return;
@@ -94,7 +163,11 @@ if (!empty($warning)) {
 <!-- Navbar Module Template: Mmenu Light JS-Plugin (https://mmenujs.com/mmenu-light) -->
 
 <!-- Navigation offcanvas menu (mobile only) -->
-<nav id="<?php echo $escape($navOffcanvasId); ?>" class="<?php echo $escape($navModuleClass); ?>">
+<nav
+    id="<?php echo $escape($navOffcanvasId); ?>"
+    class="<?php echo $escape($navModuleClass); ?>"
+    aria-label="<?php echo $escape(Text::_('MOD_COPYMYPAGE_NAVBAR_NAVIGATION')); ?>"
+>
     <?php if (!empty($list) && \is_array($list)) : ?>
         <ul>
             <?php foreach ($list as $item) : ?>
@@ -152,25 +225,28 @@ if (!empty($warning)) {
 
 <!-- User offcanvas menu (mobile only) -->
 <?php if ($userOffcanvasId !== '') : ?>
-    <nav id="<?php echo $escape($userOffcanvasId); ?>" class="<?php echo $escape($userModuleClass); ?>">
+    <nav
+        id="<?php echo $escape($userOffcanvasId); ?>"
+        class="<?php echo $escape($userModuleClass); ?>"
+        aria-label="<?php echo $escape(Text::_('COM_USERS_PROFILE')); ?>"
+    >
         <ul>
-            <?php if (!empty($userItems) && \is_array($userItems)) : ?>
-                <?php foreach ($userItems as $item) : ?>
-                    <?php
-                    $title = (string) ($item->title ?? '');
-                    $href  = (string) ($item->link ?? '#');
-                    ?>
+            <?php echo $renderAccountItems($accountItems); ?>
+            <?php if ($accountAction !== null) : ?>
+                <?php
+                $title = (string) ($accountAction['label'] ?? '');
+                $href  = (string) ($accountAction['url'] ?? '#');
+                ?>
+                <?php if ($title !== '') : ?>
                     <li>
                         <a href="<?php echo $escape($href); ?>">
                             <?php echo $escape($title); ?>
                         </a>
                     </li>
-                <?php endforeach; ?>
-            <?php else : ?>
+                <?php endif; ?>
+            <?php elseif ($accountItems === []) : ?>
                 <li>
-                    <a href="<?php echo $escape(Route::link('site', 'index.php?option=com_users&view=login')); ?>">
-                        <?php echo $escape(Text::_('JLOGIN')); ?>
-                    </a>
+                    <span>&mdash;</span>
                 </li>
             <?php endif; ?>
         </ul>
@@ -179,7 +255,11 @@ if (!empty($warning)) {
 
 <!-- Basket offcanvas menu (mobile only) -->
 <?php if ($basketOffcanvasId !== '') : ?>
-    <nav id="<?php echo $escape($basketOffcanvasId); ?>" class="<?php echo $escape($basketModuleClass); ?>">
+    <nav
+        id="<?php echo $escape($basketOffcanvasId); ?>"
+        class="<?php echo $escape($basketModuleClass); ?>"
+        aria-label="<?php echo $escape(Text::_('MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_BASKET')); ?>"
+    >
         <ul>
             <li>
                 <a href="#"><?php echo $escape(Text::_('MOD_COPYMYPAGE_NAVBAR_BASKET_EMPTY')); ?></a>

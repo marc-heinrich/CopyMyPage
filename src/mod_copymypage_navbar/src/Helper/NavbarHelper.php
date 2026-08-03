@@ -15,8 +15,6 @@ use Joomla\CMS\Application\CMSApplicationInterface;
 use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
-use Joomla\CMS\Session\Session;
-use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Registry\Registry;
 
@@ -245,44 +243,6 @@ class NavbarHelper
         $menuParams->set('aliasoptions', []);
 
         return $menuParams;
-    }
-
-    /**
-     * Returns a user menu list for mobile layouts (dummy for now).
-     *
-     * @param  Registry                $params  The module parameters object (kept for future use).
-     * @param  CMSApplicationInterface $app     The application instance.
-     *
-     * @return array<int, object>
-     */
-    public function getUserItems(Registry $params, CMSApplicationInterface $app): array
-    {
-        $user   = $app->getIdentity();
-        $return = rawurlencode(base64_encode(Uri::root() . 'index.php'));
-
-        if ($user->guest) {
-            return [
-                (object) [
-                    'title' => Text::_('JLOGIN'),
-                    'link'  => Route::link('site', 'index.php?option=com_users&view=login', false),
-                ],
-            ];
-        }
-
-        return [
-            (object) [
-                'title' => Text::_('COM_USERS_PROFILE'),
-                'link'  => Route::link('site', 'index.php?option=com_users&view=profile', false),
-            ],
-            (object) [
-                'title' => Text::_('JLOGOUT'),
-                'link'  => Route::link(
-                    'site',
-                    'index.php?option=com_users&task=user.logout&' . Session::getFormToken() . '=1&return=' . $return,
-                    false
-                ),
-            ],
-        ];
     }
 
     /**

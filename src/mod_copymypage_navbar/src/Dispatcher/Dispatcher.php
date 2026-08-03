@@ -14,6 +14,7 @@ namespace Joomla\Module\CopyMyPage\Navbar\Site\Dispatcher;
 // phpcs:enable PSR1.Files.SideEffects
 
 use Joomla\CMS\Dispatcher\AbstractModuleDispatcher;
+use Joomla\CMS\Factory;
 use Joomla\CMS\Helper\HelperFactoryAwareInterface;
 use Joomla\CMS\Helper\HelperFactoryAwareTrait;
 use Joomla\CMS\Helper\ModuleHelper;
@@ -21,6 +22,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
+use Joomla\Component\CopyMyPage\Site\Service\AccountMenuProvider;
 
 /**
  * Dispatcher class for mod_copymypage_navbar.
@@ -101,7 +103,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
              * @var int                                            $showAll
              * @var array<int, object>                             $list
              * @var array<int, object>                             $navItems
-             * @var array<int, object>                             $userItems
+             * @var array<string, mixed>                           $accountMenu
              * @var array<int, object>                             $basketItems
              * @var bool                                           $isOnepage
              * @var string                                         $activeSlot
@@ -258,14 +260,14 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['showAll']         = 0;
         $data['list']            = [];
         $data['navItems']        = [];
-        $data['userItems']       = [];
+        $data['accountMenu']     = [];
         $data['basketItems']     = [];
         $data['warning']         = '';
 
         $option  = $data['input']->getCmd('option', '');
         $view    = $data['input']->getCmd('view', '');
         $section = $data['input']->getCmd('section', '');
-        $data['isOnepage'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::isOnepage($option, $view);
+        $data['isOnepage']  = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::isOnepage($option, $view);
         $data['activeSlot'] = \Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper::resolveActiveSlot($option, $view, $section);
 
         return $data;
@@ -295,16 +297,18 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
             $helper->getSharedConfig(),
             $helper->getLayoutConfig($displayData['params'], $layout)
         );
-        $displayData['base']       = $base;
-        $displayData['active']     = $active;
-        $displayData['default']    = $default;
-        $displayData['active_id']  = isset($active->id) ? (int) $active->id : 0;
-        $displayData['default_id'] = isset($default->id) ? (int) $default->id : 0;
-        $displayData['path']       = isset($base->tree) && \is_array($base->tree) ? $base->tree : [];
-        $displayData['showAll']    = (int) $menuParams->get('showAllChildren', 1);
-        $displayData['list']       = $list;
-        $displayData['navItems']   = $list;
-        $displayData['userItems']  = $helper->getUserItems($displayData['params'], $displayData['app']);
+        $displayData['base']        = $base;
+        $displayData['active']      = $active;
+        $displayData['default']     = $default;
+        $displayData['active_id']   = isset($active->id) ? (int) $active->id : 0;
+        $displayData['default_id']  = isset($default->id) ? (int) $default->id : 0;
+        $displayData['path']        = isset($base->tree) && \is_array($base->tree) ? $base->tree : [];
+        $displayData['showAll']     = (int) $menuParams->get('showAllChildren', 1);
+        $displayData['list']        = $list;
+        $displayData['navItems']    = $list;
+        $displayData['accountMenu'] = Factory::getContainer()
+            ->get(AccountMenuProvider::class)
+            ->getMenu($displayData['app']);
         $displayData['basketItems']= $helper->getBasketItems($displayData['params'], $displayData['app']);
         $displayData['navigationState'] = $helper->getNavigationState(
             $list,
