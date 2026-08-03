@@ -4,15 +4,14 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.17
  */
 
 namespace Joomla\Module\CopyMyPage\Hero\Site\Helper;
 
 \defined('_JEXEC') or die;
 
-use Joomla\CMS\Helper\MediaHelper;
-use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Factory;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Registry\Registry;
 
@@ -21,6 +20,20 @@ use Joomla\Registry\Registry;
  */
 final class HeroHelper
 {
+    /**
+     * Browser sizing hint for full-viewport hero images.
+     *
+     * @var string
+     */
+    private const SLIDE_IMAGE_SIZES = '100vw';
+
+    /**
+     * Generated responsive image widths used by the slideshow layout.
+     *
+     * @var array<int, int>
+     */
+    private const SLIDE_IMAGE_VARIANT_WIDTHS = [960, 1280, 1920];
+
     /**
      * Dispatcher-provided fallback layout for the current module context.
      *
@@ -209,12 +222,27 @@ final class HeroHelper
             return [];
         }
 
-        $slides = [];
+        $imageHelper = $this->getImageHelper();
+        $slides      = [];
 
         foreach ($rows as $row) {
             $image = $this->resolveSlideImage(self::rowValue($row, 'image'));
 
             if ($image['src'] === '') {
+                continue;
+            }
+
+            $picture = $imageHelper->buildResponsiveImageData(
+                $image['src'],
+                self::SLIDE_IMAGE_VARIANT_WIDTHS,
+                self::SLIDE_IMAGE_SIZES,
+                allowLargerVariants: true
+            );
+            $displaySrc = $picture['src'] !== ''
+                ? $picture['src']
+                : $imageHelper->toAbsoluteUrl($image['src']);
+
+            if ($displaySrc === '') {
                 continue;
             }
 
@@ -227,6 +255,11 @@ final class HeroHelper
 
             $slides[] = (object) [
                 'src'           => $image['src'],
+                'displaySrc'    => $displaySrc,
+                'srcset'        => $picture['srcset'],
+                'webpSrcset'    => $picture['webpSrcset'],
+                'avifSrcset'    => $picture['avifSrcset'],
+                'sizes'         => $picture['sizes'] !== '' ? $picture['sizes'] : self::SLIDE_IMAGE_SIZES,
                 'alt'           => $alt,
                 'headline'      => trim(self::rowString($row, 'headline')),
                 'subline'       => trim(self::rowString($row, 'subline')),
@@ -324,183 +357,7 @@ final class HeroHelper
      */
     private function resolveSlideImage(mixed $rawImage): array
     {
-        $raw = self::mediaFieldString($rawImage);
-
-        if ($raw === '') {
-            return ['src' => '', 'width' => 0, 'height' => 0];
-        }
-
-        $fragmentData = self::extractJoomlaImageFragmentData($raw);
-        $clean        = trim((string) MediaHelper::getCleanMediaFieldValue($raw));
-
-        if ($clean === '' && $fragmentData['path'] !== '') {
-            $clean = $fragmentData['path'];
-        }
-
-        $src = self::normalizeMediaPath($clean);
-
-        if ($src === '') {
-            return ['src' => '', 'width' => 0, 'height' => 0];
-        }
-
-        $width  = CopyMyPageHelper::toInt($fragmentData['width'], 0, 0);
-        $height = CopyMyPageHelper::toInt($fragmentData['height'], 0, 0);
-
-        if (($width === 0 || $height === 0) && !preg_match('#^(?:[a-z][a-z0-9+.-]*:)?//#i', $src) && !str_starts_with($src, 'data:')) {
-            [$localWidth, $localHeight] = self::resolveLocalImageDimensions($src);
-            $width  = $width > 0 ? $width : $localWidth;
-            $height = $height > 0 ? $height : $localHeight;
-        }
-
-        return ['src' => $src, 'width' => $width, 'height' => $height];
-    }
-
-    /**
-     * Extract a path-like string from possible media field value shapes.
-     *
-     * @param   mixed  $value  Raw media value.
-     *
-     * @return  string
-     */
-    private static function mediaFieldString(mixed $value): string
-    {
-        if (\is_string($value)) {
-            $value = trim($value);
-
-            if ($value !== '' && ($value[0] === '{' || $value[0] === '[')) {
-                $decoded = json_decode($value, true);
-
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    return self::mediaFieldString($decoded);
-                }
-            }
-
-            return $value;
-        }
-
-        if ($value instanceof Registry) {
-            $value = $value->toArray();
-        } elseif (\is_object($value)) {
-            $value = get_object_vars($value);
-        }
-
-        if (\is_array($value)) {
-            foreach (['imagefile', 'image', 'file', 'src', 'url', 'path'] as $key) {
-                if (array_key_exists($key, $value)) {
-                    $candidate = self::mediaFieldString($value[$key]);
-
-                    if ($candidate !== '') {
-                        return $candidate;
-                    }
-                }
-            }
-        }
-
-        return '';
-    }
-
-    /**
-     * Resolve Joomla media adapter prefixes and local paths to frontend URLs.
-     *
-     * @param   string  $path  Clean media path.
-     *
-     * @return  string
-     */
-    private static function normalizeMediaPath(string $path): string
-    {
-        $path = trim($path);
-
-        if ($path === '') {
-            return '';
-        }
-
-        if (preg_match('#^(?:https?:)?//#i', $path) || str_starts_with($path, 'data:')) {
-            return $path;
-        }
-
-        if (preg_match('#^joomlaImage://local-([^/]+)/(.+)$#', $path, $matches) === 1) {
-            $path = $matches[1] . '/' . $matches[2];
-        } elseif (preg_match('#^local-([^:]+):/?(.*)$#', $path, $matches) === 1) {
-            $path = $matches[1] . '/' . ltrim($matches[2], '/');
-        }
-
-        return ltrim($path, '/');
-    }
-
-    /**
-     * Extract dimensions and fallback path from a Joomla image fragment.
-     *
-     * @param   string  $value  Stored media field value.
-     *
-     * @return  array{path: string, width: int, height: int}
-     */
-    private static function extractJoomlaImageFragmentData(string $value): array
-    {
-        $data = ['path' => '', 'width' => 0, 'height' => 0];
-        $hash = strpos($value, '#');
-
-        if ($hash === false) {
-            return $data;
-        }
-
-        $fragment = substr($value, $hash + 1);
-
-        if ($fragment === '') {
-            return $data;
-        }
-
-        $parts = parse_url($fragment);
-
-        if (!\is_array($parts)) {
-            return $data;
-        }
-
-        if (($parts['scheme'] ?? '') === 'joomlaImage' && str_starts_with((string) ($parts['host'] ?? ''), 'local-')) {
-            $adapter = substr((string) $parts['host'], 6);
-            $path    = ltrim((string) ($parts['path'] ?? ''), '/');
-
-            if ($adapter !== '' && $path !== '') {
-                $data['path'] = $adapter . '/' . $path;
-            }
-        }
-
-        $query = [];
-        parse_str((string) ($parts['query'] ?? ''), $query);
-
-        $data['width']  = CopyMyPageHelper::toInt($query['width'] ?? null, 0, 0);
-        $data['height'] = CopyMyPageHelper::toInt($query['height'] ?? null, 0, 0);
-
-        return $data;
-    }
-
-    /**
-     * Read intrinsic dimensions for local public image paths.
-     *
-     * @param   string  $src  Public local image path.
-     *
-     * @return  array{0: int, 1: int}
-     */
-    private static function resolveLocalImageDimensions(string $src): array
-    {
-        $path = parse_url($src, PHP_URL_PATH);
-
-        if (!\is_string($path) || $path === '') {
-            return [0, 0];
-        }
-
-        $absolutePath = JPATH_ROOT . '/' . ltrim($path, '/');
-
-        if (!is_file($absolutePath)) {
-            return [0, 0];
-        }
-
-        $size = @getimagesize($absolutePath);
-
-        if (!\is_array($size)) {
-            return [0, 0];
-        }
-
-        return [CopyMyPageHelper::toInt($size[0] ?? 0, 0, 0), CopyMyPageHelper::toInt($size[1] ?? 0, 0, 0)];
+        return $this->getImageHelper()->resolveMediaImage($rawImage);
     }
 
     /**
@@ -610,7 +467,7 @@ final class HeroHelper
         return [
             'title'       => self::htmlToPlainText(self::cfgString($cfg, 'og_title')),
             'description' => self::htmlToPlainText(self::cfgString($cfg, 'og_description')),
-            'image'       => $this->toAbsoluteUrl($image['src']),
+            'image'       => $this->getImageHelper()->toAbsoluteUrl($image['src']),
             'imageWidth'  => $imageWidth > 0 ? (string) $imageWidth : '',
             'imageHeight' => $imageHeight > 0 ? (string) $imageHeight : '',
             'imageAlt'    => trim(self::cfgString($cfg, 'og_image_alt')),
@@ -687,7 +544,7 @@ final class HeroHelper
     private function resolvePrimarySlideMeta(array $slides): array
     {
         $slide    = isset($slides[0]) && \is_object($slides[0]) ? $slides[0] : null;
-        $image    = $this->toAbsoluteUrl(trim((string) ($slide->src ?? '')));
+        $image    = $this->getImageHelper()->toAbsoluteUrl(trim((string) ($slide->src ?? '')));
 
         $title       = self::htmlToPlainText((string) ($slide->headline ?? ''));
         $imageWidth  = (int) ($slide->width ?? 0);
@@ -708,41 +565,13 @@ final class HeroHelper
     }
 
     /**
-     * Convert a hero asset path into an absolute URL.
+     * Resolve the shared image helper via the root DI container.
      *
-     * @param   string  $url  Relative, rooted or absolute URL.
-     *
-     * @return  string
+     * @return  \Joomla\Component\CopyMyPage\Site\Helper\Helpers\ImageHelper
      */
-    private function toAbsoluteUrl(string $url): string
+    private function getImageHelper(): object
     {
-        $url = trim($url);
-
-        if ($url === '') {
-            return '';
-        }
-
-        if (preg_match('#^https?://#i', $url)) {
-            return $url;
-        }
-
-        $root     = rtrim(Uri::root(), '/');
-        $rootPath = rtrim((string) parse_url($root, PHP_URL_PATH), '/');
-        $origin   = $root;
-
-        if ($rootPath !== '' && $rootPath !== '/') {
-            $origin = preg_replace('#' . preg_quote($rootPath, '#') . '$#', '', $root) ?? $root;
-        }
-
-        if (str_starts_with($url, '/')) {
-            if ($rootPath !== '' && str_starts_with($url, $rootPath . '/')) {
-                return rtrim($origin, '/') . $url;
-            }
-
-            return $root . $url;
-        }
-
-        return $root . '/' . ltrim($url, '/');
+        return Factory::getContainer()->get('copymypage.helper.image');
     }
 
     /**

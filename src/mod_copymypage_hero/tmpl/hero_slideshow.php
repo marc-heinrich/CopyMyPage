@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.17
  */
 
 \defined('_JEXEC') or die;
@@ -40,79 +40,47 @@ if (!isset($heroHelper) || !$heroHelper instanceof HeroHelper) {
     return;
 }
 
-if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
-    /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
-    $wa = $app->getDocument()->getWebAssetManager();
-
-    // Activate template-specific assets here when the active layout needs them.
-}
-
 if ($warning !== '') {
     echo $warning;
 
     return;
 }
 
+// Prioritize the display font only when this layout renders a hero headline.
+$hasHeadline = false;
+
+foreach ($slides as $slide) {
+    if (trim((string) ($slide->headline ?? '')) !== '') {
+        $hasHeadline = true;
+
+        break;
+    }
+}
+
+if ($hasHeadline && isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    $fontUri = rtrim(Uri::root(true), '/')
+        . '/media/com_copymypage/css/fonts-local/Finger_Paint/FingerPaint-Regular.woff2';
+
+    $app->getDocument()->getPreloadManager()->preload(
+        $fontUri,
+        [
+            'as'          => 'font',
+            'type'        => 'font/woff2',
+            'crossorigin' => 'anonymous',
+        ]
+    );
+}
+
 // Resolve the layout-specific option bucket for the active hero template.
 $layoutConfig = HeroHelper::getLayoutConfig($cfg, $layout);
 
-// Define static template defaults and environment-dependent path values.
-$moduleClass   = 'cmp-module cmp-module--hero cmp-module--hero-slideshow';
-$variantWidths = [960, 1280, 1920];
-$siteBaseUrl   = rtrim(Uri::root(), '/');
-$siteRootPath  = rtrim(Uri::root(true), '/');
+// Define the static wrapper classes used by this layout.
+$moduleClass = 'cmp-module cmp-module--hero cmp-module--hero-slideshow';
 
 // Toggle optional slideshow controls based on config and available slides.
 $hasMultipleSlides = \count($slides) > 1;
 $showSlidenav      = HeroHelper::cfgBool($layoutConfig, 'showSlidenav', true) && $hasMultipleSlides;
 $showDotnav        = HeroHelper::cfgBool($layoutConfig, 'showDotnav', true) && $hasMultipleSlides;
-
-// Keep path and URL transformations in small local helpers to simplify the slide loop below.
-$normalizePublicPath = static function (string $url) use ($siteBaseUrl, $siteRootPath): string {
-    $url = trim($url);
-
-    if ($url === '') {
-        return '';
-    }
-
-    $scheme = (string) parse_url($url, PHP_URL_SCHEME);
-    $host = (string) parse_url($url, PHP_URL_HOST);
-    $siteHost = (string) parse_url($siteBaseUrl, PHP_URL_HOST);
-
-    if ($scheme !== '' && !\in_array(strtolower($scheme), ['http', 'https'], true)) {
-        return '';
-    }
-
-    if ($host !== '' && ($siteHost === '' || strcasecmp($host, $siteHost) !== 0)) {
-        return '';
-    }
-
-    $path = parse_url($url, PHP_URL_PATH);
-
-    if (!\is_string($path) || $path === '') {
-        return '';
-    }
-
-    if ($siteRootPath !== '' && str_starts_with($path, $siteRootPath . '/')) {
-        $path = substr($path, strlen($siteRootPath));
-    }
-
-    return '/' . ltrim($path, '/');
-};
-
-$buildPublicUrl = static function (string $publicPath) use ($siteBaseUrl): string {
-    return $siteBaseUrl . '/' . ltrim($publicPath, '/');
-};
-
-$buildVariantPublicPath = static function (string $publicPath, string $suffix, string $extension): string {
-    $variantPath = preg_replace('/\.[^.]+$/', $suffix . '.' . $extension, $publicPath);
-
-    return \is_string($variantPath) ? $variantPath : $publicPath;
-};
-
-$buildAbsolutePath = static function (string $publicPath): string {
-    return \JPATH_ROOT . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, ltrim($publicPath, '/'));
-};
 ?>
 <!-- Hero Module Template: UIkit Framework (https://getuikit.com/docs/slideshow) -->
 <div class="<?php echo $escape($moduleClass); ?>">
@@ -122,58 +90,18 @@ $buildAbsolutePath = static function (string $publicPath): string {
             <ul class="uk-slideshow-items">
                 <?php foreach ($slides as $slide) : ?>
                     <?php
-                    $rawSrc = (string) ($slide->src ?? '');
-                    $alt = $escape($slide->alt ?? '');
-                    $isLazy = !empty($slide->isLazy) && $slide->isLazy === true;
-                    $width = (int) ($slide->width ?? 0);
-                    $height = (int) ($slide->height ?? 0);
+                    $displaySrc   = $escape($slide->displaySrc ?? '');
+                    $srcset       = $escape($slide->srcset ?? '');
+                    $webpSrcset   = $escape($slide->webpSrcset ?? '');
+                    $avifSrcset   = $escape($slide->avifSrcset ?? '');
+                    $sizes        = $escape($slide->sizes ?? '100vw');
+                    $alt          = $escape($slide->alt ?? '');
+                    $isLazy       = !empty($slide->isLazy) && $slide->isLazy === true;
+                    $width        = (int) ($slide->width ?? 0);
+                    $height       = (int) ($slide->height ?? 0);
                     $fetchPriority = $escape($slide->fetchPriority ?? ($isLazy ? 'low' : 'high'));
-                    $publicSrc = $normalizePublicPath($rawSrc);
-                    $displaySrc = $publicSrc !== '' ? $buildPublicUrl($publicSrc) : $rawSrc;
-                    $defaultDisplaySrc = $displaySrc;
-                    $sizes = '100vw';
-                    $extension = strtolower((string) pathinfo($publicSrc !== '' ? $publicSrc : $rawSrc, PATHINFO_EXTENSION));
-                    $hasIntrinsicJpgVariant = false;
-
-                    $jpgSrcsetEntries  = [];
-                    $webpSrcsetEntries = [];
-                    $avifSrcsetEntries = [];
-
-                    if ($publicSrc !== '' && $extension !== '') {
-                        foreach ($variantWidths as $variantWidth) {
-                            $jpgVariantPath = $buildVariantPublicPath($publicSrc, '-' . $variantWidth, $extension);
-                            $webpVariantPath = $buildVariantPublicPath($publicSrc, '-' . $variantWidth, 'webp');
-                            $avifVariantPath = $buildVariantPublicPath($publicSrc, '-' . $variantWidth, 'avif');
-
-                            if (is_file($buildAbsolutePath($jpgVariantPath))) {
-                                $jpgSrcsetEntries[] = $escape($buildPublicUrl($jpgVariantPath)) . ' ' . $variantWidth . 'w';
-
-                                if ($width > 0 && $variantWidth === $width) {
-                                    $defaultDisplaySrc = $buildPublicUrl($jpgVariantPath);
-                                    $hasIntrinsicJpgVariant = true;
-                                }
-                            }
-
-                            if (is_file($buildAbsolutePath($webpVariantPath))) {
-                                $webpSrcsetEntries[] = $escape($buildPublicUrl($webpVariantPath)) . ' ' . $variantWidth . 'w';
-                            }
-
-                            if (is_file($buildAbsolutePath($avifVariantPath))) {
-                                $avifSrcsetEntries[] = $escape($buildPublicUrl($avifVariantPath)) . ' ' . $variantWidth . 'w';
-                            }
-                        }
-                    }
-
-                    if ($publicSrc !== '' && $width > 0 && !$hasIntrinsicJpgVariant) {
-                        $jpgSrcsetEntries[] = $escape($buildPublicUrl($publicSrc)) . ' ' . $width . 'w';
-                    }
-
-                    $jpgSrcset  = implode(', ', array_unique($jpgSrcsetEntries));
-                    $webpSrcset = implode(', ', array_unique($webpSrcsetEntries));
-                    $avifSrcset = implode(', ', array_unique($avifSrcsetEntries));
-                    $escapedDisplaySrc = $escape($defaultDisplaySrc);
-                    $headline = trim((string) ($slide->headline ?? ''));
-                    $subline = trim((string) ($slide->subline ?? ''));
+                    $headline     = trim((string) ($slide->headline ?? ''));
+                    $subline      = trim((string) ($slide->subline ?? ''));
                     ?>
                     <li>
                         <picture>
@@ -192,9 +120,9 @@ $buildAbsolutePath = static function (string $publicPath): string {
                                 >
                             <?php endif; ?>
                             <img
-                                src="<?php echo $escapedDisplaySrc; ?>"
-                                <?php if ($jpgSrcset !== '') : ?>
-                                    srcset="<?php echo $jpgSrcset; ?>"
+                                src="<?php echo $displaySrc; ?>"
+                                <?php if ($srcset !== '') : ?>
+                                    srcset="<?php echo $srcset; ?>"
                                     sizes="<?php echo $sizes; ?>"
                                 <?php endif; ?>
                                 loading="<?php echo $isLazy ? 'lazy' : 'eager'; ?>"

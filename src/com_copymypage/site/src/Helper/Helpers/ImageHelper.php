@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.15
+ * @since       0.0.17
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper\Helpers;
@@ -70,6 +70,7 @@ final class ImageHelper
      * @param   array<int, int> $variantWidths          Candidate variant widths.
      * @param   string          $sizes                  Browser sizing hint.
      * @param   string          $preferredSubdirectory  Optional sibling directory.
+     * @param   bool            $allowLargerVariants    Include existing variants wider than the source image.
      *
      * @return  array{
      *     src: string,
@@ -85,7 +86,8 @@ final class ImageHelper
         string $src,
         array $variantWidths,
         string $sizes = '',
-        string $preferredSubdirectory = ''
+        string $preferredSubdirectory = '',
+        bool $allowLargerVariants = false
     ): array {
         $data = [
             'src'          => '',
@@ -134,7 +136,7 @@ final class ImageHelper
         $preferredSubdirectory = trim(str_replace('\\', '/', $preferredSubdirectory), '/');
 
         foreach ($variantWidths as $variantWidth) {
-            if ($width > 0 && $variantWidth > $width) {
+            if (!$allowLargerVariants && $width > 0 && $variantWidth > $width) {
                 continue;
             }
 

@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.15
+ * @since       0.0.17
  */
 
 namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
@@ -13,7 +13,6 @@ namespace Joomla\Module\CopyMyPage\Gallery\Site\Helper;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
-use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Database\DatabaseAwareInterface;
 use Joomla\Database\DatabaseAwareTrait;
@@ -71,7 +70,7 @@ final class GalleryHelper implements DatabaseAwareInterface
             [
                 'title'       => self::htmlToPlainText($headline !== '' ? $headline : Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE')),
                 'description' => self::htmlToPlainText($lead !== '' ? $lead : Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_DESC')),
-                'image'       => $this->toAbsoluteUrl(self::DEFAULT_OG_IMAGE),
+                'image'       => $this->getImageHelper()->toAbsoluteUrl(self::DEFAULT_OG_IMAGE),
                 'imageWidth'  => '',
                 'imageHeight' => '',
                 'imageAlt'    => Text::_('MOD_COPYMYPAGE_GALLERY_PREVIEW_TITLE'),
@@ -392,7 +391,7 @@ final class GalleryHelper implements DatabaseAwareInterface
         return [
             'title'       => self::htmlToPlainText(self::cfgString($cfg, 'og_title')),
             'description' => self::htmlToPlainText(self::cfgString($cfg, 'og_description')),
-            'image'       => $this->toAbsoluteUrl($image['src']),
+            'image'       => $this->getImageHelper()->toAbsoluteUrl($image['src']),
             'imageWidth'  => $imageWidth > 0 ? (string) $imageWidth : '',
             'imageHeight' => $imageHeight > 0 ? (string) $imageHeight : '',
             'imageAlt'    => trim(self::cfgString($cfg, 'og_image_alt')),
@@ -448,44 +447,6 @@ final class GalleryHelper implements DatabaseAwareInterface
     private function resolveOpenGraphImage(mixed $rawImage): array
     {
         return $this->getImageHelper()->resolveMediaImage($rawImage);
-    }
-
-    /**
-     * Convert a gallery asset path into an absolute URL.
-     *
-     * @param   string  $url  Relative, rooted or absolute URL.
-     *
-     * @return  string
-     */
-    private function toAbsoluteUrl(string $url): string
-    {
-        $url = trim($url);
-
-        if ($url === '') {
-            return '';
-        }
-
-        if (preg_match('#^https?://#i', $url)) {
-            return $url;
-        }
-
-        $root     = rtrim(Uri::root(), '/');
-        $rootPath = rtrim((string) parse_url($root, PHP_URL_PATH), '/');
-        $origin   = $root;
-
-        if ($rootPath !== '' && $rootPath !== '/') {
-            $origin = preg_replace('#' . preg_quote($rootPath, '#') . '$#', '', $root) ?? $root;
-        }
-
-        if (str_starts_with($url, '/')) {
-            if ($rootPath !== '' && str_starts_with($url, $rootPath . '/')) {
-                return rtrim($origin, '/') . $url;
-            }
-
-            return $root . $url;
-        }
-
-        return $root . '/' . ltrim($url, '/');
     }
 
     /**
