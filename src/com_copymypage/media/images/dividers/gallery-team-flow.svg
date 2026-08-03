@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 1440 2100"
+    preserveAspectRatio="none"
+    fill="none"
+    color="#00979c"
+>
+    <style>
+        .cmp-gallery-team-flow__mobile {
+            display: none;
+        }
+
+        @media (max-width: 959px) {
+            .cmp-gallery-team-flow__desktop {
+                display: none;
+            }
+
+            .cmp-gallery-team-flow__mobile {
+                display: inline;
+            }
+        }
+    </style>
+    <path
+        class="cmp-gallery-team-flow__desktop"
+        d="M1260 -80C1490 140 1390 420 1130 438C875 456 785 208 545 248C288 292 118 510 236 704C372 928 812 692 1110 760C1395 826 1422 1120 1220 1278C1014 1440 744 1256 488 1325C180 1408 118 1662 326 1815C548 1978 922 1688 1152 1830C1302 1922 1288 2090 1186 2170"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.35"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        vector-effect="non-scaling-stroke"
+    />
+    <path
+        class="cmp-gallery-team-flow__mobile"
+        d="M980 -80C1320 180 1170 390 790 430C410 470 355 740 690 860C1085 1000 1050 1240 690 1340C330 1440 380 1750 735 1810C1020 1860 1090 2030 920 2170"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        vector-effect="non-scaling-stroke"
+    />
+</svg>

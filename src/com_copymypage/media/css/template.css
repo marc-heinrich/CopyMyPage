@@ -1304,6 +1304,70 @@ body:is(.is-narrow, .is-small) .cmp-back-to-top {
     padding-block-start: var(--cmp-section-spacing-start);
 }
 
+.cmp-section-story {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    overflow: clip;
+    background: var(--cmp-color-background-default);
+}
+
+.cmp-section-story > .cmp-section {
+    position: relative;
+}
+
+.cmp-section-story > .cmp-section > * {
+    position: relative;
+    z-index: 2;
+}
+
+.cmp-section-story > .cmp-section--gallery::before,
+.cmp-section-story > .cmp-section--team::after {
+    position: absolute;
+    content: "";
+    z-index: 0;
+    pointer-events: none;
+}
+
+.cmp-section-story > .cmp-section--gallery::before {
+    inset: -12% -8% -18%;
+    background:
+        radial-gradient(ellipse 45% 34% at 6% 18%, rgba(var(--cmp-color-rgb), 0.15) 0%, rgba(var(--cmp-color-rgb), 0.065) 42%, transparent 74%),
+        radial-gradient(ellipse 36% 28% at 94% 72%, rgba(var(--cmp-color-logo-dark-rgb), 0.06) 0%, transparent 72%);
+    filter: blur(22px);
+}
+
+.cmp-section-story > .cmp-section--team {
+    isolation: auto;
+    overflow: visible;
+}
+
+.cmp-section-story > .cmp-section--team::after {
+    inset: 8% -10% -8%;
+    background:
+        radial-gradient(ellipse 38% 30% at 88% 24%, rgba(var(--cmp-color-rgb), 0.12) 0%, rgba(var(--cmp-color-rgb), 0.045) 46%, transparent 76%),
+        radial-gradient(ellipse 42% 30% at 10% 82%, rgba(var(--cmp-color-logo-dark-rgb), 0.055) 0%, transparent 74%);
+    filter: blur(24px);
+}
+
+.cmp-section-story__line {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+    color: var(--cmp-color);
+    opacity: 0.24;
+    pointer-events: none;
+}
+
+.cmp-section-story__line.uk-animation-stroke {
+    animation-duration: 2.4s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .cmp-section--team {
     position: relative;
     isolation: isolate;
@@ -1312,6 +1376,8 @@ body:is(.is-narrow, .is-small) .cmp-back-to-top {
 }
 
 .cmp-section--team::before {
+    --cmp-team-section-edge-height: clamp(2.75rem, 4.5vw, 4rem);
+
     position: absolute;
     content: "";
     top: calc(var(--cmp-section-spacing-top) * 0.5);
@@ -1320,6 +1386,12 @@ body:is(.is-narrow, .is-small) .cmp-back-to-top {
     left: 0;
     z-index: 0;
     background: var(--cmp-color-surface);
+    -webkit-mask:
+        url("../images/dividers/team-section-torn-edge.svg") top center / 100% var(--cmp-team-section-edge-height) no-repeat,
+        linear-gradient(#000 0 0) left bottom / 100% calc(100% - var(--cmp-team-section-edge-height) + 1px) no-repeat;
+    mask:
+        url("../images/dividers/team-section-torn-edge.svg") top center / 100% var(--cmp-team-section-edge-height) no-repeat,
+        linear-gradient(#000 0 0) left bottom / 100% calc(100% - var(--cmp-team-section-edge-height) + 1px) no-repeat;
     transform: skewY(-3deg);
 }
 
@@ -1358,29 +1430,17 @@ body:is(.is-narrow, .is-small) .cmp-back-to-top {
     text-transform: none;
 }
 
-.cmp-section-header__headline::before {
-    position: absolute;
-    content: "";
-    left: 50%;
-    bottom: 0;
-    inline-size: min(84%, 36rem);
-    block-size: 2px;
-    border-radius: 1px;
-    background: var(--cmp-color);
-    opacity: 0.2;
-    transform: translateX(-50%);
-}
-
 .cmp-section-header__headline::after {
     position: absolute;
     content: "";
-    bottom: -2px;
+    bottom: 0;
     left: 50%;
-    inline-size: 50px;
-    block-size: 6px;
-    border-radius: 3px;
-    background: var(--cmp-color);
+    inline-size: 110px;
+    block-size: 12px;
+    background-color: var(--cmp-color);
     transform: translateX(-50%);
+    -webkit-mask: url("../images/dividers/section-divider-freehand.svg") center / 100% 100% no-repeat;
+    mask: url("../images/dividers/section-divider-freehand.svg") center / 100% 100% no-repeat;
 }
 
 .cmp-section-header__lead {
@@ -1398,6 +1458,25 @@ body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-header__headline {
 
 body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-header__lead {
     font-size: var(--cmp-font-size-sm);
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-story > .cmp-section--gallery::before,
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-story > .cmp-section--team::after {
+    opacity: 0.72;
+    filter: blur(16px);
+}
+
+body:is(.is-mobile, .is-narrow, .is-small) .cmp-section-story__line {
+    opacity: 0.18;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cmp-section-story__line {
+        animation: none !important;
+        opacity: 0.24 !important;
+        stroke-dasharray: none !important;
+        stroke-dashoffset: 0 !important;
+    }
 }
 
 /* COUNTS

@@ -120,6 +120,13 @@ $preloaderType    = $preloaderConfig['type'];
 $preloaderText    = $preloaderConfig['text'];
 $preloaderLogoUrl = $preloaderConfig['logoUrl'];
 $hasAlertModules  = $this->countModules('alert') > 0;
+$onepageSections  = $isOnepage ? CopyMyPageHelper::getOnepageSections() : [];
+$hasSectionStory  = $isOnepage
+    && $this->countModules('gallery') > 0
+    && $this->countModules('team') > 0;
+$sectionStoryPath = $hasSectionStory
+    ? HTMLHelper::_('image', 'com_' . $this->template . '/dividers/gallery-team-flow.svg', '', [], true, 1)
+    : '';
 
 // Register and load web assets (aligned with offline.php).
 $wa->getRegistry()->addExtensionRegistryFile('com_' . $this->template);
@@ -301,16 +308,37 @@ $navbarAttr = trim(implode(' ', array_filter($navbarAttrs)));
             <main id="<?php echo $escape($mainContentID); ?>" class="cmp-main" role="main">
 
                 <?php if ($isOnepage) : ?>
-                    <?php foreach (CopyMyPageHelper::getOnepageSections() as $sectionSlot => $section) : ?>
+                    <?php $sectionStoryOpen = false; ?>
+                    <?php foreach ($onepageSections as $sectionSlot => $section) : ?>
                         <?php if ($this->countModules($sectionSlot)) : ?>
                             <?php
                             $sectionLabel = (string) ($section['label'] ?? '');
                             $sectionTitle = $sectionLabel !== '' ? Text::_($sectionLabel) : ucfirst($sectionSlot);
                             ?>
+                            <?php if ($hasSectionStory && $sectionSlot === 'gallery') : ?>
+                                <?php $sectionStoryOpen = true; ?>
+                                <div
+                                    class="cmp-section-story cmp-section-story--gallery-team"
+                                    uk-scrollspy="target: > svg.cmp-section-story__line; cls: uk-animation-stroke; repeat: false; delay: 120"
+                                >
+                                    <img
+                                        class="cmp-section-story__line"
+                                        src="<?php echo $escape($sectionStoryPath); ?>"
+                                        alt=""
+                                        aria-hidden="true"
+                                        loading="lazy"
+                                        decoding="async"
+                                        uk-svg="stroke-animation: true"
+                                    >
+                            <?php endif; ?>
                             <!-- Module <?php echo $escape(ucfirst($sectionSlot)); ?> -->
                             <section id="<?php echo $escape($sectionSlot); ?>" class="cmp-section cmp-section--<?php echo $escape($sectionSlot); ?>" role="region" aria-label="<?php echo $escape($sectionTitle); ?>">
                                 <jdoc:include type="modules" name="<?php echo $escape($sectionSlot); ?>" style="none" />
                             </section>
+                            <?php if ($sectionStoryOpen && $sectionSlot === 'team') : ?>
+                                </div>
+                                <?php $sectionStoryOpen = false; ?>
+                            <?php endif; ?>
                         <?php endif; ?>
                     <?php endforeach; ?>
 
