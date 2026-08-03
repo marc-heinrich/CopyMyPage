@@ -37,6 +37,7 @@ class Router extends RouterView
     {
         // Register the views we want to be routable.
         $this->registerView(new RouterViewConfiguration('onepage'));
+        $this->registerView(new RouterViewConfiguration('dashboard'));
 
         $gallery = new RouterViewConfiguration('gallery');
         $gallery->setKey('id');

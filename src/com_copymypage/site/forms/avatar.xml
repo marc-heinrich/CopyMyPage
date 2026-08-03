@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+  <fieldset name="avatar">
+    <field
+      name="avatar"
+      type="media"
+      label="COM_COPYMYPAGE_PROFILE_AVATAR_FIELD_LABEL"
+      hiddenLabel="true"
+      preview="true"
+      preview_width="240"
+      preview_height="240"
+      types="images"
+    />
+  </fieldset>
+</form>

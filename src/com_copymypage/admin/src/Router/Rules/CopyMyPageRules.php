@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.17
  */
 
 namespace Joomla\Component\CopyMyPage\Administrator\Router\Rules;
@@ -13,13 +13,64 @@ namespace Joomla\Component\CopyMyPage\Administrator\Router\Rules;
 
 use Joomla\CMS\Component\Router\Rules\MenuRules;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
+use Joomla\Component\CopyMyPage\Site\Service\AccountMenuProvider;
 use Joomla\Component\CopyMyPage\Site\Service\Router;
 
 /**
- * Custom router rules for CopyMyPage onepage and gallery routing.
+ * Custom router rules for CopyMyPage account, onepage and gallery routing.
  */
 final class CopyMyPageRules extends MenuRules
 {
+    /**
+     * Keep dashboard edit layouts in their matching account-menu context.
+     *
+     * Core MenuRules cannot find dedicated dashboard edit menu items and
+     * otherwise falls back to the first generic dashboard destination.
+     *
+     * @param   array  $query  The query array to process.
+     *
+     * @return  void
+     */
+    public function preprocess(&$query): void
+    {
+        if (($query['view'] ?? '') !== 'dashboard') {
+            return;
+        }
+
+        $overviewLayout = match (strtolower(trim((string) ($query['layout'] ?? 'default')))) {
+            'profile.edit'  => 'profile',
+            'security.edit' => 'security',
+            default         => '',
+        };
+
+        if ($overviewLayout === '') {
+            return;
+        }
+
+        $items = $this->router->menu->getItems(
+            'menutype',
+            AccountMenuProvider::MENU_TYPE
+        ) ?: [];
+
+        foreach ($items as $item) {
+            if (
+                ($item->component ?? '') !== 'com_copymypage'
+                || ($item->query['view'] ?? '') !== 'dashboard'
+                || strtolower(trim((string) ($item->query['layout'] ?? 'default'))) !== $overviewLayout
+            ) {
+                continue;
+            }
+
+            $itemId = (int) ($item->id ?? 0);
+
+            if ($itemId > 0) {
+                $query['Itemid'] = $itemId;
+            }
+
+            return;
+        }
+    }
+
     /**
      * Query parameter used for server-visible onepage section URLs.
      *

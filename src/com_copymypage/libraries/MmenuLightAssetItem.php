@@ -4,7 +4,7 @@
  * @subpackage  WebAssetItem
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.10
+ * @since       0.0.17
  */
 
 namespace Joomla\CMS\WebAsset\AssetItem;
@@ -32,16 +32,19 @@ final class MmenuLightAssetItem extends WebAssetItem implements WebAssetAttachBe
 
         $doc->addScriptDeclaration("
             (function () {
+                const drawers = [];
+
                 const initMmenuLight = function () {
                     {$this->getMmenuLightJS()}
                 };
 
                 if (document.readyState === 'loading') {
                     document.addEventListener('DOMContentLoaded', initMmenuLight, { once: true });
-                    return;
+                } else {
+                    initMmenuLight();
                 }
 
-                initMmenuLight();
+                document.addEventListener('joomla:updated', initMmenuLight);
             })();
         ");
     }
@@ -87,8 +90,6 @@ final class MmenuLightAssetItem extends WebAssetItem implements WebAssetAttachBe
                     position: cfg.mmenuLightBasketPosition || 'right'
                 }
             ].filter((menu) => !!(menu && menu.id));
-
-            const drawers = [];
 
             const closeAllExcept = (keep) => {
                 drawers.forEach((drawer) => {

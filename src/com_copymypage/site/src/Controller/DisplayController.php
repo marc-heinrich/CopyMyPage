@@ -39,6 +39,20 @@ class DisplayController extends BaseController
     private const DASHBOARD_HELPER_ALIAS_PREFIX = 'copymypage.helper.';
 
     /**
+     * Public dashboard layouts supported by the current implementation.
+     *
+     * @var array<int, string>
+     */
+    private const DASHBOARD_LAYOUTS = [
+        'default',
+        'profile',
+        'profile.address',
+        'profile.edit',
+        'security',
+        'security.edit',
+    ];
+
+    /**
      * Default view for the component.
      *
      * @var    string
@@ -80,6 +94,13 @@ class DisplayController extends BaseController
         $vName    = $this->input->getCmd('view', $this->default_view);
         $lName    = $this->input->getCmd('layout', $this->default_layout);
         $vFormat  = $document->getType();
+
+        if ($vName === 'dashboard' && !\in_array($lName, self::DASHBOARD_LAYOUTS, true)) {
+            throw new Exception\ResourceNotFound(
+                Text::sprintf('JLIB_APPLICATION_ERROR_LAYOUTFILE_NOT_FOUND', $lName),
+                404
+            );
+        }
 
         // Ensure the primary model exists.
         if (!$model = $this->getModel($vName)) {
@@ -141,6 +162,8 @@ class DisplayController extends BaseController
             return;
         }
 
+        $primaryModel->setState('form_name', $layoutName);
+
         $container     = Factory::getContainer();
         $helperService = $this->getDashboardHelperService($layoutName);
 
@@ -156,11 +179,10 @@ class DisplayController extends BaseController
         }
 
         // Let the helper load the external model (via bootComponent) and return raw data.
-        $extraData = $handler->getExtraData();
+        $extraData = $handler->getExtraData($layoutName);
 
-        // Store the extra data and the layout name in the model state.
+        // Store the extra data in the primary dashboard model state.
         $primaryModel->setState('extra_data', $extraData);
-        $primaryModel->setState('form_name', $layoutName);
     }
 
     /**

@@ -48,7 +48,8 @@
         "uikit",
         "uikit.icons",
         "copymypage.base",
-        "copymypage.behavior"
+        "copymypage.behavior",
+        "copymypage.content.drawer"
       ],
       "attributes": {
         "defer": true
@@ -85,6 +86,46 @@
         "keepalive",
         "form.validate",
         "copymypage.modal.dialogs"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.profile.address",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-profile-address.min.js",
+      "version": "0.0.17",
+      "dependencies": [
+        "core"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.avatar.picker",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-avatar-picker.min.js",
+      "version": "0.0.17",
+      "dependencies": [
+        "core",
+        "uikit.icons"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.avatar.profile",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-avatar-profile.min.js",
+      "version": "0.0.17",
+      "dependencies": [
+        "core",
+        "copymypage.content.drawer",
+        "webcomponent.field-media",
+        "webcomponent.media-select"
       ],
       "attributes": {
         "defer": true
@@ -153,6 +194,34 @@
       }
     },
     {
+      "name": "copymypage.content.loader",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-content-loader.min.js",
+      "version": "0.0.17",
+      "dependencies": [
+        "core"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.content.drawer",
+      "type": "script",
+      "class": "ContentDrawerAssetItem",
+      "uri": "com_copymypage/copymypage-content-drawer.min.js",
+      "version": "0.0.17",
+      "dependencies": [
+        "core",
+        "uikit",
+        "uikit.icons",
+        "copymypage.content.loader"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
       "name": "copymypage.modal.dialog",
       "type": "script",
       "uri": "com_copymypage/copymypage-dialog.min.js",
@@ -171,10 +240,7 @@
       "uri": "com_copymypage/copymypage-content-modal.min.js",
       "version": "0.0.17",
       "dependencies": [
-        "core",
-        "uikit",
-        "uikit.icons",
-        "copymypage.modal.dialog"
+        "copymypage.content.drawer"
       ],
       "attributes": {
         "defer": true

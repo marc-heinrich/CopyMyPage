@@ -7,10 +7,33 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.16</version>
+  <version>0.0.17</version>
   <namespace path="src">Joomla\Component\CopyMyPage</namespace>
   <!-- Short description via language constant -->
   <description>COM_COPYMYPAGE_XML_DESCRIPTION</description>
+  <accountMenuBootstrap>
+    <item
+      key="overview"
+      title="COM_COPYMYPAGE_DASHBOARD_NAV_OVERVIEW"
+      alias="cmp-account-overview"
+      icon="grid"
+      link="index.php?option=com_copymypage&amp;view=dashboard"
+    />
+    <item
+      key="profile"
+      title="COM_COPYMYPAGE_DASHBOARD_NAV_PROFILE"
+      alias="cmp-account-profile"
+      icon="user"
+      link="index.php?option=com_copymypage&amp;view=dashboard&amp;layout=profile"
+    />
+    <item
+      key="security"
+      title="COM_COPYMYPAGE_DASHBOARD_NAV_SECURITY"
+      alias="cmp-account-security"
+      icon="lock"
+      link="index.php?option=com_copymypage&amp;view=dashboard&amp;layout=security"
+    />
+  </accountMenuBootstrap>
   <!-- Installer script (Service Provider aware) -->
   <scriptfile>script.php</scriptfile>
   <install>
@@ -30,6 +53,7 @@
   </uninstall>
   <!-- Site area -->
   <files folder="site">
+    <folder>data</folder>
     <folder>forms</folder>
     <folder>src</folder>
     <folder>tmpl</folder>
@@ -44,7 +68,9 @@
   </media>
   <!-- Libraries files -->
   <files folder="libraries">
+    <filename destination="libraries/src/WebAsset/AssetItem">ContentDrawerAssetItem.php</filename>
     <filename destination="libraries/src/WebAsset/AssetItem">CopyMyPageAssetItem.php</filename>
+    <filename destination="libraries/src/WebAsset/AssetItem">IsotopeAssetItem.php</filename>
     <filename destination="libraries/src/WebAsset/AssetItem">MmenuLightAssetItem.php</filename>
     <filename destination="libraries/src/WebAsset/AssetItem">PureCounterAssetItem.php</filename>
   </files>

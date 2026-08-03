@@ -190,6 +190,7 @@ final class ContactModel extends FormModel
      *
      * Existing contacts are matched globally by alias or email address, mirroring
      * the legacy OnePager behavior while keeping repeated submissions idempotent.
+     * Private CopyMyPage profile-address contacts are explicitly excluded.
      *
      * @param   string  $senderName       Validated sender name.
      * @param   string  $senderEmail      Validated and punycoded sender email.
@@ -300,6 +301,9 @@ final class ContactModel extends FormModel
     /**
      * Find a previously stored Joomla contact by legacy alias/email semantics.
      *
+     * CopyMyPage's private profile-address records share the user's email but
+     * serve a different purpose and must not suppress creation of a sender contact.
+     *
      * @param   DatabaseInterface  $db           Joomla database connection.
      * @param   string             $alias        Normalized contact alias.
      * @param   string             $senderEmail  Normalized contact email.
@@ -311,6 +315,8 @@ final class ContactModel extends FormModel
         string $alias,
         string $senderEmail
     ): int {
+        $profileAliasPattern = 'copymypage-profile-address-%';
+        $profileMarker       = '%"copymypage_profile_address":1%';
         $query = $db->getQuery(true)
             ->select($db->quoteName('id'))
             ->from($db->quoteName('#__contact_details'))
@@ -320,8 +326,17 @@ final class ContactModel extends FormModel
                 . ' OR ' . $db->quoteName('email_to') . ' = :email'
                 . ')'
             )
+            ->where($db->quoteName('alias') . ' NOT LIKE :profileAlias')
+            ->where(
+                '('
+                . $db->quoteName('params') . ' IS NULL'
+                . ' OR ' . $db->quoteName('params') . ' NOT LIKE :profileMarker'
+                . ')'
+            )
             ->bind(':alias', $alias, ParameterType::STRING)
             ->bind(':email', $senderEmail, ParameterType::STRING)
+            ->bind(':profileAlias', $profileAliasPattern, ParameterType::STRING)
+            ->bind(':profileMarker', $profileMarker, ParameterType::STRING)
             ->setLimit(1);
 
         return (int) $db->setQuery($query)->loadResult();

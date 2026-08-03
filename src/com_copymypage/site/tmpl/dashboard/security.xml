@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <layout
+    title="COM_COPYMYPAGE_DASHBOARD_NAV_SECURITY"
+    option="COM_COPYMYPAGE_DASHBOARD_NAV_SECURITY"
+  >
+    <message><![CDATA[COM_COPYMYPAGE_DASHBOARD_NAV_SECURITY_DESC]]></message>
+  </layout>
+  <fields name="params">
+    <fieldset name="basic">
+      <field
+        name="copymypage_account_key"
+        type="hidden"
+        default="security"
+      />
+      <field
+        name="copymypage_account_icon"
+        type="hidden"
+        default="lock"
+      />
+    </fieldset>
+  </fields>
+</metadata>

@@ -14,9 +14,11 @@ namespace Joomla\Plugin\System\CopyMyPage\Extension;
 use Joomla\CMS\Application\CMSWebApplicationInterface;
 use Joomla\CMS\Event\Application\AfterRouteEvent;
 use Joomla\CMS\Event\Model;
+use Joomla\CMS\Event\User\AfterLogoutEvent;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\FormFactoryInterface;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\ImageHelper;
@@ -88,6 +90,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         return [
             'onAfterInitialise'    => 'onAfterInitialise',
             'onContentPrepareForm' => 'onContentPrepareForm',
+            'onUserAfterLogout'    => 'onUserAfterLogout',
         ];
     }
 
@@ -109,6 +112,62 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         $this->registerHelperServices($container);
         $this->configurePasswordResetRoute();
         $this->registerProfileRouteCompatibility();
+    }
+
+    /**
+     * Revoke persistent login tokens after an administrator remotely logs out a site user.
+     *
+     * @param   AfterLogoutEvent  $event  The successful logout event.
+     *
+     * @return  void
+     *
+     * @since   0.0.17
+     */
+    public function onUserAfterLogout(AfterLogoutEvent $event): void
+    {
+        $app = $this->getApplication();
+
+        if (!$app->isClient('administrator')) {
+            return;
+        }
+
+        $identity     = $app->getIdentity();
+        $parameters   = $event->getParameters();
+        $options      = $event->getOptions();
+        $targetUserId = (int) ($parameters['id'] ?? 0);
+        $username     = trim((string) ($parameters['username'] ?? $options['username'] ?? ''));
+        $clientId     = (int) ($options['clientid'] ?? -1);
+        $shared       = (bool) $app->get('shared_session', '0');
+
+        if (
+            !$identity->authorise('core.manage', 'com_users')
+            || $targetUserId <= 0
+            || $targetUserId === (int) $identity->id
+            || $username === ''
+            || (!$shared && $clientId !== 0)
+        ) {
+            return;
+        }
+
+        $db    = Factory::getContainer()->get(DatabaseInterface::class);
+        $query = $db->getQuery(true)
+            ->delete($db->quoteName('#__user_keys'))
+            ->where($db->quoteName('user_id') . ' = :username')
+            ->bind(':username', $username);
+
+        try {
+            $db->setQuery($query)->execute();
+        } catch (\RuntimeException $exception) {
+            Log::add(
+                \sprintf(
+                    'Failed to revoke Remember Me tokens for user ID %d: %s',
+                    $targetUserId,
+                    $exception->getMessage()
+                ),
+                Log::WARNING,
+                'security'
+            );
+        }
     }
 
     /**

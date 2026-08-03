@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <layout
+    title="COM_COPYMYPAGE_DASHBOARD_NAV_PROFILE"
+    option="COM_COPYMYPAGE_DASHBOARD_NAV_PROFILE"
+  >
+    <message><![CDATA[COM_COPYMYPAGE_DASHBOARD_NAV_PROFILE_DESC]]></message>
+  </layout>
+  <fields name="params">
+    <fieldset name="basic">
+      <field
+        name="copymypage_account_key"
+        type="hidden"
+        default="profile"
+      />
+      <field
+        name="copymypage_account_icon"
+        type="hidden"
+        default="user"
+      />
+    </fieldset>
+  </fields>
+</metadata>
