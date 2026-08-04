@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.17
  */
 
 namespace Joomla\Module\CopyMyPage\Navbar\Site\Dispatcher;
@@ -104,7 +104,6 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
              * @var array<int, object>                             $list
              * @var array<int, object>                             $navItems
              * @var array<string, mixed>                           $accountMenu
-             * @var array<int, object>                             $basketItems
              * @var bool                                           $isOnepage
              * @var string                                         $activeSlot
              * @var string                                         $slot
@@ -261,7 +260,6 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['list']            = [];
         $data['navItems']        = [];
         $data['accountMenu']     = [];
-        $data['basketItems']     = [];
         $data['warning']         = '';
 
         $option  = $data['input']->getCmd('option', '');
@@ -309,7 +307,6 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $displayData['accountMenu'] = Factory::getContainer()
             ->get(AccountMenuProvider::class)
             ->getMenu($displayData['app']);
-        $displayData['basketItems']= $helper->getBasketItems($displayData['params'], $displayData['app']);
         $displayData['navigationState'] = $helper->getNavigationState(
             $list,
             $active,

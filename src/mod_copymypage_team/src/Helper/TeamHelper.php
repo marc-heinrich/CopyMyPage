@@ -247,6 +247,35 @@ final class TeamHelper implements DatabaseAwareInterface
     }
 
     /**
+     * Get one published CopyMyPage team contact by its Joomla contact ID.
+     *
+     * This exposes the same prepared item used by the module templates so
+     * component overrides do not need to duplicate image and profile logic.
+     *
+     * @param   int  $contactId  Joomla contact ID.
+     *
+     * @return  object|null
+     *
+     * @since   0.0.17
+     */
+    public function getItemById(int $contactId): ?object
+    {
+        if ($contactId <= 0) {
+            return null;
+        }
+
+        foreach ($this->getPublishedContacts() as $contact) {
+            if ((int) ($contact->id ?? 0) !== $contactId || !$this->isTeamContact($contact)) {
+                continue;
+            }
+
+            return $this->prepareContactItem($contact);
+        }
+
+        return null;
+    }
+
+    /**
      * Extract the layout-specific parameter subset from the flat module config.
      *
      * Example:

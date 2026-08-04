@@ -92,6 +92,18 @@
       }
     },
     {
+      "name": "copymypage.finder.autosubmit",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-finder-autosubmit.min.js",
+      "version": "0.0.17",
+      "dependencies": [
+        "com_finder.finder"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
       "name": "copymypage.profile.address",
       "type": "script",
       "uri": "com_copymypage/copymypage-profile-address.min.js",

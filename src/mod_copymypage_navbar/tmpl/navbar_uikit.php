@@ -4,13 +4,14 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.16
+ * @since       0.0.17
  */
 
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Filter\OutputFilter;
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
@@ -25,7 +26,6 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  *                                - logoLayout: string
  *                                - navOffcanvasId: string
  *                                - userOffcanvasId: string
- *                                - basketOffcanvasId: string
  *                                - userDropdownSelectorRoot: string
  *
  * @var array<int, object> $list
@@ -48,10 +48,14 @@ $logoLayout             = strtolower(trim((string) ($cfg['logoLayout'] ?? 'image
 $logoLayout             = \in_array($logoLayout, ['image', 'image_title'], true) ? $logoLayout : 'image';
 $navOffcanvasId         = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId        = (string) ($cfg['userOffcanvasId'] ?? '');
-$basketOffcanvasId      = (string) ($cfg['basketOffcanvasId'] ?? '');
 $userDropdownRootClass  = CopyMyPageHelper::selectorToToken((string) $cfg['userDropdownSelectorRoot'] ?? '');
 $moduleClass            = trim('cmp-module ' . $userDropdownRootClass);
 $onepageBase            = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
+$basketUrl              = Route::link('site', 'index.php?option=com_copymypage&view=basket');
+$basketLabel            = Text::_('MOD_COPYMYPAGE_NAVBAR_BASKET_OPEN');
+$basketTitle            = Text::_('MOD_COPYMYPAGE_NAVBAR_BASKET_TITLE');
+$finderUrl              = Route::link('site', 'index.php?option=com_finder&view=search');
+$finderLabel            = Text::_('JSEARCH_FILTER_SUBMIT');
 $logoHref               = $isOnepage ? '#top' : $onepageBase;
 $navigationState        = is_array($navigationState ?? null) ? $navigationState : [];
 $accountMenu            = is_array($accountMenu ?? null) ? $accountMenu : [];
@@ -443,7 +447,7 @@ if (!empty($warning)) {
                         </ul>
                     </div>
 
-                    <!-- RIGHT: Mobile = User/Basket toggles, Desktop = Icons -->
+                    <!-- RIGHT: Mobile = User/Search/Basket icons, Desktop = Icons -->
                     <div class="uk-navbar-right">
                         <!-- Mobile: User offcanvas -->
                         <a
@@ -456,15 +460,28 @@ if (!empty($warning)) {
                             <span class="<?php echo $escape($userIconClass); ?>" uk-icon="user"></span>
                         </a>
 
-                        <!-- Mobile: Basket offcanvas -->
+                        <!-- Mobile: Finder search -->
                         <a
                             class="uk-navbar-item uk-hidden@m cmp-navbar-icon-link"
-                            href="#"
-                            role="button"
-                            aria-label="Open basket"
-                            data-cmp-mmenulight-open="#<?php echo $escape($basketOffcanvasId); ?>"
+                            href="<?php echo $escape($finderUrl); ?>"
+                            aria-label="<?php echo $escape($finderLabel); ?>"
+                            title="<?php echo $escape($finderLabel); ?>"
                         >
-                            <span uk-icon="cart"></span>
+                            <span uk-icon="search" aria-hidden="true"></span>
+                        </a>
+
+                        <!-- Mobile: Basket content drawer -->
+                        <a
+                            class="uk-navbar-item uk-hidden@m cmp-navbar-icon-link"
+                            href="<?php echo $escape($basketUrl); ?>"
+                            aria-label="<?php echo $escape($basketLabel); ?>"
+                            title="<?php echo $escape($basketLabel); ?>"
+                            aria-haspopup="dialog"
+                            data-cmp-content-drawer="basket"
+                            data-cmp-drawer-title="<?php echo $escape($basketTitle); ?>"
+                            data-cmp-drawer-transport="document"
+                        >
+                            <span uk-icon="cart" aria-hidden="true"></span>
                         </a>
 
                         <!-- Desktop: icon nav (use uk-navbar-nav so dropdown uses navbar positioning) -->
@@ -509,21 +526,27 @@ if (!empty($warning)) {
 
                                 <li>
                                     <a
-                                        href="<?php echo $escape(Route::link('site', 'index.php?option=com_finder&view=search')); ?>"
+                                        href="<?php echo $escape($finderUrl); ?>"
                                         class="cmp-navbar-icon"
-                                        aria-label="Search"
+                                        aria-label="<?php echo $escape($finderLabel); ?>"
+                                        title="<?php echo $escape($finderLabel); ?>"
                                     >
-                                        <span uk-icon="icon: search"></span>
+                                        <span uk-icon="icon: search" aria-hidden="true"></span>
                                     </a>
                                 </li>
 
                                 <li>
                                     <a
-                                        href="<?php echo $escape(Route::link('site', 'index.php?option=com_copymypage&view=basket')); ?>"
+                                        href="<?php echo $escape($basketUrl); ?>"
                                         class="cmp-navbar-icon"
-                                        aria-label="Basket"
+                                        aria-label="<?php echo $escape($basketLabel); ?>"
+                                        title="<?php echo $escape($basketLabel); ?>"
+                                        aria-haspopup="dialog"
+                                        data-cmp-content-drawer="basket"
+                                        data-cmp-drawer-title="<?php echo $escape($basketTitle); ?>"
+                                        data-cmp-drawer-transport="document"
                                     >
-                                        <span uk-icon="icon: cart"></span>
+                                        <span uk-icon="icon: cart" aria-hidden="true"></span>
                                     </a>
                                 </li>
                             </ul>

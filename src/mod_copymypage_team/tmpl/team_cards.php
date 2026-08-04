@@ -10,6 +10,7 @@
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\Module\CopyMyPage\Team\Site\Helper\TeamHelper;
 
 /**
@@ -61,7 +62,6 @@ $showDescriptions = TeamHelper::cfgBool($layoutConfig, 'showDescriptions', true)
 $cardStyle        = strtolower(trim(TeamHelper::cfgString($layoutConfig, 'cardStyle', 'default')));
 $cardStyle        = \in_array($cardStyle, ['default', 'primary', 'secondary'], true) ? $cardStyle : 'default';
 $moduleClass      = 'cmp-module cmp-module--team cmp-module--team-cards';
-$cardClass        = 'cmp-team__card uk-card uk-card-' . $cardStyle . ' uk-card-small uk-card-hover';
 
 if ($headline === '') {
     $headline = Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_HEADLINE');
@@ -101,93 +101,19 @@ if ($headline === '') {
                     if (!\is_object($item)) {
                         continue;
                     }
-
-                    $name        = trim((string) ($item->name ?? ''));
-                    $role        = trim((string) ($item->role ?? ''));
-                    $description = trim((string) ($item->description ?? ''));
-                    $image       = trim((string) ($item->image ?? ''));
-                    $imageAlt    = trim((string) ($item->imageAlt ?? $name));
-                    $imageWidth  = (int) ($item->imageWidth ?? 0);
-                    $imageHeight = (int) ($item->imageHeight ?? 0);
-                    $imageSrcset = trim((string) ($item->imageSrcset ?? ''));
-                    $webpSrcset  = trim((string) ($item->imageWebpSrcset ?? ''));
-                    $avifSrcset  = trim((string) ($item->imageAvifSrcset ?? ''));
-                    $imageSizes  = trim((string) ($item->imageSizes ?? ''));
-
-                    if ($name === '' && $description === '') {
-                        continue;
-                    }
-
-                    if ($imageAlt === '') {
-                        $imageAlt = Text::_('MOD_COPYMYPAGE_TEAM_DEFAULT_IMAGE_ALT');
-                    }
                     ?>
                     <div class="cmp-team__item">
-                        <article class="<?php echo $escape($cardClass); ?>">
-                            <?php if ($showImages && $image !== '') : ?>
-                                <div class="cmp-team__media uk-card-media-top">
-                                    <picture class="cmp-team__picture">
-                                        <?php if ($avifSrcset !== '') : ?>
-                                            <source
-                                                type="image/avif"
-                                                srcset="<?php echo $escape($avifSrcset); ?>"
-                                                <?php if ($imageSizes !== '') : ?>
-                                                    sizes="<?php echo $escape($imageSizes); ?>"
-                                                <?php endif; ?>
-                                            >
-                                        <?php endif; ?>
-                                        <?php if ($webpSrcset !== '') : ?>
-                                            <source
-                                                type="image/webp"
-                                                srcset="<?php echo $escape($webpSrcset); ?>"
-                                                <?php if ($imageSizes !== '') : ?>
-                                                    sizes="<?php echo $escape($imageSizes); ?>"
-                                                <?php endif; ?>
-                                            >
-                                        <?php endif; ?>
-                                        <img
-                                            src="<?php echo $escape($image); ?>"
-                                            <?php if ($imageSrcset !== '') : ?>
-                                                srcset="<?php echo $escape($imageSrcset); ?>"
-                                                <?php if ($imageSizes !== '') : ?>
-                                                    sizes="<?php echo $escape($imageSizes); ?>"
-                                                <?php endif; ?>
-                                            <?php endif; ?>
-                                            alt="<?php echo $escape($imageAlt); ?>"
-                                            <?php if ($imageWidth > 0) : ?>
-                                                width="<?php echo $imageWidth; ?>"
-                                            <?php endif; ?>
-                                            <?php if ($imageHeight > 0) : ?>
-                                                height="<?php echo $imageHeight; ?>"
-                                            <?php endif; ?>
-                                            loading="lazy"
-                                            decoding="async"
-                                            fetchpriority="low"
-                                        >
-                                    </picture>
-                                </div>
-                            <?php endif; ?>
-
-                            <div class="cmp-team__body uk-card-body">
-                                <?php if ($name !== '') : ?>
-                                    <h3 class="cmp-team__name uk-card-title">
-                                        <?php echo $escape($name); ?>
-                                    </h3>
-                                <?php endif; ?>
-
-                                <?php if ($role !== '') : ?>
-                                    <p class="cmp-team__role">
-                                        <?php echo $escape($role); ?>
-                                    </p>
-                                <?php endif; ?>
-
-                                <?php if ($showDescriptions && $description !== '') : ?>
-                                    <p class="cmp-team__description">
-                                        <?php echo $escape($description); ?>
-                                    </p>
-                                <?php endif; ?>
-                            </div>
-                        </article>
+                        <?php echo LayoutHelper::render(
+                            'copymypage.team.card',
+                            [
+                                'item'            => $item,
+                                'cardStyle'       => $cardStyle,
+                                'showImage'       => $showImages,
+                                'showDescription' => $showDescriptions,
+                                'headingTag'      => 'h3',
+                                'variant'         => 'card',
+                            ]
+                        ); ?>
                     </div>
                 <?php endforeach; ?>
             </div>

@@ -63,7 +63,6 @@
       <fieldset name="mobilemenu_mmenulight_ids" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_NAV">
         <field name="mobilemenu_mmenulight_navOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_NAV_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_NAV_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-nav" filter="cmd" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_userOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_USER_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_USER_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-user" filter="cmd" showon="layoutVariant:mobilemenu_mmenulight"/>
-        <field name="mobilemenu_mmenulight_basketOffcanvasId" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_BASKET_OFFCANVAS_ID_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_BASKET_OFFCANVAS_ID_DESC" default="cmp-mobilemenu-basket" filter="cmd" showon="layoutVariant:mobilemenu_mmenulight"/>
       </fieldset>
       <fieldset name="mobilemenu_mmenulight_global" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_GLOBAL">
         <field name="mobilemenu_mmenulight_mediaQuery" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_MEDIAQUERY_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_MEDIAQUERY_DESC" default="all" showon="layoutVariant:mobilemenu_mmenulight"/>
@@ -93,15 +92,8 @@
         </field>
       </fieldset>
       <fieldset name="mobilemenu_mmenulight_user" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_USER">
-        <field name="mobilemenu_mmenulight_userTitle" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_DESC" default="User" showon="layoutVariant:mobilemenu_mmenulight"/>
+        <field name="mobilemenu_mmenulight_userTitle" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_DESC" default="" showon="layoutVariant:mobilemenu_mmenulight"/>
         <field name="mobilemenu_mmenulight_userPosition" type="list" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_DESC" default="right" showon="layoutVariant:mobilemenu_mmenulight">
-          <option value="left">JGLOBAL_LEFT</option>
-          <option value="right">JGLOBAL_RIGHT</option>
-        </field>
-      </fieldset>
-      <fieldset name="mobilemenu_mmenulight_basket" label="MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_BASKET">
-        <field name="mobilemenu_mmenulight_basketTitle" type="text" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_TITLE_DESC" default="Basket" showon="layoutVariant:mobilemenu_mmenulight"/>
-        <field name="mobilemenu_mmenulight_basketPosition" type="list" label="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_LABEL" description="MOD_COPYMYPAGE_NAVBAR_FIELD_MMENU_POSITION_DESC" default="right" showon="layoutVariant:mobilemenu_mmenulight">
           <option value="left">JGLOBAL_LEFT</option>
           <option value="right">JGLOBAL_RIGHT</option>
         </field>

@@ -757,6 +757,8 @@ return new class () implements ServiceProviderInterface
                  * @param   array<string, mixed>  $params       Raw params.
                  *
                  * @return  void
+                 *
+                 * @since   0.0.17  Stops migrating obsolete mobile basket params.
                  */
                 private function migrateMobilemenuSlotParams(array &$normalized, array $params): void
                 {
@@ -773,13 +775,6 @@ return new class () implements ServiceProviderInterface
                         'mobilemenu_mmenulight_userOffcanvasId',
                         'cmp-mobilemenu-user',
                         'userOffcanvasId'
-                    );
-                    $this->migrateScalarParam(
-                        $normalized,
-                        $params,
-                        'mobilemenu_mmenulight_basketOffcanvasId',
-                        'cmp-mobilemenu-basket',
-                        'basketOffcanvasId'
                     );
                     $this->migrateScalarParam(
                         $normalized,
@@ -862,7 +857,7 @@ return new class () implements ServiceProviderInterface
                         $normalized,
                         $params,
                         'mobilemenu_mmenulight_userTitle',
-                        'User',
+                        '',
                         'mmenuLightUserTitle'
                     );
                     $this->migrateScalarParam(
@@ -871,20 +866,6 @@ return new class () implements ServiceProviderInterface
                         'mobilemenu_mmenulight_userPosition',
                         'right',
                         'mmenuLightUserPosition'
-                    );
-                    $this->migrateScalarParam(
-                        $normalized,
-                        $params,
-                        'mobilemenu_mmenulight_basketTitle',
-                        'Basket',
-                        'mmenuLightBasketTitle'
-                    );
-                    $this->migrateScalarParam(
-                        $normalized,
-                        $params,
-                        'mobilemenu_mmenulight_basketPosition',
-                        'right',
-                        'mmenuLightBasketPosition'
                     );
                 }
 
@@ -961,6 +942,7 @@ return new class () implements ServiceProviderInterface
                  * @return  void
                  *
                  * @since   0.0.15  Removes legacy navbar logo params.
+                 * @since   0.0.17  Removes obsolete mobile basket params.
                  */
                 private function removeLegacyNavbarParams(array &$normalized): void
                 {
@@ -971,6 +953,9 @@ return new class () implements ServiceProviderInterface
                         'navOffcanvasId',
                         'userOffcanvasId',
                         'basketOffcanvasId',
+                        'mobilemenu_mmenulight_basketOffcanvasId',
+                        'mobilemenu_mmenulight_basketPosition',
+                        'mobilemenu_mmenulight_basketTitle',
                         'mmenuLightMediaQuery',
                         'mmenuLightSelectedClass',
                         'mmenuLightSlidingSubmenus',

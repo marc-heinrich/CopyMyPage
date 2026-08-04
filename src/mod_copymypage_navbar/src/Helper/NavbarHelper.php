@@ -12,6 +12,7 @@ namespace Joomla\Module\CopyMyPage\Navbar\Site\Helper;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Application\CMSApplicationInterface;
+use Joomla\CMS\Factory;
 use Joomla\CMS\Helper\ModuleHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
@@ -243,24 +244,6 @@ class NavbarHelper
         $menuParams->set('aliasoptions', []);
 
         return $menuParams;
-    }
-
-    /**
-     * Returns a basket menu list for mobile layouts (dummy for now).
-     *
-     * @param  Registry                $params  The module parameters object (kept for future use).
-     * @param  CMSApplicationInterface $app     The application instance.
-     *
-     * @return array<int, object>
-     */
-    public function getBasketItems(Registry $params, CMSApplicationInterface $app): array
-    {
-        return [
-            (object) [
-                'title' => Text::_('JGLOBAL_CLOSE'),
-                'link'  => '#',
-            ],
-        ];
     }
 
     /**
@@ -534,7 +517,6 @@ class NavbarHelper
                 'layoutVariant'               => $baseLayout,
                 'navOffcanvasId'              => 'cmp-mobilemenu-nav',
                 'userOffcanvasId'             => 'cmp-mobilemenu-user',
-                'basketOffcanvasId'           => 'cmp-mobilemenu-basket',
                 'mmenuLightMediaQuery'        => 'all',
                 'mmenuLightSelectedClass'     => 'Selected',
                 'mmenuLightSlidingSubmenus'   => true,
@@ -546,10 +528,8 @@ class NavbarHelper
                 'mmenuLightOcdMaxWidth'       => 440,
                 'mmenuLightNavTitle'          => 'Menu',
                 'mmenuLightNavPosition'       => 'left',
-                'mmenuLightUserTitle'         => 'User',
+                'mmenuLightUserTitle'         => $this->getMmenuLightUserTitle(),
                 'mmenuLightUserPosition'      => 'right',
-                'mmenuLightBasketTitle'       => 'Basket',
-                'mmenuLightBasketPosition'    => 'right',
             ],
             default => [
                 'slot'         => $slot,
@@ -609,7 +589,6 @@ class NavbarHelper
         return [
             'navOffcanvasId'            => $this->readString($params, ['mobilemenu_mmenulight_navOffcanvasId', 'navOffcanvasId'], 'cmp-mobilemenu-nav'),
             'userOffcanvasId'           => $this->readString($params, ['mobilemenu_mmenulight_userOffcanvasId', 'userOffcanvasId'], 'cmp-mobilemenu-user'),
-            'basketOffcanvasId'         => $this->readString($params, ['mobilemenu_mmenulight_basketOffcanvasId', 'basketOffcanvasId'], 'cmp-mobilemenu-basket'),
             'mmenuLightMediaQuery'      => $this->readString($params, ['mobilemenu_mmenulight_mediaQuery', 'mmenuLightMediaQuery'], 'all'),
             'mmenuLightSelectedClass'   => $this->readString($params, ['mobilemenu_mmenulight_selectedClass', 'mmenuLightSelectedClass'], 'Selected'),
             'mmenuLightSlidingSubmenus' => $this->readBool($params, ['mobilemenu_mmenulight_slidingSubmenus', 'mmenuLightSlidingSubmenus'], true),
@@ -621,11 +600,47 @@ class NavbarHelper
             'mmenuLightOcdMaxWidth'     => $this->readInt($params, ['mobilemenu_mmenulight_ocdMaxWidth', 'mmenuLightOcdMaxWidth'], 440, 0),
             'mmenuLightNavTitle'        => $this->readString($params, ['mobilemenu_mmenulight_navTitle', 'mmenuLightNavTitle'], 'Menu'),
             'mmenuLightNavPosition'     => $this->readString($params, ['mobilemenu_mmenulight_navPosition', 'mmenuLightNavPosition'], 'left'),
-            'mmenuLightUserTitle'       => $this->readString($params, ['mobilemenu_mmenulight_userTitle', 'mmenuLightUserTitle'], 'User'),
+            'mmenuLightUserTitle'       => $this->getMmenuLightUserTitle($params),
             'mmenuLightUserPosition'    => $this->readString($params, ['mobilemenu_mmenulight_userPosition', 'mmenuLightUserPosition'], 'right'),
-            'mmenuLightBasketTitle'     => $this->readString($params, ['mobilemenu_mmenulight_basketTitle', 'mmenuLightBasketTitle'], 'Basket'),
-            'mmenuLightBasketPosition'  => $this->readString($params, ['mobilemenu_mmenulight_basketPosition', 'mmenuLightBasketPosition'], 'right'),
         ];
+    }
+
+    /**
+     * Resolve the localized Mmenu Light user title while preserving custom overrides.
+     *
+     * The module language is loaded explicitly because getClientConfig() may run
+     * from a WebAssetItem before the module dispatcher has rendered a module.
+     *
+     * @param   array<string, mixed>  $params  Raw module params.
+     *
+     * @return  string
+     *
+     * @since   0.0.17
+     */
+    private function getMmenuLightUserTitle(array $params = []): string
+    {
+        $app = Factory::getApplication();
+
+        if ($app instanceof CMSApplicationInterface) {
+            $language = $app->getLanguage();
+            $language->load('mod_copymypage_navbar', JPATH_SITE)
+                || $language->load(
+                    'mod_copymypage_navbar',
+                    JPATH_SITE . '/modules/mod_copymypage_navbar'
+                );
+        }
+
+        $languageKey = 'MOD_COPYMYPAGE_NAVBAR_USER_MENU_TITLE';
+        $default     = Text::_($languageKey);
+        $default     = $default !== $languageKey ? $default : 'User';
+        $title       = trim(
+            $this->readString(
+                $params,
+                ['mobilemenu_mmenulight_userTitle', 'mmenuLightUserTitle']
+            )
+        );
+
+        return $title === '' || $title === 'User' ? $default : $title;
     }
 
     /**

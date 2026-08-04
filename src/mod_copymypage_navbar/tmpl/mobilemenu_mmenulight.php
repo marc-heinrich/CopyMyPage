@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.16
+ * @since       0.0.17
  */
 
 \defined('_JEXEC') or die;
@@ -22,7 +22,6 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  *                                Document only the keys used in this layout:
  *                                - navOffcanvasId: string
  *                                - userOffcanvasId: string
- *                                - basketOffcanvasId: string
  *                                - mmenuLightSelectedClass: string
  *                                - mmenuLightItemHeight: int
  *                                - mmenuLightOcdWidth: int
@@ -45,7 +44,6 @@ $escape = static fn(mixed $value): string => htmlspecialchars((string) $value, E
 // For type normalization (boolean or integer), use the component helper class CopyMyPage.
 $navOffcanvasId    = (string) ($cfg['navOffcanvasId'] ?? '');
 $userOffcanvasId   = (string) ($cfg['userOffcanvasId'] ?? '');
-$basketOffcanvasId = (string) ($cfg['basketOffcanvasId'] ?? '');
 
 // Mmenu-light expects a "selected" class on the <li>.
 $selectedClass = (string) ($cfg['mmenuLightSelectedClass'] ?? 'current');
@@ -64,7 +62,6 @@ $accountAction      = is_array($accountAction) ? $accountAction : null;
 $onepageBase        = Route::link('site', 'index.php?option=com_copymypage&view=onepage');
 $navModuleClass     = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-nav uk-hidden@m';
 $userModuleClass    = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-user uk-hidden@m';
-$basketModuleClass  = 'cmp-module cmp-module--mobilemenu cmp-module--mobilemenu-basket uk-hidden@m';
 $renderAccountItems = static function (array $nodes) use (
     &$renderAccountItems,
     $escape,
@@ -249,21 +246,6 @@ if (!empty($warning)) {
                     <span>&mdash;</span>
                 </li>
             <?php endif; ?>
-        </ul>
-    </nav>
-<?php endif; ?>
-
-<!-- Basket offcanvas menu (mobile only) -->
-<?php if ($basketOffcanvasId !== '') : ?>
-    <nav
-        id="<?php echo $escape($basketOffcanvasId); ?>"
-        class="<?php echo $escape($basketModuleClass); ?>"
-        aria-label="<?php echo $escape(Text::_('MOD_COPYMYPAGE_NAVBAR_FIELDSET_MMENU_LIGHT_BASKET')); ?>"
-    >
-        <ul>
-            <li>
-                <a href="#"><?php echo $escape(Text::_('MOD_COPYMYPAGE_NAVBAR_BASKET_EMPTY')); ?></a>
-            </li>
         </ul>
     </nav>
 <?php endif; ?>

@@ -83,11 +83,6 @@ final class MmenuLightAssetItem extends WebAssetItem implements WebAssetAttachBe
                     id: cfg.userOffcanvasId,
                     title: cfg.mmenuLightUserTitle,
                     position: cfg.mmenuLightUserPosition || 'right'
-                },
-                {
-                    id: cfg.basketOffcanvasId,
-                    title: cfg.mmenuLightBasketTitle,
-                    position: cfg.mmenuLightBasketPosition || 'right'
                 }
             ].filter((menu) => !!(menu && menu.id));
 
