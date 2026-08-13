@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.16
+ * @since       0.0.18
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Model;
@@ -190,7 +190,8 @@ final class ContactModel extends FormModel
      *
      * Existing contacts are matched globally by alias or email address, mirroring
      * the legacy OnePager behavior while keeping repeated submissions idempotent.
-     * Private CopyMyPage profile-address contacts are explicitly excluded.
+     * New submission contacts remain unpublished and carry a structured internal
+     * marker. Private CopyMyPage profile-address contacts are explicitly excluded.
      *
      * @param   string  $senderName       Validated sender name.
      * @param   string  $senderEmail      Validated and punycoded sender email.
@@ -247,11 +248,14 @@ final class ContactModel extends FormModel
                 'alias'            => $alias,
                 'email_to'         => $senderEmail,
                 'catid'            => $categoryId,
-                'published'        => 1,
+                'published'        => 0,
                 'access'           => 1,
                 'language'         => $app->getLanguage()->getTag(),
                 'created'          => Factory::getDate()->toSql(),
                 'created_by_alias' => $createdByAlias,
+                'params'           => [
+                    'copymypage_contact_submission' => 1,
+                ],
             ];
 
             $saved = false;
@@ -423,7 +427,7 @@ final class ContactModel extends FormModel
                 'alias'       => $alias,
                 'description' => '',
                 'extension'   => $extension,
-                'published'   => 1,
+                'published'   => 0,
                 'access'      => 1,
                 'language'    => '*',
                 'params'      => [

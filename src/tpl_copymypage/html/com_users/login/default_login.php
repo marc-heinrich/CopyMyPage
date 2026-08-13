@@ -4,7 +4,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.17
+ * @since       0.0.18
  */
 
 \defined('_JEXEC') or die;
@@ -124,20 +124,24 @@ $this->form->addControlField(
                             title="<?php echo $escape(Text::_((string) ($button['label'] ?? ''))); ?>"
                             id="<?php echo $escape($button['id'] ?? ''); ?>"
                         >
-                            <?php if (!empty($button['icon'])) : ?>
-                                <span class="<?php echo $escape($button['icon']); ?>"></span>
-                            <?php elseif (!empty($button['image'])) : ?>
-                                <?php
-                                echo HTMLHelper::_(
-                                    'image',
-                                    $button['image'],
-                                    Text::_((string) ($button['tooltip'] ?? '')),
-                                    ['class' => 'icon'],
-                                    true
-                                );
-                                ?>
-                            <?php elseif (!empty($button['svg'])) : ?>
-                                <?php echo $button['svg']; ?>
+                            <?php if (!empty($button['icon']) || !empty($button['image']) || !empty($button['svg'])) : ?>
+                                <span class="cmp-auth__extra-icon" aria-hidden="true">
+                                    <?php if (!empty($button['icon'])) : ?>
+                                        <span class="<?php echo $escape($button['icon']); ?>"></span>
+                                    <?php elseif (!empty($button['image'])) : ?>
+                                        <?php
+                                        echo HTMLHelper::_(
+                                            'image',
+                                            $button['image'],
+                                            Text::_((string) ($button['tooltip'] ?? '')),
+                                            ['class' => 'icon'],
+                                            true
+                                        );
+                                        ?>
+                                    <?php elseif (!empty($button['svg'])) : ?>
+                                        <?php echo $button['svg']; ?>
+                                    <?php endif; ?>
+                                </span>
                             <?php endif; ?>
                             <?php echo $escape(Text::_((string) ($button['label'] ?? ''))); ?>
                         </button>

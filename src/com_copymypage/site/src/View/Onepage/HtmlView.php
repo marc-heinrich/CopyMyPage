@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.14
+ * @since       0.0.18
  */
 
 namespace Joomla\Component\CopyMyPage\Site\View\Onepage;
@@ -80,29 +80,35 @@ class HtmlView extends BaseHtmlView
         $menu     = $app->getMenu()->getActive();
         $document = $this->document;
 
-        // Title: prefer menu title, fallback to language string.
-        if ($menu && $menu->title) {
-            $title = $menu->title;
-        } else {
+        // Title: prefer Joomla's browser page title, then the active menu title.
+        $title = $this->params instanceof Registry
+            ? trim((string) $this->params->get('page_title', ''))
+            : '';
+
+        if ($title === '' && $menu && $menu->title) {
+            $title = trim((string) $menu->title);
+        }
+
+        if ($title === '') {
             $title = Text::_('COM_COPYMYPAGE_VIEW_ONEPAGE_TITLE');
         }
 
-        // Prepare defaults for meta description and keywords.
+        // Resolve the page-level meta description and optional keywords.
         $metaDescription = '';
         $metaKeywords    = '';
 
         if ($this->params instanceof Registry) {
-            $metaDescription = (string) $this->params->get('meta_description', '');
-            $metaKeywords    = (string) $this->params->get('meta_keywords', '');
+            $menuMetaDescription      = trim((string) $this->params->get('menu-meta_description', ''));
+            $componentMetaDescription = trim((string) $this->params->get('meta_description', ''));
+            $metaDescription          = $menuMetaDescription !== ''
+                ? $menuMetaDescription
+                : $componentMetaDescription;
+            $metaKeywords             = trim((string) $this->params->get('meta_keywords', ''));
         }
 
-        // Fallback to template-level defaults if nothing is set in menu/component params.
+        // Use the localized description only when neither menu nor component provides one.
         if ($metaDescription === '') {
             $metaDescription = Text::_('COM_COPYMYPAGE_VIEW_ONEPAGE_META_DESCRIPTION');
-        }
-
-        if ($metaKeywords === '') {
-            $metaKeywords = Text::_('COM_COPYMYPAGE_VIEW_ONEPAGE_META_KEYWORDS');
         }
 
         $pageMeta       = $this->buildPageMeta($title, $metaDescription);

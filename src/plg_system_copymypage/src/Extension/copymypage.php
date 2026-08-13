@@ -230,6 +230,11 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             [$this, 'restoreProfileRouteCompatibility'],
             Priority::BELOW_NORMAL
         );
+        $dispatcher->addListener(
+            'onAfterRoute',
+            [$this, 'redirectCoreAccountRoutes'],
+            Priority::MIN
+        );
 
         $this->profileRouteListenersRegistered = true;
     }
@@ -309,6 +314,118 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         }
 
         $this->profileRequestContext = [];
+    }
+
+    /**
+     * Redirect safe core account display routes to their CopyMyPage dashboard equivalents.
+     *
+     * Joomla keeps control of guests, form submissions, controller tasks, remembered-login
+     * sessions, forced password resets and the first-time or mandatory MFA setup flows.
+     *
+     * @param   AfterRouteEvent  $event  The after-route event.
+     *
+     * @return  void
+     *
+     * @since   0.0.18
+     */
+    public function redirectCoreAccountRoutes(AfterRouteEvent $event): void
+    {
+        $app = $this->getApplication();
+
+        if (!$app instanceof CMSWebApplicationInterface) {
+            return;
+        }
+
+        $dashboardLayout = $this->getCoreAccountRedirectLayout($app);
+
+        if ($dashboardLayout === null) {
+            return;
+        }
+
+        $app->redirect(
+            Factory::getContainer()
+                ->get(AccountMenuProvider::class)
+                ->getDashboardUrl($app, $dashboardLayout)
+        );
+    }
+
+    /**
+     * Resolve the CopyMyPage dashboard layout for an unambiguous core display request.
+     *
+     * @param   CMSWebApplicationInterface  $app  The active site application.
+     *
+     * @return  string|null
+     *
+     * @since   0.0.18
+     */
+    private function getCoreAccountRedirectLayout(CMSWebApplicationInterface $app): ?string
+    {
+        $input    = $app->getInput();
+        $identity = $app->getIdentity();
+
+        if (
+            $input->getMethod() !== 'GET'
+            || $input->getCmd('option', '') !== 'com_users'
+            || (int) $identity->id <= 0
+            || (bool) $identity->guest
+            || !empty($identity->cookieLogin)
+            || (bool) $identity->requireReset
+            || $input->getCmd('format', 'html') !== 'html'
+            || $input->getCmd('tmpl', '') !== ''
+            || $input->getCmd('action', '') !== ''
+            || $input->getString('returnurl', '') !== ''
+            || $input->getString('return', '') !== ''
+            || !$this->requestTargetsCurrentUser($app)
+        ) {
+            return null;
+        }
+
+        $view   = $input->getCmd('view', '');
+        $task   = $input->getCmd('task', '');
+        $layout = $input->getCmd('layout', '');
+
+        if ($view === 'profile' && $task === '') {
+            return match ($layout) {
+                '', 'default', 'default_core', 'default_custom', 'default_params' => 'profile',
+                'edit' => 'profile.edit',
+                default => null,
+            };
+        }
+
+        $isMethodsDisplay = ($view === 'methods' && $task === '')
+            || $task === 'methods.display';
+
+        if (!$isMethodsDisplay || !\in_array($layout, ['', 'default', 'list'], true)) {
+            return null;
+        }
+
+        $session = $app->getSession();
+
+        if (
+            (int) $session->get('com_users.mfa_checked', 0) !== 1
+            || (int) $session->get('com_users.mandatory_mfa_setup', 0) !== 0
+        ) {
+            return null;
+        }
+
+        return 'security';
+    }
+
+    /**
+     * Ensure an optional user_id does not turn an own-account redirect into another-user access.
+     *
+     * @param   CMSWebApplicationInterface  $app  The active site application.
+     *
+     * @return  bool
+     *
+     * @since   0.0.18
+     */
+    private function requestTargetsCurrentUser(CMSWebApplicationInterface $app): bool
+    {
+        $inputUserId = $app->getInput()->get('user_id', null, 'raw');
+
+        return $inputUserId === null
+            || ($inputUserId !== '' && $app->getInput()->getInt('user_id', 0) === (int) $app->getIdentity()->id);
     }
 
     /**

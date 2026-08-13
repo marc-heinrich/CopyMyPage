@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc.
  * @license     GNU General Public License version 3 or later
- * @since       0.0.16
+ * @since       0.0.17
  */
 
 namespace Joomla\Module\CopyMyPage\Contact\Site\Helper;
@@ -125,11 +125,13 @@ final class ContactHelper
      */
     public function getEyebrow(array $cfg, string $layout): string
     {
-        return self::translatedValue(
+        $eyebrow = trim(self::cfgString(
             self::getLayoutConfig($cfg, $layout),
             'eyebrow',
             'MOD_COPYMYPAGE_CONTACT_DEFAULT_EYEBROW'
-        );
+        ));
+
+        return $eyebrow !== '' ? Text::_($eyebrow) : '';
     }
 
     /**

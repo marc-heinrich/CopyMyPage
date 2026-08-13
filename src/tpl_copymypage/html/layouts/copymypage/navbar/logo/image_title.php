@@ -11,7 +11,7 @@
 
 use Joomla\CMS\Uri\Uri;
 
-$escape  = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$escape   = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $context  = strtolower(trim((string) ($displayData['context'] ?? 'desktop')));
 $isMobile = $context === 'mobile';
 $logo     = rtrim(Uri::root(true), '/') . '/media/com_copymypage/images/logo/logo-cmp-1.svg';

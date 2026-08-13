@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.17
+ * @since       0.0.18
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -5301,34 +5301,41 @@ body.is-authpage .cmp-section--component {
     margin-block: 0.25rem 0;
 }
 
-.cmp-auth__extra-button {
-    margin-block: 0.75rem 0;
+.cmp-auth__form .cmp-auth__extra-button {
+    margin-block: var(--cmp-spacing-sm) 0;
+}
+
+.cmp-auth__fieldset > :not(.cmp-auth__extra-button) + .cmp-auth__extra-button {
+    margin-block-start: var(--cmp-spacing-lg);
+}
+
+.cmp-auth__extra-button + .cmp-auth__actions {
+    margin-block-start: var(--cmp-spacing-sm);
 }
 
 .cmp-auth__secondary-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     inline-size: 100%;
-    min-block-size: 2.75rem;
-    padding: 0.55rem 0.9rem;
-    gap: 0.5rem;
-    color: var(--cmp-color-text-default);
-    font: inherit;
-    font-weight: 600;
-    line-height: 1.25;
-    background: var(--cmp-color-background-default);
-    border: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.18);
-    border-radius: var(--cmp-border-radius);
-    cursor: pointer;
 }
 
-.cmp-auth__secondary-button:hover,
-.cmp-auth__secondary-button:focus-visible {
-    color: var(--cmp-color-logo-dark);
-    text-decoration: none;
-    background: var(--cmp-color-muted);
-    border-color: rgba(var(--cmp-color-rgb), 0.65);
+.cmp-auth__extra-icon {
+    display: inline-flex;
+    flex: 0 0 1.25rem;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1.25rem;
+    block-size: 1.25rem;
+    line-height: 1;
+}
+
+.cmp-auth__extra-icon > :is(img, svg) {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+}
+
+.cmp-auth__extra-icon > svg {
+    fill: currentColor;
 }
 
 .cmp-auth__actions {
@@ -5336,7 +5343,7 @@ body.is-authpage .cmp-section--component {
 }
 
 .cmp-auth__actions .controls,
-.cmp-auth__actions .uk-button {
+.cmp-auth__actions .cmp-button {
     inline-size: 100%;
 }
 

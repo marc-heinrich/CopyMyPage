@@ -1,15 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <config>
-  <!-- Eigener (leer) Platzhalter-Tab -->
   <fieldset
-    name="component"
-    label="COM_COPYMYPAGE"
-    description="COM_COPYMYPAGE_XML_DESCRIPTION">
+    name="page-metadata"
+    label="COM_COPYMYPAGE_FIELD_CONFIG_PAGE_METADATA_LABEL"
+    description="COM_COPYMYPAGE_FIELD_CONFIG_PAGE_METADATA_DESC">
     <field
-      name="placeholder_note"
-      type="note"
-      label="COM_COPYMYPAGE"
-      description="COM_COPYMYPAGE_XML_DESCRIPTION" />
+      name="meta_description"
+      type="textarea"
+      label="COM_COPYMYPAGE_FIELD_CONFIG_META_DESCRIPTION_LABEL"
+      description="COM_COPYMYPAGE_FIELD_CONFIG_META_DESCRIPTION_DESC"
+      default=""
+      rows="3"
+      cols="30"
+      maxlength="300"
+      charcounter="true"
+      class="uk-textarea"
+      filter="string" />
+    <field
+      name="meta_keywords"
+      type="textarea"
+      label="COM_COPYMYPAGE_FIELD_CONFIG_META_KEYWORDS_LABEL"
+      description="COM_COPYMYPAGE_FIELD_CONFIG_META_KEYWORDS_DESC"
+      default=""
+      rows="3"
+      cols="30"
+      class="uk-textarea"
+      filter="string" />
   </fieldset>
 
   <fieldset

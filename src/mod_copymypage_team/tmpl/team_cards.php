@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.15
+ * @since       0.0.17
  */
 
 \defined('_JEXEC') or die;
@@ -94,7 +94,7 @@ if ($headline === '') {
             <div
                 class="cmp-team__grid uk-child-width-1-1 uk-child-width-1-2@s uk-child-width-1-4@l uk-grid-column-small uk-grid-row-small uk-grid-match"
                 uk-grid
-                uk-scrollspy="target: > .cmp-team__item; cls: uk-animation-fade; delay: 120; repeat: false"
+                uk-scrollspy="target: > .cmp-team__item; cls: uk-animation-fade; delay: 160; repeat: true"
             >
                 <?php foreach ($items as $item) : ?>
                     <?php
