@@ -57,6 +57,22 @@
       cols="30" />
   </fieldset>
 
+  <fieldset
+    name="ticket-sales"
+    label="COM_COPYMYPAGE_FIELD_CONFIG_TICKET_SALES_LABEL"
+    description="COM_COPYMYPAGE_FIELD_CONFIG_TICKET_SALES_DESC">
+    <field
+      name="ticket_reservation_minutes"
+      type="number"
+      label="COM_COPYMYPAGE_FIELD_CONFIG_TICKET_RESERVATION_MINUTES_LABEL"
+      description="COM_COPYMYPAGE_FIELD_CONFIG_TICKET_RESERVATION_MINUTES_DESC"
+      default="15"
+      min="5"
+      max="60"
+      step="1"
+      filter="integer" />
+  </fieldset>
+
   <!-- Standard-Reiter "Berechtigungen" -->
   <fieldset
     name="permissions"

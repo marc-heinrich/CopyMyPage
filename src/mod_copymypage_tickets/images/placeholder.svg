@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Veranstaltungsticket</title>
+  <desc id="desc">Abstrakte Illustration eines Tickets mit Konfetti</desc>
+  <rect width="1600" height="900" fill="#f5f7fb"/>
+  <circle cx="196" cy="168" r="92" fill="#c4f4f5"/>
+  <circle cx="1410" cy="734" r="126" fill="#c4f4f5"/>
+  <path d="M120 690l68-68 68 68-68 68zM1324 126l52-52 52 52-52 52z" fill="#04cbd0" opacity=".72"/>
+  <path d="M326 106l24 70M1264 238l70 24M288 784l76-18M1168 756l38 66" fill="none" stroke="#061225" stroke-linecap="round" stroke-width="20" opacity=".18"/>
+  <g transform="translate(312 210)">
+    <path d="M80 0h816c0 60 48 108 108 108v264c-60 0-108 48-108 108H80C80 420 32 372-28 372V108C32 108 80 60 80 0z" fill="#061225"/>
+    <path d="M622 0v480" fill="none" stroke="#04cbd0" stroke-dasharray="22 22" stroke-width="8" opacity=".78"/>
+    <circle cx="302" cy="206" r="104" fill="#04cbd0"/>
+    <path d="M260 206l30 30 62-70" fill="none" stroke="#061225" stroke-linecap="round" stroke-linejoin="round" stroke-width="28"/>
+    <path d="M716 148h124M716 216h156M716 284h100" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="22" opacity=".92"/>
+  </g>
+</svg>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form addfieldprefix="Joomla\Plugin\System\CopyMyPage\Field">
+  <fieldset
+    name="copymypage_seating"
+    label="PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_TAB_LABEL"
+  >
+    <field
+      name="copymypage_event_seating"
+      type="Eventseating"
+      label="PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_FIELD_LABEL"
+      description="PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_FIELD_DESC"
+    />
+  </fieldset>
+</form>

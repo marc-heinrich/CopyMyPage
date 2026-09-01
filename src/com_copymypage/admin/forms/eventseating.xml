@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form addfieldprefix="Joomla\Component\CopyMyPage\Administrator\Field">
+  <fieldset name="seating">
+    <field
+      name="definition"
+      type="Bundledlayout"
+      label="COM_COPYMYPAGE_EVENT_SEATING_FIELD_DEFINITION_LABEL"
+      description="COM_COPYMYPAGE_EVENT_SEATING_FIELD_DEFINITION_DESC"
+      required="true"
+      validate="options"
+    >
+      <option value="">COM_COPYMYPAGE_EVENT_SEATING_FIELD_DEFINITION_SELECT</option>
+    </field>
+    <field
+      name="layout_id"
+      type="Seatlayout"
+      label="COM_COPYMYPAGE_EVENT_SEATING_FIELD_LAYOUT_LABEL"
+      description="COM_COPYMYPAGE_EVENT_SEATING_FIELD_LAYOUT_DESC"
+      required="true"
+      validate="options"
+    >
+      <option value="">COM_COPYMYPAGE_EVENT_SEATING_FIELD_LAYOUT_SELECT</option>
+    </field>
+  </fieldset>
+</form>

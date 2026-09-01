@@ -1,14 +1,16 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.18",
+  "version": "0.0.19",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
+  "namespace": "Joomla\\Component\\CopyMyPage\\Site\\WebAsset\\AssetItem",
   "assets": [
     {
       "name": "core",
       "type": "script",
       "class": "CoreAssetItem",
+      "namespace": "Joomla\\CMS\\WebAsset\\AssetItem",
       "uri": "system/core.min.js",
       "attributes": {
         "defer": true
@@ -26,7 +28,7 @@
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.min.css",
-      "version": "0.0.18",
+      "version": "0.0.19",
       "dependencies": [
         "uikit",
         "template.fonts"
@@ -151,6 +153,88 @@
         "core",
         "isotope"
       ]
+    },
+    {
+      "name": "copymypage.tickets",
+      "type": "preset",
+      "dependencies": [
+        "swiper#style",
+        "copymypage.tickets#script"
+      ]
+    },
+    {
+      "name": "copymypage.tickets",
+      "type": "script",
+      "class": "TicketsAssetItem",
+      "uri": "com_copymypage/copymypage-tickets.min.js",
+      "version": "0.0.19",
+      "dependencies": [
+        "core",
+        "swiper"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.ticket-cart",
+      "type": "script",
+      "class": "TicketCartAssetItem",
+      "uri": "com_copymypage/copymypage-ticket-cart.min.js",
+      "version": "0.0.19",
+      "dependencies": [
+        "core",
+        "uikit",
+        "uikit.icons",
+        "copymypage.modal.dialogs"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.ticket-seats",
+      "type": "script",
+      "class": "TicketSeatsAssetItem",
+      "uri": "com_copymypage/copymypage-seat-selection.min.js",
+      "version": "0.0.19",
+      "dependencies": [
+        "core",
+        "uikit",
+        "uikit.icons"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.customer-data",
+      "type": "script",
+      "class": "CustomerDataAssetItem",
+      "uri": "com_copymypage/copymypage-customer-data.min.js",
+      "version": "0.0.19",
+      "dependencies": [
+        "core",
+        "keepalive",
+        "form.validate",
+        "copymypage.profile.address"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.order-review",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-order-review.min.js",
+      "version": "0.0.19",
+      "dependencies": [
+        "core",
+        "copymypage.content.drawer"
+      ],
+      "attributes": {
+        "defer": true
+      }
     },
     {
       "name": "copymypage.alertbar",
@@ -361,6 +445,21 @@
       "dependencies": [
         "uikit"
       ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "swiper",
+      "type": "style",
+      "uri": "com_copymypage/swiper/swiper-bundle.min.css",
+      "version": "14.1.0"
+    },
+    {
+      "name": "swiper",
+      "type": "script",
+      "uri": "com_copymypage/swiper/swiper-bundle.min.js",
+      "version": "14.1.0",
       "attributes": {
         "defer": true
       }

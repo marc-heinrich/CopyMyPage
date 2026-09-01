@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form>
+  <fields name="params">
+    <fieldset name="task_params">
+      <field
+        name="timeout_minutes"
+        type="number"
+        label="PLG_TASK_COPYMYPAGE_TIMEOUT_MINUTES_LABEL"
+        description="PLG_TASK_COPYMYPAGE_TIMEOUT_MINUTES_DESC"
+        default="60"
+        min="15"
+        max="1440"
+        step="5"
+        filter="uint"
+        validate="number"
+      />
+      <field
+        name="batch_size"
+        type="number"
+        label="PLG_TASK_COPYMYPAGE_BATCH_SIZE_LABEL"
+        description="PLG_TASK_COPYMYPAGE_BATCH_SIZE_DESC"
+        default="50"
+        min="1"
+        max="500"
+        step="1"
+        filter="uint"
+        validate="number"
+      />
+      <field
+        name="dry_run"
+        type="radio"
+        label="PLG_TASK_COPYMYPAGE_DRY_RUN_LABEL"
+        description="PLG_TASK_COPYMYPAGE_DRY_RUN_DESC"
+        layout="joomla.form.field.radio.switcher"
+        default="0"
+        filter="uint"
+      >
+        <option value="0">JNO</option>
+        <option value="1">JYES</option>
+      </field>
+    </fieldset>
+  </fields>
+</form>

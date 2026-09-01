@@ -15,8 +15,11 @@ use Joomla\CMS\Extension\ComponentInterface;
 use Joomla\CMS\Extension\Service\Provider\ComponentDispatcherFactory;
 use Joomla\CMS\Extension\Service\Provider\MVCFactory;
 use Joomla\CMS\Extension\Service\Provider\RouterFactory;
+use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\Component\CopyMyPage\Administrator\Extension\CopyMyPageComponent;
+use Joomla\Component\CopyMyPage\Site\Service\EventSeatInventoryService;
+use Joomla\Component\CopyMyPage\Site\Service\SeatLayoutService;
 use Joomla\Database\DatabaseInterface;
 use Joomla\DI\Container;
 use Joomla\DI\ServiceProviderInterface;
@@ -32,6 +35,34 @@ return new class () implements ServiceProviderInterface
      */
     public function register(Container $container): void
     {
+        // Administrator models and custom fields resolve shared domain services
+        // from Joomla's root container, while component providers themselves
+        // are registered in an extension container.
+        $rootContainer = Factory::getContainer();
+
+        if (!$rootContainer->has(SeatLayoutService::class)) {
+            $rootContainer->share(
+                SeatLayoutService::class,
+                static fn(Container $container): SeatLayoutService => new SeatLayoutService(
+                    $container->get(DatabaseInterface::class),
+                    JPATH_SITE . '/components/com_copymypage/data/seat-layouts'
+                ),
+                true
+            );
+        }
+
+        if (!$rootContainer->has(EventSeatInventoryService::class)) {
+            $rootContainer->share(
+                EventSeatInventoryService::class,
+                static fn(Container $container): EventSeatInventoryService
+                    => new EventSeatInventoryService(
+                        $container->get(DatabaseInterface::class),
+                        $container->get(SeatLayoutService::class)
+                    ),
+                true
+            );
+        }
+
         // Register the dispatcher factory for com_copymypage.
         $container->registerServiceProvider(
             new ComponentDispatcherFactory('\\Joomla\\Component\\CopyMyPage')

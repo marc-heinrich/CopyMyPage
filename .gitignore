@@ -22,6 +22,7 @@ cache/
 
 # Local agent instructions
 AGENTS.md
+DESIGN.md
 docs/UI_STYLE_GUIDE.md
 
 # Local-only media & design drafts

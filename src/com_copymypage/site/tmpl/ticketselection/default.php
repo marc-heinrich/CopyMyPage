@@ -1,0 +1,303 @@
+<?php
+/**
+ * @package     Joomla.Site
+ * @subpackage  Components.CopyMyPage
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
+ * @license     GNU General Public License version 3 or later
+ * @since       0.0.19
+ */
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Layout\LayoutHelper;
+use Joomla\CMS\Router\Route;
+
+/** @var \Joomla\Component\CopyMyPage\Site\View\Ticketselection\HtmlView $this */
+
+$escape         = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$validAttribute = static function (mixed $value): string {
+    $value = strtolower(trim((string) $value));
+
+    return preg_match('/^data-[a-z0-9-]+$/', $value) ? $value : '';
+};
+$validFieldName = static function (mixed $value): string {
+    $value = trim((string) $value);
+
+    return preg_match('/^[A-Za-z][A-Za-z0-9_]*$/', $value) ? $value : '';
+};
+$attributes = [];
+
+foreach ($this->markupAttributes as $key => $attribute) {
+    $attributes[$key] = $validAttribute($attribute);
+}
+
+$revisionField = $validFieldName($this->formFieldNames['expectedCartRevision'] ?? '');
+$cartRevision  = max(0, (int) ($this->cart['cartRevision'] ?? 0));
+
+$reserveAction = Route::_('index.php?option=com_copymypage&task=ticketcart.reserve');
+$basketUrl     = Route::_('index.php?option=com_copymypage&view=basket');
+$seatsUrl      = Route::_('index.php?option=com_copymypage&view=seatselection');
+$canContinue   = !empty($this->cart['continuable']);
+?>
+<main
+    class="cmp-ticket-selection"
+    <?php if (($attributes['root'] ?? '') !== '') : ?>
+        <?php echo $attributes['root']; ?>="1"
+    <?php endif; ?>
+>
+    <div class="uk-container">
+        <h1 class="visually-hidden">
+            <?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_TITLE')); ?>
+        </h1>
+
+        <?php echo LayoutHelper::render(
+            'copymypage.tickets.steps',
+            [
+                'activeStep' => 1,
+                'totalSteps' => 5,
+            ]
+        ); ?>
+
+        <?php if ($this->events === []) : ?>
+            <div class="cmp-ticket-selection__notice" role="status">
+                <span uk-icon="icon: info" aria-hidden="true"></span>
+                <p><?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_EMPTY')); ?></p>
+            </div>
+        <?php else : ?>
+            <section
+                class="cmp-ticket-selection__events"
+                aria-labelledby="cmp-ticket-selection-events-title"
+            >
+                <h2 id="cmp-ticket-selection-events-title" class="cmp-ticket-selection__section-title">
+                    <?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_EVENTS_TITLE')); ?>
+                </h2>
+                <p class="cmp-seat-selection__intro">
+                    <?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_INTRO')); ?>
+                </p>
+
+                <ul
+                    class="uk-accordion-default cmp-ticket-selection__accordion"
+                    uk-accordion="targets: > .cmp-ticket-selection-event--bookable; collapsible: true; multiple: false"
+                >
+                    <?php foreach ($this->events as $event) : ?>
+                        <?php
+                        $eventId      = max(0, (int) ($event['id'] ?? 0));
+                        $availability = \is_array($event['availability'] ?? null)
+                            ? $event['availability']
+                            : [];
+                        $status = preg_replace(
+                            '/[^a-z-]/',
+                            '',
+                            strtolower((string) ($availability['status'] ?? 'unavailable'))
+                        ) ?: 'unavailable';
+                        $prices     = \is_array($event['prices'] ?? null) ? $event['prices'] : [];
+                        $canReserve = !empty($event['canReserve']);
+                        $hasSelectedQuantity = false;
+
+                        foreach ($prices as $price) {
+                            if (max(0, (int) ($price['quantity'] ?? 0)) > 0) {
+                                $hasSelectedQuantity = true;
+
+                                break;
+                            }
+                        }
+
+                        $isOpen     = $canReserve && $eventId === $this->selectedEventId;
+                        $anchorId   = trim((string) ($event['anchorId'] ?? ''));
+
+                        if (!preg_match('/^[A-Za-z][A-Za-z0-9_-]*$/', $anchorId)) {
+                            $anchorId = 'cmp-ticket-selection-event-' . $eventId;
+                        }
+
+                        $titleId    = 'cmp-ticket-selection-event-title-' . $eventId;
+                        $formId     = 'cmp-ticket-selection-form-' . $eventId;
+                        ?>
+                        <li
+                            id="<?php echo $escape($anchorId); ?>"
+                            class="cmp-ticket-selection-event<?php echo $canReserve ? ' cmp-ticket-selection-event--bookable' : ''; ?><?php echo $isOpen ? ' uk-open' : ''; ?>"
+                            <?php if (($attributes['event'] ?? '') !== '') : ?>
+                                <?php echo $attributes['event']; ?>
+                            <?php endif; ?>
+                            <?php if (($attributes['eventId'] ?? '') !== '') : ?>
+                                <?php echo $attributes['eventId']; ?>="<?php echo $eventId; ?>"
+                            <?php endif; ?>
+                        >
+                            <?php if ($canReserve) : ?>
+                                <a class="uk-accordion-title cmp-ticket-selection-event__toggle" href="#">
+                            <?php else : ?>
+                                <div class="cmp-ticket-selection-event__toggle">
+                            <?php endif; ?>
+                                <span class="cmp-ticket-selection-event__summary">
+                                    <time
+                                        class="cmp-ticket-selection-event__date"
+                                        datetime="<?php echo $escape($event['dateTime'] ?? ''); ?>"
+                                    >
+                                        <?php echo $escape($event['dateLabel'] ?? ''); ?>
+                                    </time>
+                                    <span
+                                        id="<?php echo $escape($titleId); ?>"
+                                        class="cmp-ticket-selection-event__title"
+                                    >
+                                        <?php echo $escape($event['title'] ?? ''); ?>
+                                    </span>
+                                    <span class="cmp-ticket-selection-event__availability">
+                                        <span
+                                            class="cmp-ticket-selection-event__status-dot
+                                                cmp-ticket-selection-event__status-dot--<?php echo $escape($status); ?>"
+                                            aria-hidden="true"
+                                        ></span>
+                                        <span
+                                            <?php if (($attributes['eventStatus'] ?? '') !== '') : ?>
+                                                <?php echo $attributes['eventStatus']; ?>
+                                            <?php endif; ?>
+                                        >
+                                            <?php echo $escape($availability['statusLabel'] ?? ''); ?>
+                                        </span>
+                                    </span>
+                                </span>
+                                <?php if ($canReserve) : ?>
+                                    <span
+                                        class="cmp-ticket-selection-event__icon"
+                                        uk-accordion-icon
+                                        aria-hidden="true"
+                                    ></span>
+                                <?php endif; ?>
+                            <?php if ($canReserve) : ?>
+                                </a>
+                            <?php else : ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if ($canReserve) : ?>
+                                <div class="uk-accordion-content cmp-ticket-selection-event__content">
+                                    <form
+                                        id="<?php echo $escape($formId); ?>"
+                                        class="cmp-form cmp-ticket-selection-event__form"
+                                        action="<?php echo $escape($reserveAction); ?>"
+                                        method="post"
+                                        aria-labelledby="<?php echo $escape($titleId); ?>"
+                                        <?php if (($attributes['eventForm'] ?? '') !== '') : ?>
+                                            <?php echo $attributes['eventForm']; ?>
+                                        <?php endif; ?>
+                                    >
+                                        <fieldset class="uk-fieldset cmp-ticket-selection-event__fieldset">
+                                            <legend class="visually-hidden">
+                                                <?php echo $escape(Text::sprintf(
+                                                    'COM_COPYMYPAGE_TICKET_SELECTION_FORM_LEGEND',
+                                                    $event['title'] ?? ''
+                                                )); ?>
+                                            </legend>
+
+                                            <div class="cmp-ticket-selection-event__prices">
+                                                <?php foreach ($prices as $price) : ?>
+                                                    <?php
+                                                    $priceIndex = max(0, (int) ($price['index'] ?? 0));
+                                                    $quantity   = max(0, (int) ($price['quantity'] ?? 0));
+                                                    $limit      = max(0, (int) ($price['limit'] ?? 0));
+                                                    $inputId    = 'cmp-ticket-quantity-' . $eventId . '-' . $priceIndex;
+                                                    ?>
+                                                    <div class="control-group cmp-ticket-selection-price">
+                                                        <div class="control-label">
+                                                            <label for="<?php echo $escape($inputId); ?>">
+                                                                <span class="cmp-ticket-selection-price__label">
+                                                                    <?php echo $escape($price['label'] ?? ''); ?>
+                                                                </span>
+                                                                <span class="cmp-ticket-selection-price__price">
+                                                                    <?php echo $escape($price['formattedPrice'] ?? ''); ?>
+                                                                </span>
+                                                            </label>
+                                                        </div>
+                                                        <div class="controls">
+                                                            <input
+                                                                id="<?php echo $escape($inputId); ?>"
+                                                                class="uk-input form-control cmp-ticket-selection-price__quantity"
+                                                                type="number"
+                                                                name="quantities[<?php echo $priceIndex; ?>]"
+                                                                value="<?php echo $quantity; ?>"
+                                                                min="0"
+                                                                max="<?php echo $limit; ?>"
+                                                                step="1"
+                                                                inputmode="numeric"
+                                                                <?php echo !$canReserve || $limit < 1 ? ' disabled' : ''; ?>
+                                                                <?php if (($attributes['quantity'] ?? '') !== '') : ?>
+                                                                    <?php echo $attributes['quantity']; ?>
+                                                                <?php endif; ?>
+                                                            >
+                                                            <?php if (trim((string) ($price['description'] ?? '')) !== '') : ?>
+                                                                <small class="form-text">
+                                                                    <?php echo $escape($price['description']); ?>
+                                                                </small>
+                                                            <?php endif; ?>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </fieldset>
+
+                                        <input type="hidden" name="event_id" value="<?php echo $eventId; ?>">
+                                        <?php if ($revisionField !== '') : ?>
+                                            <input
+                                                type="hidden"
+                                                name="<?php echo $escape($revisionField); ?>"
+                                                value="<?php echo $cartRevision; ?>"
+                                                <?php if (($attributes['revisionField'] ?? '') !== '') : ?>
+                                                    <?php echo $attributes['revisionField']; ?>
+                                                <?php endif; ?>
+                                            >
+                                        <?php endif; ?>
+                                        <?php echo HTMLHelper::_('form.token'); ?>
+
+                                        <div class="cmp-form__actions cmp-ticket-selection-event__actions">
+                                            <button
+                                                class="uk-button uk-button-primary cmp-button cmp-button--primary"
+                                                type="submit"
+                                                <?php echo !$canReserve || !$hasSelectedQuantity ? ' disabled' : ''; ?>
+                                            >
+                                                <span uk-icon="icon: cart" aria-hidden="true"></span>
+                                                <span><?php echo $escape($event['submitLabel'] ?? ''); ?></span>
+                                            </button>
+
+                                            <a
+                                                class="cmp-ticket-selection-event__cart-link"
+                                                href="<?php echo $escape($basketUrl); ?>"
+                                                aria-haspopup="dialog"
+                                                data-cmp-content-drawer="basket"
+                                                data-cmp-drawer-title="<?php echo $escape(Text::_('COM_COPYMYPAGE_BASKET_TITLE')); ?>"
+                                                data-cmp-drawer-transport="document"
+                                            >
+                                                <?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_CART_VIEW')); ?>
+                                            </a>
+                                        </div>
+                                    </form>
+                                </div>
+                            <?php endif; ?>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+
+                <div class="cmp-ticket-selection__actions">
+                    <a
+                        class="uk-button uk-button-primary cmp-button cmp-button--primary"
+                        <?php if ($canContinue) : ?>
+                            href="<?php echo $escape($seatsUrl); ?>"
+                            target="_top"
+                        <?php else : ?>
+                            aria-disabled="true"
+                            disabled
+                            tabindex="-1"
+                        <?php endif; ?>
+                        data-cmp-ticket-selection-continue-url="<?php echo $escape($seatsUrl); ?>"
+                        <?php if (($attributes['continue'] ?? '') !== '') : ?>
+                            <?php echo $attributes['continue']; ?>="1"
+                        <?php endif; ?>
+                    >
+                        <span><?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_CONTINUE')); ?></span>
+                        <span uk-icon="icon: chevron-right" aria-hidden="true"></span>
+                    </a>
+                </div>
+            </section>
+        <?php endif; ?>
+    </div>
+</main>

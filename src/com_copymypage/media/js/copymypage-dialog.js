@@ -1,9 +1,9 @@
 ﻿/**
  * @package     Joomla.Site
  * @subpackage  Components.CopyMyPage
- * @copyright   (C) 2026 Open Source Matters, Inc.
+ * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.6
+ * @since       0.0.16
  */
 
 window.CopyMyPageModal = window.CopyMyPageModal || {};

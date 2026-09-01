@@ -45,7 +45,7 @@ abstract class CopyMyPageHelper
         ],
         'tickets' => [
             'label'   => 'TPL_COPYMYPAGE_MODULE_TICKETS',
-            'hasMeta' => false,
+            'hasMeta' => true,
         ],
         'contact' => [
             'label'   => 'TPL_COPYMYPAGE_MODULE_CONTACT',

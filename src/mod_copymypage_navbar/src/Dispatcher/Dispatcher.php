@@ -23,6 +23,7 @@ use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Component\CopyMyPage\Site\Service\AccountMenuProvider;
+use Joomla\Component\CopyMyPage\Site\Service\TicketReservationService;
 
 /**
  * Dispatcher class for mod_copymypage_navbar.
@@ -104,6 +105,7 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
              * @var array<int, object>                             $list
              * @var array<int, object>                             $navItems
              * @var array<string, mixed>                           $accountMenu
+             * @var array<string, mixed>                           $ticketCart
              * @var bool                                           $isOnepage
              * @var string                                         $activeSlot
              * @var string                                         $slot
@@ -127,6 +129,12 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         parent::loadLanguage();
 
         CopyMyPageHelper::loadSharedUiLanguages($this->app->getLanguage());
+        $this->app->getLanguage()->load(
+            'com_copymypage',
+            JPATH_SITE . '/components/com_copymypage',
+            null,
+            true
+        );
     }
 
     /**
@@ -260,6 +268,11 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $data['list']            = [];
         $data['navItems']        = [];
         $data['accountMenu']     = [];
+        $data['ticketCart']      = [
+            'active'           => false,
+            'expiresAt'        => '',
+            'markupAttributes' => [],
+        ];
         $data['warning']         = '';
 
         $option  = $data['input']->getCmd('option', '');
@@ -307,6 +320,22 @@ class Dispatcher extends AbstractModuleDispatcher implements HelperFactoryAwareI
         $displayData['accountMenu'] = Factory::getContainer()
             ->get(AccountMenuProvider::class)
             ->getMenu($displayData['app']);
+
+        if ($this->slot === 'navbar') {
+            try {
+                $ticketService  = Factory::getContainer()->get(TicketReservationService::class);
+                $indicatorState = $ticketService->getBasketIndicatorState();
+
+                $displayData['ticketCart'] = [
+                    'active'           => !empty($indicatorState['active']),
+                    'expiresAt'        => (string) ($indicatorState['expiresAt'] ?? ''),
+                    'markupAttributes' => $ticketService->getMarkupAttributes(),
+                ];
+            } catch (\Throwable) {
+                // Keep the basket icon available even when its optional state cannot be loaded.
+            }
+        }
+
         $displayData['navigationState'] = $helper->getNavigationState(
             $list,
             $active,

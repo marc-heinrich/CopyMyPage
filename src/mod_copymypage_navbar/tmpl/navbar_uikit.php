@@ -30,6 +30,7 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
  *
  * @var array<int, object> $list
  * @var array<string, mixed> $accountMenu
+ * @var array<string, mixed> $ticketCart
  * @var array<int, int>    $path
  * @var object             $active
  * @var int                $active_id
@@ -41,6 +42,11 @@ use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 
 // Closure for escaping output.
 $escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+$validDataAttribute = static function (mixed $value): string {
+    $value = strtolower(trim((string) $value));
+
+    return preg_match('/^data-[a-z0-9-]+$/', $value) ? $value : '';
+};
 
 // Read only the config keys used by this layout.
 // For type normalization (boolean or integer), use the component helper class CopyMyPage.
@@ -59,6 +65,18 @@ $finderLabel            = Text::_('JSEARCH_FILTER_SUBMIT');
 $logoHref               = $isOnepage ? '#top' : $onepageBase;
 $navigationState        = is_array($navigationState ?? null) ? $navigationState : [];
 $accountMenu            = is_array($accountMenu ?? null) ? $accountMenu : [];
+$ticketCart             = is_array($ticketCart ?? null) ? $ticketCart : [];
+$ticketMarkupAttributes = is_array($ticketCart['markupAttributes'] ?? null)
+    ? $ticketCart['markupAttributes']
+    : [];
+$basketIndicatorAttribute       = $validDataAttribute($ticketMarkupAttributes['basketIndicator'] ?? '');
+$basketIndicatorExpiryAttribute = $validDataAttribute(
+    $ticketMarkupAttributes['basketIndicatorExpiry'] ?? ''
+);
+$basketIndicatorState           = !empty($ticketCart['active']) ? 'active' : 'empty';
+$basketIndicatorExpiresAt       = $basketIndicatorState === 'active'
+    ? trim((string) ($ticketCart['expiresAt'] ?? ''))
+    : '';
 $accountItems           = is_array($accountMenu['items'] ?? null) ? $accountMenu['items'] : [];
 $isAuthenticated        = !(bool) ($accountMenu['guest'] ?? true);
 $accountAction          = $isAuthenticated
@@ -152,8 +170,10 @@ if (!isset($navbarHelper) || !$navbarHelper instanceof \Joomla\Module\CopyMyPage
 if (isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
     /** @var \Joomla\CMS\WebAsset\WebAssetManager $wa */
     $wa = $app->getDocument()->getWebAssetManager();
+    $wa->getRegistry()->addExtensionRegistryFile('com_copymypage');
     $wa->useScript('mburger');
     $wa->useScript('copymypage.dropdown');
+    $wa->useScript('copymypage.ticket-cart');
 }
 
 if (!empty($warning)) {
@@ -481,7 +501,17 @@ if (!empty($warning)) {
                             data-cmp-drawer-title="<?php echo $escape($basketTitle); ?>"
                             data-cmp-drawer-transport="document"
                         >
-                            <span uk-icon="cart" aria-hidden="true"></span>
+                            <span
+                                class="cmp-navbar-basket-icon"
+                                uk-icon="cart"
+                                aria-hidden="true"
+                                <?php if ($basketIndicatorAttribute !== '') : ?>
+                                    <?php echo $basketIndicatorAttribute; ?>="<?php echo $basketIndicatorState; ?>"
+                                <?php endif; ?>
+                                <?php if ($basketIndicatorExpiryAttribute !== '' && $basketIndicatorExpiresAt !== '') : ?>
+                                    <?php echo $basketIndicatorExpiryAttribute; ?>="<?php echo $escape($basketIndicatorExpiresAt); ?>"
+                                <?php endif; ?>
+                            ></span>
                         </a>
 
                         <!-- Desktop: icon nav (use uk-navbar-nav so dropdown uses navbar positioning) -->
@@ -546,7 +576,17 @@ if (!empty($warning)) {
                                         data-cmp-drawer-title="<?php echo $escape($basketTitle); ?>"
                                         data-cmp-drawer-transport="document"
                                     >
-                                        <span uk-icon="icon: cart" aria-hidden="true"></span>
+                                        <span
+                                            class="cmp-navbar-basket-icon"
+                                            uk-icon="icon: cart"
+                                            aria-hidden="true"
+                                            <?php if ($basketIndicatorAttribute !== '') : ?>
+                                                <?php echo $basketIndicatorAttribute; ?>="<?php echo $basketIndicatorState; ?>"
+                                            <?php endif; ?>
+                                            <?php if ($basketIndicatorExpiryAttribute !== '' && $basketIndicatorExpiresAt !== '') : ?>
+                                                <?php echo $basketIndicatorExpiryAttribute; ?>="<?php echo $escape($basketIndicatorExpiresAt); ?>"
+                                            <?php endif; ?>
+                                        ></span>
                                     </a>
                                 </li>
                             </ul>

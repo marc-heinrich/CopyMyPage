@@ -38,7 +38,11 @@ $viewClass = 'cmp-gallery-view';
                 </p>
             <?php endif; ?>
 
-            <a class="cmp-gallery-view__back" href="<?php echo $escape($this->backUrl); ?>">
+            <a
+                class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--back cmp-gallery-view__back"
+                href="<?php echo $escape($this->backUrl); ?>"
+            >
+                <span uk-icon="icon: chevron-left" aria-hidden="true"></span>
                 <span><?php echo $escape(Text::_('COM_COPYMYPAGE_VIEW_GALLERY_BACKBUTTON')); ?></span>
             </a>
         </div>

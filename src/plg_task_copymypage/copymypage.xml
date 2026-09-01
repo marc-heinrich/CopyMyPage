@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="task" method="upgrade">
+  <name>plg_task_copymypage</name>
+  <author>Marc Heinrich</author>
+  <creationDate>2026-09-01</creationDate>
+  <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
+  <license>GNU General Public License version 3 or later</license>
+  <version>0.0.19</version>
+  <description>PLG_TASK_COPYMYPAGE_XML_DESCRIPTION</description>
+  <namespace path="src">Joomla\Plugin\Task\CopyMyPage</namespace>
+  <files>
+    <folder>forms</folder>
+    <folder>language</folder>
+    <folder plugin="copymypage">services</folder>
+    <folder>src</folder>
+  </files>
+</extension>

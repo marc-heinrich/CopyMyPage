@@ -20,13 +20,13 @@ use Joomla\DI\ServiceProviderInterface;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Database\ParameterType;
 use Joomla\Filesystem\File;
-use Joomla\Filesystem\Folder;
 use Joomla\Filesystem\Path;
+use Joomla\Registry\Registry;
 
 /**
  * CopyMyPage Service Provider + Installer Script
  *
- * Registers the installer callbacks, copies shared library files and
+ * Registers the installer callbacks, removes legacy shared-library files and
  * provisions the component-owned account menu without overwriting edits.
  *
  * @since 0.0.1
@@ -48,11 +48,14 @@ return new class () implements ServiceProviderInterface
             InstallerScriptInterface::class,
             new class () implements InstallerScriptInterface
             {
-                /**
-                 * Files to be copied or deleted.
-                 */
-                protected array $files = [];          
-                
+                private const TERMS_ARTICLE_ALIAS = 'allgemeine-geschaeftsbedingungen';
+
+                private const TERMS_ARTICLE_NOTE = 'system: com_copymypage ticket-terms';
+
+                private const TERMS_CATEGORY_ALIAS = 'copymypage-legal';
+
+                private const TERMS_PLACEHOLDER_HTML = '<p>Allgemeine Geschäftsbedingungen Test</p>';
+
                 /**
                  * Runs before install/update/discover_install.
                  */
@@ -90,81 +93,69 @@ return new class () implements ServiceProviderInterface
                  */
                 public function postflight(string $type, InstallerAdapter $adapter): bool
                 {
-                    $manifest = $adapter->getManifest();
+                    $this->removeLegacyWebAssetItems();
 
-                    // Search for the correct 'files' node containing the file list.
-                    if (isset($manifest->files)) {
-                        foreach ($manifest->files as $fileGroup) {
-                            
-                            // Ensure the 'folder' attribute exists.
-                            if (isset($fileGroup->attributes()->folder)) {
-                                foreach ($fileGroup->filename as $file) {
-                                    $fileName    = (string) $file;
-                                    $destination = (string) $file->attributes()->destination;
-
-                                    // Ensure destination is set.
-                                    if (!empty($destination)) {
-                                        $path['src']    = Path::clean($adapter->getParent()->getPath('source') . '/libraries/' . $fileName);
-                                        $path['dest']   = Path::clean(JPATH_ROOT . '/' . $destination . '/' . $fileName);
-                                        $this->files[]  = $path;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // If the operation is not an uninstallation, copy the files
-                    // and ensure the component-owned account navigation.
-                    if ($type !== 'uninstall') {
-                        if (!$this->copyFiles()) {
-                            return false;
-                        }
-
-                        if (\in_array($type, ['install', 'update', 'discover_install'], true)) {
-                            try {
-                                $this->ensureAccountMenu($adapter);
-                            } catch (\Throwable $exception) {
-                                Factory::getApplication()->enqueueMessage(
-                                    'CopyMyPage account menu setup failed: ' . $exception->getMessage(),
-                                    'warning'
-                                );
-                            } finally {
-                                $this->clearAccountMenuCaches();
-                            }
-
-                            try {
-                                $this->ensureAvatarField();
-                            } catch (\Throwable $exception) {
-                                Factory::getApplication()->enqueueMessage(
-                                    'CopyMyPage avatar field setup failed: ' . $exception->getMessage(),
-                                    'warning'
-                                );
-                            }
-                        }
-
+                    if ($type === 'uninstall') {
                         return true;
                     }
 
-                    // Otherwise, delete the files during uninstallation.
-                    return $this->deleteFiles();
-                }
-
-                /**
-                 * Copies the files listed in the manifest to their respective destinations.
-                 */
-                protected function copyFiles(): bool
-                {
-                    foreach ($this->files as $file) {
-                        $src  = $file['src'];
-                        $dest = $file['dest'];
-
-                        if (!file_exists(dirname($dest))) {
-                            Folder::create(dirname($dest));
+                    // Ensure the component-owned account navigation and avatar field.
+                    if (\in_array($type, ['install', 'update', 'discover_install'], true)) {
+                        try {
+                            $this->ensureAccountMenu($adapter);
+                        } catch (\Throwable $exception) {
+                            Factory::getApplication()->enqueueMessage(
+                                'CopyMyPage account menu setup failed: ' . $exception->getMessage(),
+                                'warning'
+                            );
+                        } finally {
+                            $this->clearAccountMenuCaches();
                         }
 
-                        if (!File::copy($src, $dest)) {
-                            Log::add(Text::sprintf('JLIB_INSTALLER_ERROR_COPY_FILE', $src, $dest), Log::WARNING, 'jerror');
-                            return false;
+                        try {
+                            $this->ensureAvatarField();
+                        } catch (\Throwable $exception) {
+                            Factory::getApplication()->enqueueMessage(
+                                'CopyMyPage avatar field setup failed: ' . $exception->getMessage(),
+                                'warning'
+                            );
+                        }
+
+                        try {
+                            $articleId = $this->ensureTermsArticle($adapter);
+
+                            if ($articleId <= 0) {
+                                throw new \RuntimeException(
+                                    'The CopyMyPage terms article could not be resolved.'
+                                );
+                            }
+
+                            $termsConfigured = $this->configureDPCalendarTerms($articleId);
+                            $articleUrl = 'index.php?option=com_content&task=article.edit&id=' . $articleId;
+
+                            Factory::getApplication()->enqueueMessage(
+                                'CopyMyPage terms article is ready. Review it before publication: '
+                                    . '<a href="' . $articleUrl . '">Edit article</a>.',
+                                'success'
+                            );
+
+                            if (!$termsConfigured) {
+                                Factory::getApplication()->enqueueMessage(
+                                    'DPCalendar has no default terms article yet. '
+                                        . 'Select the generated CopyMyPage article in the DPCalendar settings.',
+                                    'warning'
+                                );
+                            }
+                        } catch (\Throwable $exception) {
+                            Log::add(
+                                'CopyMyPage terms article setup failed: ' . $exception->getMessage(),
+                                Log::WARNING,
+                                'jerror'
+                            );
+                            Factory::getApplication()->enqueueMessage(
+                                'CopyMyPage terms article setup failed: ' . $exception->getMessage(),
+                                'warning'
+                            );
                         }
                     }
 
@@ -172,26 +163,413 @@ return new class () implements ServiceProviderInterface
                 }
 
                 /**
-                 * Deletes the files listed in the manifest during uninstallation.
+                 * Ensure that one reusable German terms article exists.
+                 *
+                 * Existing editorial content is preserved. Only an empty article or the
+                 * known local test placeholder is populated from the bundled starter text.
+                 *
+                 * @since  0.0.20
                  */
-                protected function deleteFiles(): bool
+                private function ensureTermsArticle(InstallerAdapter $adapter): int
                 {
-                    foreach ($this->files as $file) {
-                        $path = $file['dest'];
+                    $app     = Factory::getApplication();
+                    $db      = Factory::getContainer()->get(DatabaseInterface::class);
+                    $article = $this->findTermsArticle($db);
 
-                        if (is_dir($path)) {
-                            Folder::delete($path);
-                        } else {
-                            File::delete($path);
+                    if ($article) {
+                        $this->ensureTermsArticlePresentation($db, $article);
+                    }
+
+                    if ($article && !$this->isTermsPlaceholder($article)) {
+                        return (int) $article->id;
+                    }
+
+                    $termsHtml = $this->loadTermsTemplate($adapter);
+
+                    if ($article) {
+                        $record               = new \stdClass();
+                        $record->id           = (int) $article->id;
+                        $record->introtext    = $termsHtml;
+                        $record->fulltext     = '';
+                        $record->note         = self::TERMS_ARTICLE_NOTE;
+                        $record->modified     = Factory::getDate()->toSql();
+                        $record->modified_by  = (int) ($app->getIdentity()->id ?? 0);
+
+                        if (!$db->updateObject('#__content', $record, 'id')) {
+                            throw new \RuntimeException(
+                                'The existing CopyMyPage terms placeholder could not be populated.'
+                            );
                         }
 
-                        if (file_exists($path)) {
-                            Log::add(Text::sprintf('JLIB_INSTALLER_ERROR_DELETE_FILE', $path), Log::WARNING, 'jerror');
-                            return false;
+                        return (int) $article->id;
+                    }
+
+                    $categoryId  = $this->ensureTermsCategory($db);
+                    $articleModel = $app->bootComponent('com_content')
+                        ->getMVCFactory()
+                        ->createModel('Article', 'Administrator', ['ignore_request' => true]);
+                    $createdBy   = (int) ($app->getIdentity()->id ?? 0);
+                    $now         = Factory::getDate()->toSql();
+                    $articleData = [
+                        'id'               => 0,
+                        'title'            => 'Allgemeine Geschäftsbedingungen',
+                        'alias'            => self::TERMS_ARTICLE_ALIAS,
+                        'introtext'        => $termsHtml,
+                        'fulltext'         => '',
+                        'state'            => 1,
+                        'catid'            => $categoryId,
+                        'created'          => $now,
+                        'created_by'       => $createdBy,
+                        'created_by_alias' => 'CopyMyPage',
+                        'publish_up'       => $now,
+                        'access'           => 1,
+                        'language'         => 'de-DE',
+                        'note'             => self::TERMS_ARTICLE_NOTE,
+                        'featured'         => 0,
+                        'images'           => [
+                            'image_intro'            => '',
+                            'image_intro_alt'        => '',
+                            'float_intro'            => '',
+                            'image_intro_caption'    => '',
+                            'image_fulltext'         => '',
+                            'image_fulltext_alt'     => '',
+                            'float_fulltext'         => '',
+                            'image_fulltext_caption' => '',
+                        ],
+                        'urls' => [
+                            'urla'      => '',
+                            'urlatext'  => '',
+                            'targeta'   => '',
+                            'urlb'      => '',
+                            'urlbtext'  => '',
+                            'targetb'   => '',
+                            'urlc'      => '',
+                            'urlctext'  => '',
+                            'targetc'   => '',
+                        ],
+                        'attribs' => json_encode(
+                            [
+                                'show_title'           => 1,
+                                'link_titles'          => 0,
+                                'show_intro'           => 1,
+                                'show_category'        => 0,
+                                'show_author'          => 0,
+                                'show_create_date'     => 0,
+                                'show_modify_date'     => 1,
+                                'show_publish_date'    => 0,
+                                'show_hits'            => 0,
+                                'show_item_navigation' => 0,
+                            ],
+                            JSON_UNESCAPED_SLASHES
+                        ),
+                        'metadata' => json_encode(
+                            [
+                                'robots' => 'noindex, follow',
+                                'author' => '',
+                                'rights' => '',
+                            ],
+                            JSON_UNESCAPED_SLASHES
+                        ),
+                    ];
+
+                    if (!$articleModel || !$articleModel->save($articleData)) {
+                        $error = $articleModel ? $articleModel->getError() : '';
+
+                        throw new \RuntimeException(
+                            'The CopyMyPage terms article could not be saved. ' . (string) $error
+                        );
+                    }
+
+                    $articleId = (int) $articleModel->getState('article.id');
+
+                    if ($articleId > 0) {
+                        return $articleId;
+                    }
+
+                    $article = $this->findTermsArticle($db);
+
+                    return $article ? (int) $article->id : 0;
+                }
+
+                /**
+                 * Locate a generated or deliberately pre-existing general terms article.
+                 *
+                 * @since  0.0.20
+                 */
+                private function findTermsArticle(DatabaseInterface $db): ?object
+                {
+                    $note  = self::TERMS_ARTICLE_NOTE;
+                    $query = $db->getQuery(true)
+                        ->select($db->quoteName(['id', 'attribs', 'introtext', 'note']))
+                        ->from($db->quoteName('#__content'))
+                        ->where($db->quoteName('note') . ' = :note')
+                        ->bind(':note', $note, ParameterType::STRING)
+                        ->setLimit(1);
+                    $article = $db->setQuery($query)->loadObject();
+
+                    if ($article) {
+                        return $article;
+                    }
+
+                    $alias = self::TERMS_ARTICLE_ALIAS;
+                    $query = $db->getQuery(true)
+                        ->select($db->quoteName(['id', 'attribs', 'introtext', 'note']))
+                        ->from($db->quoteName('#__content'))
+                        ->where($db->quoteName('alias') . ' = :alias')
+                        ->bind(':alias', $alias, ParameterType::STRING)
+                        ->order($db->quoteName('id') . ' ASC')
+                        ->setLimit(1);
+
+                    return $db->setQuery($query)->loadObject() ?: null;
+                }
+
+                /**
+                 * Prevent inherited article navigation from offering a route out of checkout.
+                 *
+                 * An explicit editorial choice remains untouched; only Joomla's inherited
+                 * empty value is resolved for the terms article.
+                 *
+                 * @since  0.0.20
+                 */
+                private function ensureTermsArticlePresentation(DatabaseInterface $db, object $article): void
+                {
+                    $attribs = new Registry((string) ($article->attribs ?? ''));
+
+                    if ((string) $attribs->get('show_item_navigation', '') !== '') {
+                        return;
+                    }
+
+                    $attribs->set('show_item_navigation', 0);
+
+                    $record          = new \stdClass();
+                    $record->id      = (int) $article->id;
+                    $record->attribs = $attribs->toString();
+
+                    if (!$db->updateObject('#__content', $record, 'id')) {
+                        throw new \RuntimeException(
+                            'The CopyMyPage terms article presentation could not be updated.'
+                        );
+                    }
+
+                    $article->attribs = $record->attribs;
+                }
+
+                /**
+                 * Restrict automatic content replacement to the known starter state.
+                 *
+                 * @since  0.0.20
+                 */
+                private function isTermsPlaceholder(object $article): bool
+                {
+                    $content = preg_replace('/\s+/', ' ', trim((string) ($article->introtext ?? '')));
+
+                    return $content === '' || $content === self::TERMS_PLACEHOLDER_HTML;
+                }
+
+                /**
+                 * Load and personalise the bundled German starter terms.
+                 *
+                 * @since  0.0.20
+                 */
+                private function loadTermsTemplate(InstallerAdapter $adapter): string
+                {
+                    $sourceRoot = rtrim((string) $adapter->getParent()->getPath('source'), '/\\');
+                    $sourceFile = '';
+                    $candidates = [
+                        $sourceRoot . '/admin/terms/terms-and-conditions.de-DE.html',
+                        $sourceRoot . '/terms/terms-and-conditions.de-DE.html',
+                        __DIR__ . '/terms/terms-and-conditions.de-DE.html',
+                    ];
+
+                    foreach ($candidates as $candidate) {
+                        if (is_file($candidate)) {
+                            $sourceFile = $candidate;
+                            break;
                         }
                     }
 
-                    return true;
+                    $termsHtml = $sourceFile !== ''
+                        ? (string) file_get_contents($sourceFile)
+                        : '';
+
+                    if (trim($termsHtml) === '') {
+                        throw new \RuntimeException('The CopyMyPage terms source file is missing or empty.');
+                    }
+
+                    $app      = Factory::getApplication();
+                    $siteName = trim((string) $app->get('sitename', ''));
+                    $mailFrom = trim((string) $app->get('mailfrom', ''));
+                    $updated  = Factory::getDate()->format('d.m.Y');
+                    $escape   = static fn(string $value): string => htmlspecialchars(
+                        $value,
+                        ENT_QUOTES | ENT_SUBSTITUTE,
+                        'UTF-8'
+                    );
+
+                    return strtr(
+                        $termsHtml,
+                        [
+                            '{{SITE_NAME}}'     => $escape($siteName !== '' ? $siteName : '[Name der Website]'),
+                            '{{CONTACT_EMAIL}}' => $escape($mailFrom !== '' ? $mailFrom : 'kontakt@example.invalid'),
+                            '{{UPDATED_AT}}'    => $escape($updated),
+                        ]
+                    );
+                }
+
+                /**
+                 * Create the legal-content category when no reusable article exists.
+                 *
+                 * @since  0.0.20
+                 */
+                private function ensureTermsCategory(DatabaseInterface $db): int
+                {
+                    $extension = 'com_content';
+                    $alias     = self::TERMS_CATEGORY_ALIAS;
+                    $query     = $db->getQuery(true)
+                        ->select($db->quoteName('id'))
+                        ->from($db->quoteName('#__categories'))
+                        ->where($db->quoteName('extension') . ' = :extension')
+                        ->where($db->quoteName('alias') . ' = :alias')
+                        ->bind(':extension', $extension, ParameterType::STRING)
+                        ->bind(':alias', $alias, ParameterType::STRING);
+                    $categoryId = (int) $db->setQuery($query)->loadResult();
+
+                    if ($categoryId > 0) {
+                        return $categoryId;
+                    }
+
+                    $categoryModel = Factory::getApplication()
+                        ->bootComponent('com_categories')
+                        ->getMVCFactory()
+                        ->createModel('Category', 'Administrator', ['ignore_request' => true]);
+                    $categoryData = [
+                        'id'          => 0,
+                        'parent_id'   => 1,
+                        'title'       => 'CopyMyPage Rechtliches',
+                        'alias'       => self::TERMS_CATEGORY_ALIAS,
+                        'description' => '',
+                        'extension'   => 'com_content',
+                        'published'   => 1,
+                        'access'      => 1,
+                        'language'    => '*',
+                        'params'      => [
+                            'category_layout' => '',
+                            'image'           => '',
+                        ],
+                        'metadata' => [
+                            'author' => '',
+                            'robots' => '',
+                        ],
+                        'note' => 'system: com_copymypage legal-content',
+                    ];
+
+                    if (!$categoryModel || !$categoryModel->save($categoryData)) {
+                        $error = $categoryModel ? $categoryModel->getError() : '';
+
+                        throw new \RuntimeException(
+                            'The CopyMyPage legal-content category could not be saved. ' . (string) $error
+                        );
+                    }
+
+                    $categoryId = (int) $categoryModel->getState('category.id');
+
+                    if ($categoryId <= 0) {
+                        throw new \RuntimeException(
+                            'The CopyMyPage legal-content category has no valid id.'
+                        );
+                    }
+
+                    return $categoryId;
+                }
+
+                /**
+                 * Select the generated article as DPCalendar's default without replacing a choice.
+                 *
+                 * @since  0.0.20
+                 */
+                private function configureDPCalendarTerms(int $articleId): bool
+                {
+                    $db       = Factory::getContainer()->get(DatabaseInterface::class);
+                    $type     = 'component';
+                    $element  = 'com_dpcalendar';
+                    $clientId = 1;
+                    $query    = $db->getQuery(true)
+                        ->select($db->quoteName(['extension_id', 'params']))
+                        ->from($db->quoteName('#__extensions'))
+                        ->where($db->quoteName('type') . ' = :type')
+                        ->where($db->quoteName('element') . ' = :element')
+                        ->where($db->quoteName('client_id') . ' = :clientId')
+                        ->bind(':type', $type, ParameterType::STRING)
+                        ->bind(':element', $element, ParameterType::STRING)
+                        ->bind(':clientId', $clientId, ParameterType::INTEGER);
+                    $component = $db->setQuery($query)->loadObject();
+
+                    if (!$component) {
+                        return false;
+                    }
+
+                    $params = new Registry((string) $component->params);
+
+                    if ((int) $params->get('event_form_terms', 0) > 0) {
+                        return true;
+                    }
+
+                    $params->set('event_form_terms', $articleId);
+                    $record               = new \stdClass();
+                    $record->extension_id = (int) $component->extension_id;
+                    $record->params       = $params->toString();
+
+                    return $db->updateObject('#__extensions', $record, 'extension_id');
+                }
+
+                /**
+                 * Remove CopyMyPage AssetItems formerly installed in Joomla's core namespace.
+                 *
+                 * A content marker prevents deletion when another extension owns a file with
+                 * the same generic name.
+                 *
+                 * @since  0.0.19
+                 */
+                private function removeLegacyWebAssetItems(): void
+                {
+                    $legacyFiles = [
+                        'ContentDrawerAssetItem.php' => 'COM_COPYMYPAGE_CONTENT_DRAWER_CLOSE',
+                        'CopyMyPageAssetItem.php'    => 'final class CopyMyPageAssetItem',
+                        'IsotopeAssetItem.php'       => "Joomla.getOptions('copymypage.params'",
+                        'MmenuLightAssetItem.php'    => 'data-cmp-mmenulight-open',
+                        'PureCounterAssetItem.php'   => 'cmp-purecounter-pending',
+                        'TicketsAssetItem.php'       => 'MOD_COPYMYPAGE_TICKETS_JS_RUNTIME_MISSING',
+                    ];
+
+                    $legacyDirectory = Path::clean(JPATH_LIBRARIES . '/src/WebAsset/AssetItem');
+
+                    foreach ($legacyFiles as $fileName => $ownershipMarker) {
+                        $path = Path::clean($legacyDirectory . '/' . $fileName);
+
+                        if (!is_file($path)) {
+                            continue;
+                        }
+
+                        $contents = file_get_contents($path);
+
+                        if (!\is_string($contents) || !str_contains($contents, $ownershipMarker)) {
+                            Log::add(
+                                'Skipped legacy CopyMyPage AssetItem without the expected ownership marker: ' . $path,
+                                Log::WARNING,
+                                'jerror'
+                            );
+
+                            continue;
+                        }
+
+                        if (!File::delete($path) && file_exists($path)) {
+                            Log::add(
+                                Text::sprintf('JLIB_INSTALLER_ERROR_DELETE_FILE', $path),
+                                Log::WARNING,
+                                'jerror'
+                            );
+                        }
+                    }
                 }
 
                 /**

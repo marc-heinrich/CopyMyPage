@@ -9,5 +9,6 @@
     <action name="core.edit"       title="JACTION_EDIT" />
     <action name="core.edit.state" title="JACTION_EDITSTATE" />
     <action name="core.edit.own"   title="JACTION_EDITOWN" />
+    <action name="copymypage.seating.configure" title="COM_COPYMYPAGE_ACTION_SEATING_CONFIGURE" description="COM_COPYMYPAGE_ACTION_SEATING_CONFIGURE_DESC" />
   </section>
 </access>

@@ -11,11 +11,14 @@ namespace Joomla\Plugin\System\CopyMyPage\Extension;
 
 \defined('_JEXEC') or die;
 
+use DigitalPeak\Component\DPCalendar\Site\Helper\RouteHelper as DPCalendarRouteHelper;
 use Joomla\CMS\Application\CMSWebApplicationInterface;
 use Joomla\CMS\Event\Application\AfterRouteEvent;
+use Joomla\CMS\Event\Content\ContentPrepareEvent;
 use Joomla\CMS\Event\Model;
 use Joomla\CMS\Event\User\AfterLogoutEvent;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Form\FormHelper;
 use Joomla\CMS\Form\FormFactoryInterface;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Log\Log;
@@ -32,9 +35,23 @@ use Joomla\Component\CopyMyPage\Site\Repository\ProfileAddressRepository;
 use Joomla\Component\CopyMyPage\Site\Service\AccountMenuProvider;
 use Joomla\Component\CopyMyPage\Site\Service\AddressCatalogService;
 use Joomla\Component\CopyMyPage\Site\Service\AvatarService;
+use Joomla\Component\CopyMyPage\Site\Service\BookingCompletionService;
 use Joomla\Component\CopyMyPage\Site\Service\ContactClaimService;
 use Joomla\Component\CopyMyPage\Site\Service\CountryCodeResolver;
+use Joomla\Component\CopyMyPage\Site\Service\CustomerDataService;
+use Joomla\Component\CopyMyPage\Site\Service\EventSeatInventoryService;
+use Joomla\Component\CopyMyPage\Site\Service\OrderCheckoutService;
+use Joomla\Component\CopyMyPage\Site\Service\OrderReviewService;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentHandoffService;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationService;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationServiceProvider;
 use Joomla\Component\CopyMyPage\Site\Service\ProfileAddressService;
+use Joomla\Component\CopyMyPage\Site\Service\SeatLayoutService;
+use Joomla\Component\CopyMyPage\Site\Service\SeatSelectionService;
+use Joomla\Component\CopyMyPage\Site\Service\TicketCartContextService;
+use Joomla\Component\CopyMyPage\Site\Service\TicketCatalogService;
+use Joomla\Component\CopyMyPage\Site\Service\TicketReservationService;
+use Joomla\Component\CopyMyPage\Site\Service\TicketSeatProjectionService;
 use Joomla\Component\CopyMyPage\Site\Service\UserFormProjectionService;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Database\ParameterType;
@@ -81,7 +98,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     /**
      * Returns an array of events this subscriber will listen to.
      *
-     * @return  array<string, string>
+     * @return  array<string, string|array{0: string, 1: int}>
      *
      * @since   0.0.3
      */
@@ -89,6 +106,11 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     {
         return [
             'onAfterInitialise'    => 'onAfterInitialise',
+            'onAfterRoute'         => ['guardDPCalendarPaymentCallback', Priority::MAX],
+            'onContentAfterDelete' => 'onContentAfterDelete',
+            'onContentAfterSave'   => 'onContentAfterSave',
+            'onContentChangeState' => 'onContentChangeState',
+            'onContentPrepare'     => ['onContentPrepare', Priority::MIN],
             'onContentPrepareForm' => 'onContentPrepareForm',
             'onUserAfterLogout'    => 'onUserAfterLogout',
         ];
@@ -112,6 +134,170 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         $this->registerHelperServices($container);
         $this->configurePasswordResetRoute();
         $this->registerProfileRouteCompatibility();
+    }
+
+    /**
+     * Stop late or repeated payment callbacks before a provider can mutate a terminal booking.
+     *
+     * @param   AfterRouteEvent  $event  The after-route event.
+     *
+     * @return  void
+     *
+     * @since   0.0.19
+     */
+    public function guardDPCalendarPaymentCallback(AfterRouteEvent $event): void
+    {
+        $app = $this->getApplication();
+
+        if (!$app instanceof CMSWebApplicationInterface || !$app->isClient('site')) {
+            return;
+        }
+
+        $input = $app->getInput();
+        $task  = $input->getCmd('task', '');
+
+        if (
+            $input->getCmd('option', '') !== 'com_dpcalendar'
+            || !\in_array($task, ['booking.pay', 'booking.paycancel'], true)
+        ) {
+            return;
+        }
+
+        $bookingId = max(0, $input->getInt('b_id', 0));
+
+        if ($bookingId < 1) {
+            return;
+        }
+
+        $requestToken = trim($input->getString('dptoken', $input->getString('token', '')));
+        $identity     = $app->getIdentity();
+
+        try {
+            $decision = Factory::getContainer()
+                ->get(PaymentReconciliationService::class)
+                ->getCallbackDecision(
+                    $bookingId,
+                    $requestToken,
+                    (int) $app->getSession()->get('com_dpcalendar.booking_id', 0),
+                    max(0, (int) ($identity->id ?? 0)),
+                    $identity->authorise('dpcalendar.admin.book', 'com_dpcalendar')
+                );
+        } catch (\Throwable $exception) {
+            Log::add(
+                'CopyMyPage payment callback guard failed for booking ID '
+                    . $bookingId . ' (' . $exception::class . ').',
+                Log::ERROR,
+                'com_copymypage'
+            );
+
+            return;
+        }
+
+        if (
+            empty($decision['managed'])
+            || empty($decision['authorized'])
+            || empty($decision['block'])
+            || trim((string) ($decision['bookingUid'] ?? '')) === ''
+        ) {
+            return;
+        }
+
+        $app->getLanguage()->load(
+            'com_copymypage',
+            JPATH_SITE . '/components/com_copymypage',
+            null,
+            true
+        );
+        $app->getSession()->set('com_dpcalendar.booking_id', $bookingId);
+        $app->enqueueMessage(
+            Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_PAYMENT_CALLBACK_BLOCKED'),
+            'notice'
+        );
+        $app->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
+        $app->setHeader('Pragma', 'no-cache', true);
+        $app->redirect(
+            DPCalendarRouteHelper::getBookingRoute(
+                (object) [
+                    'id'    => $bookingId,
+                    'token' => (string) ($decision['bookingToken'] ?? ''),
+                    'uid'   => (string) $decision['bookingUid'],
+                ]
+            ) . '&layout=order'
+        );
+    }
+
+    /**
+     * Add the CopyMyPage seat assignment to DPCalendar ticket field output.
+     *
+     * @param   ContentPrepareEvent  $event  The content preparation event.
+     *
+     * @return  void
+     *
+     * @since   0.0.19
+     */
+    public function onContentPrepare(ContentPrepareEvent $event): void
+    {
+        if ($event->getContext() !== 'com_dpcalendar.ticket') {
+            return;
+        }
+
+        $ticket    = $event->getItem();
+        $ticketId  = \is_object($ticket) ? max(0, (int) ($ticket->id ?? 0)) : 0;
+        $bookingId = \is_object($ticket) ? max(0, (int) ($ticket->booking_id ?? 0)) : 0;
+
+        if ($ticketId < 1 || $bookingId < 1) {
+            return;
+        }
+
+        try {
+            $this->getApplication()->getLanguage()->load(
+                'com_copymypage',
+                JPATH_SITE . '/components/com_copymypage',
+                null,
+                true
+            );
+            $seat = Factory::getContainer()
+                ->get(TicketSeatProjectionService::class)
+                ->getForTicket($ticketId, $bookingId);
+
+            if (!\is_array($seat) || trim((string) ($seat['label'] ?? '')) === '') {
+                return;
+            }
+
+            if (isset($ticket->jcfields) && !\is_array($ticket->jcfields)) {
+                return;
+            }
+
+            $fields = $ticket->jcfields ?? [];
+
+            foreach ($fields as $field) {
+                if (
+                    \is_object($field)
+                    && (string) ($field->name ?? '') === 'copymypage_seat'
+                ) {
+                    return;
+                }
+            }
+
+            $fields['copymypage_seat'] = (object) [
+                'id'    => 'copymypage_seat',
+                'label' => 'COM_COPYMYPAGE_BOOKING_COMPLETION_SEAT_LABEL',
+                'name'  => 'copymypage_seat',
+                'value' => htmlspecialchars(
+                    (string) $seat['label'],
+                    ENT_QUOTES | ENT_SUBSTITUTE,
+                    'UTF-8'
+                ),
+            ];
+            $ticket->jcfields = $fields;
+        } catch (\Throwable $exception) {
+            Log::add(
+                'CopyMyPage ticket seat projection failed for ticket ID '
+                    . $ticketId . ' (' . $exception::class . ').',
+                Log::WARNING,
+                'com_copymypage'
+            );
+        }
     }
 
     /**
@@ -647,6 +833,154 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                 );
             }
 
+            if (!$container->has(TicketCatalogService::class)) {
+                $container->share(
+                    TicketCatalogService::class,
+                    static fn(Container $container): TicketCatalogService => new TicketCatalogService(
+                        $app,
+                        $container->get(DatabaseInterface::class)
+                    ),
+                    true
+                );
+            }
+
+            if (!$container->has(TicketCartContextService::class)) {
+                $container->share(
+                    TicketCartContextService::class,
+                    static fn(Container $container): TicketCartContextService
+                        => new TicketCartContextService(
+                            $app,
+                            $container->get(DatabaseInterface::class)
+                        ),
+                    true
+                );
+            }
+
+            if (!$container->has(TicketReservationService::class)) {
+                $container->share(
+                    TicketReservationService::class,
+                    static fn(Container $container): TicketReservationService => new TicketReservationService(
+                        $container->get(DatabaseInterface::class),
+                        $container->get(TicketCatalogService::class),
+                        $container->get(TicketCartContextService::class),
+                        $container->get(SeatSelectionService::class)
+                    ),
+                    true
+                );
+            }
+
+            if (!$container->has(SeatLayoutService::class)) {
+                $container->share(
+                    SeatLayoutService::class,
+                    static fn(Container $container): SeatLayoutService => new SeatLayoutService(
+                        $container->get(DatabaseInterface::class),
+                        JPATH_SITE . '/components/com_copymypage/data/seat-layouts'
+                    ),
+                    true
+                );
+            }
+
+            if (!$container->has(EventSeatInventoryService::class)) {
+                $container->share(
+                    EventSeatInventoryService::class,
+                    static fn(Container $container): EventSeatInventoryService
+                        => new EventSeatInventoryService(
+                            $container->get(DatabaseInterface::class),
+                            $container->get(SeatLayoutService::class)
+                        ),
+                    true
+                );
+            }
+
+            if (!$container->has(SeatSelectionService::class)) {
+                $container->share(
+                    SeatSelectionService::class,
+                    static fn(Container $container): SeatSelectionService => new SeatSelectionService(
+                        $container->get(DatabaseInterface::class),
+                        $container->get(TicketCatalogService::class),
+                        $container->get(TicketCartContextService::class)
+                    ),
+                    true
+                );
+            }
+
+            if (!$container->has(TicketSeatProjectionService::class)) {
+                $container->share(
+                    TicketSeatProjectionService::class,
+                    static fn(Container $container): TicketSeatProjectionService
+                        => new TicketSeatProjectionService(
+                            $container->get(DatabaseInterface::class)
+                        ),
+                    true
+                );
+            }
+
+            if (!$container->has(PaymentHandoffService::class)) {
+                $container->share(
+                    PaymentHandoffService::class,
+                    static fn(Container $container): PaymentHandoffService
+                        => new PaymentHandoffService($app),
+                    true
+                );
+            }
+
+            $container->registerServiceProvider(new PaymentReconciliationServiceProvider());
+
+            if (!$container->has(BookingCompletionService::class)) {
+                $container->share(
+                    BookingCompletionService::class,
+                    static fn(Container $container): BookingCompletionService
+                        => new BookingCompletionService(
+                            $container->get(DatabaseInterface::class),
+                            $container->get(TicketSeatProjectionService::class)
+                        ),
+                    true
+                );
+            }
+
+            if (!$container->has(CustomerDataService::class)) {
+                $container->share(
+                    CustomerDataService::class,
+                    static fn(Container $container): CustomerDataService => new CustomerDataService(
+                        $app,
+                        $container->get(DatabaseInterface::class),
+                        $container->get(FormFactoryInterface::class),
+                        $container->get(ProfileAddressRepository::class),
+                        $container->get(AddressCatalogService::class),
+                        $container->get(TicketCartContextService::class),
+                        $container->get(SeatSelectionService::class)
+                    ),
+                    true
+                );
+            }
+
+            if (!$container->has(OrderReviewService::class)) {
+                $container->share(
+                    OrderReviewService::class,
+                    static fn(Container $container): OrderReviewService => new OrderReviewService(
+                        $container->get(CustomerDataService::class),
+                        $container->get(SeatSelectionService::class),
+                        $container->get(TicketReservationService::class)
+                    ),
+                    true
+                );
+            }
+
+            if (!$container->has(OrderCheckoutService::class)) {
+                $container->share(
+                    OrderCheckoutService::class,
+                    static fn(Container $container): OrderCheckoutService => new OrderCheckoutService(
+                        $app,
+                        $container->get(DatabaseInterface::class),
+                        $container->get(OrderReviewService::class),
+                        $container->get(TicketCartContextService::class),
+                        $container->get(TicketCatalogService::class),
+                        $container->get(TicketSeatProjectionService::class)
+                    ),
+                    true
+                );
+            }
+
             if (!$container->has(UserHelper::class)) {
                 $container->share(
                     UserHelper::class,
@@ -732,6 +1066,21 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             return true;
         }
 
+        if ($name === 'com_dpcalendar.event') {
+            if (!$app->getIdentity()->authorise('copymypage.seating.configure', 'com_copymypage')) {
+                return true;
+            }
+
+            $this->loadLanguage();
+            FormHelper::addFieldPrefix('Joomla\\Plugin\\System\\CopyMyPage\\Field');
+            $form->loadFile(
+                JPATH_PLUGINS . '/system/copymypage/forms/dpcalendar_event_seating.xml',
+                false
+            );
+
+            return true;
+        }
+
         if ($name !== 'com_modules.module' || !$this->isSigplusModule($event->getData())) {
             return true;
         }
@@ -740,6 +1089,192 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         $form->loadFile(JPATH_PLUGINS . '/system/copymypage/forms/sigplus.xml', false);
 
         return true;
+    }
+
+    /**
+     * Release linked seats after a DPCalendar booking has been deleted.
+     */
+    public function onContentAfterDelete(Model\AfterDeleteEvent $event): void
+    {
+        if ($event->getContext() !== 'com_dpcalendar.booking') {
+            return;
+        }
+
+        $item      = $event->getItem();
+        $bookingId = \is_object($item) ? max(0, (int) ($item->id ?? 0)) : 0;
+
+        $this->releaseDPCalendarBookingSeats($bookingId);
+    }
+
+    /**
+     * Release linked seats after cancellation, refund or trashing.
+     */
+    public function onContentChangeState(Model\AfterChangeStateEvent $event): void
+    {
+        if (
+            $event->getContext() !== 'com_dpcalendar.booking'
+            || !\in_array((int) $event->getValue(), [6, 7, -2], true)
+        ) {
+            return;
+        }
+
+        foreach ((array) $event->getPks() as $bookingId) {
+            $this->releaseDPCalendarBookingSeats(max(0, (int) $bookingId));
+        }
+    }
+
+    /**
+     * Import and activate the JSON layout selected in a DPCalendar event.
+     *
+     * The event itself has already been saved when this hook runs. Seating
+     * failures therefore remain visible administrator messages and never
+     * expose internal exception details or roll back DPCalendar data.
+     *
+     * @param   Model\AfterSaveEvent  $event  The content save event.
+     *
+     * @since   0.0.19
+     */
+    public function onContentAfterSave(Model\AfterSaveEvent $event): void
+    {
+        $app = $this->getApplication();
+
+        if (
+            !$app->isClient('administrator')
+            || $event->getContext() !== 'com_dpcalendar.event'
+            || !$app->getIdentity()->authorise('copymypage.seating.configure', 'com_copymypage')
+        ) {
+            return;
+        }
+
+        $post  = $app->getInput()->post->getArray();
+        $jform = \is_array($post['jform'] ?? null) ? $post['jform'] : [];
+        $action = trim((string) ($jform['copymypage_seating_action'] ?? ''));
+        $item   = $event->getItem();
+        $eventId = \is_object($item) ? max(0, (int) ($item->id ?? 0)) : 0;
+
+        if ($action === 'mark_ready') {
+            if ($eventId === 0) {
+                return;
+            }
+
+            $this->loadLanguage();
+            $app->getLanguage()->load(
+                'com_copymypage',
+                JPATH_ADMINISTRATOR . '/components/com_copymypage',
+                null,
+                true
+            );
+            $userId = max(0, (int) $app->getIdentity()->id);
+
+            try {
+                $ready = Factory::getContainer()
+                    ->get(EventSeatInventoryService::class)
+                    ->markReady($eventId, $userId);
+                $app->enqueueMessage(
+                    Text::sprintf(
+                        'PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_READY_SUCCESS',
+                        (int) $ready['seatCount']
+                    ),
+                    'success'
+                );
+            } catch (\DomainException $exception) {
+                $app->enqueueMessage(
+                    Text::sprintf(
+                        'PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_SAVE_DRAFT_WARNING',
+                        $exception->getMessage()
+                    ),
+                    'warning'
+                );
+            } catch (\Throwable $exception) {
+                Log::add(
+                    'CopyMyPage DPCalendar seating activation failed: ' . $exception->getMessage(),
+                    Log::ERROR,
+                    'com_copymypage'
+                );
+                $app->enqueueMessage(
+                    Text::_('PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_SAVE_ERROR'),
+                    'error'
+                );
+            }
+
+            return;
+        }
+
+        if (!array_key_exists('copymypage_layout_file', $jform)) {
+            return;
+        }
+
+        $file = trim((string) $jform['copymypage_layout_file']);
+
+        if ($file === '' || $eventId === 0) {
+            return;
+        }
+
+        $this->loadLanguage();
+        $app->getLanguage()->load(
+            'com_copymypage',
+            JPATH_ADMINISTRATOR . '/components/com_copymypage',
+            null,
+            true
+        );
+        $userId = max(0, (int) $app->getIdentity()->id);
+
+        try {
+            $container = Factory::getContainer();
+            $layout    = $container->get(SeatLayoutService::class)
+                ->importBundledDefinition($file, $userId);
+            $inventory = $container->get(EventSeatInventoryService::class);
+            $inventory->assignDraft($eventId, (int) $layout['id'], $userId);
+            $ready = $inventory->markReady($eventId, $userId);
+
+            $app->enqueueMessage(
+                Text::sprintf(
+                    'PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_SAVE_SUCCESS',
+                    (string) $layout['title'],
+                    (int) $layout['version'],
+                    (int) $ready['seatCount']
+                ),
+                'success'
+            );
+        } catch (\DomainException $exception) {
+            $app->enqueueMessage(
+                Text::sprintf(
+                    'PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_SAVE_DRAFT_WARNING',
+                    $exception->getMessage()
+                ),
+                'warning'
+            );
+        } catch (\Throwable $exception) {
+            Log::add(
+                'CopyMyPage DPCalendar seating activation failed: ' . $exception->getMessage(),
+                Log::ERROR,
+                'com_copymypage'
+            );
+            $app->enqueueMessage(
+                Text::_('PLG_SYSTEM_COPYMYPAGE_EVENT_SEATING_SAVE_ERROR'),
+                'error'
+            );
+        }
+    }
+
+    private function releaseDPCalendarBookingSeats(int $bookingId): void
+    {
+        if ($bookingId < 1) {
+            return;
+        }
+
+        try {
+            Factory::getContainer()
+                ->get(OrderCheckoutService::class)
+                ->releaseBookingSeats($bookingId);
+        } catch (\Throwable $exception) {
+            Log::add(
+                'CopyMyPage could not release seats for DPCalendar booking '
+                    . $bookingId . ' (' . $exception::class . ').',
+                Log::ERROR,
+                'com_copymypage'
+            );
+        }
     }
 
     /**

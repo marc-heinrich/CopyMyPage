@@ -1,0 +1,1260 @@
+{
+  "schemaVersion": 1,
+  "alias": "gemeindesaal-2027",
+  "version": 1,
+  "title": "Gemeindesaal – Sitzplan 2027",
+  "canvas": {
+    "width": 1500,
+    "height": 1050
+  },
+  "areas": [
+    {
+      "code": "music",
+      "type": "obstacle",
+      "label": "Musik",
+      "shape": "rectangle",
+      "x": 5,
+      "y": 25,
+      "width": 245,
+      "height": 145,
+      "rotation": 0
+    },
+    {
+      "code": "stage",
+      "type": "stage",
+      "label": "Bühne",
+      "shape": "rectangle",
+      "x": 5,
+      "y": 190,
+      "width": 120,
+      "height": 620,
+      "rotation": 0
+    },
+    {
+      "code": "loge",
+      "type": "obstacle",
+      "label": "Loge",
+      "shape": "rectangle",
+      "x": 5,
+      "y": 815,
+      "width": 120,
+      "height": 195,
+      "rotation": 0
+    },
+    {
+      "code": "middle-aisle",
+      "type": "obstacle",
+      "label": "Mittelgang",
+      "shape": "rectangle",
+      "x": 238,
+      "y": 600,
+      "width": 1212,
+      "height": 50,
+      "rotation": 0
+    },
+    {
+      "code": "exit-main",
+      "type": "exit",
+      "label": "Ausgang",
+      "shape": "rectangle",
+      "x": 160,
+      "y": 1010,
+      "width": 105,
+      "height": 30,
+      "rotation": 0
+    },
+    {
+      "code": "restaurant",
+      "type": "entrance",
+      "label": "Gaststätte",
+      "shape": "rectangle",
+      "x": 1070,
+      "y": 1010,
+      "width": 150,
+      "height": 30,
+      "rotation": 0
+    }
+  ],
+  "tables": [
+    {
+      "code": "T01",
+      "number": "1",
+      "label": "Tisch 1",
+      "shape": "rectangle",
+      "x": 338,
+      "y": 75,
+      "width": 725,
+      "height": 50,
+      "rotation": 0,
+      "sortOrder": 1,
+      "seats": [
+        {
+          "number": "1",
+          "x": 375,
+          "y": 44,
+          "sortOrder": 1
+        },
+        {
+          "number": "3",
+          "x": 425,
+          "y": 44,
+          "sortOrder": 2
+        },
+        {
+          "number": "5",
+          "x": 475,
+          "y": 44,
+          "sortOrder": 3
+        },
+        {
+          "number": "7",
+          "x": 525,
+          "y": 44,
+          "sortOrder": 4
+        },
+        {
+          "number": "9",
+          "x": 575,
+          "y": 44,
+          "sortOrder": 5
+        },
+        {
+          "number": "11",
+          "x": 625,
+          "y": 44,
+          "sortOrder": 6
+        },
+        {
+          "number": "13",
+          "x": 675,
+          "y": 44,
+          "sortOrder": 7
+        },
+        {
+          "number": "15",
+          "x": 725,
+          "y": 44,
+          "sortOrder": 8
+        },
+        {
+          "number": "17",
+          "x": 775,
+          "y": 44,
+          "sortOrder": 9
+        },
+        {
+          "number": "19",
+          "x": 825,
+          "y": 44,
+          "sortOrder": 10
+        },
+        {
+          "number": "21",
+          "x": 875,
+          "y": 44,
+          "sortOrder": 11
+        },
+        {
+          "number": "23",
+          "x": 925,
+          "y": 44,
+          "sortOrder": 12
+        },
+        {
+          "number": "25",
+          "x": 975,
+          "y": 44,
+          "sortOrder": 13
+        },
+        {
+          "number": "27",
+          "x": 1025,
+          "y": 44,
+          "sortOrder": 14
+        },
+        {
+          "number": "2",
+          "x": 375,
+          "y": 156,
+          "sortOrder": 15
+        },
+        {
+          "number": "4",
+          "x": 425,
+          "y": 156,
+          "sortOrder": 16
+        },
+        {
+          "number": "6",
+          "x": 475,
+          "y": 156,
+          "sortOrder": 17
+        },
+        {
+          "number": "8",
+          "x": 525,
+          "y": 156,
+          "sortOrder": 18
+        },
+        {
+          "number": "10",
+          "x": 575,
+          "y": 156,
+          "sortOrder": 19
+        },
+        {
+          "number": "12",
+          "x": 625,
+          "y": 156,
+          "sortOrder": 20
+        },
+        {
+          "number": "14",
+          "x": 675,
+          "y": 156,
+          "sortOrder": 21
+        },
+        {
+          "number": "16",
+          "x": 725,
+          "y": 156,
+          "sortOrder": 22
+        },
+        {
+          "number": "18",
+          "x": 775,
+          "y": 156,
+          "sortOrder": 23
+        },
+        {
+          "number": "20",
+          "x": 825,
+          "y": 156,
+          "sortOrder": 24
+        },
+        {
+          "number": "22",
+          "x": 875,
+          "y": 156,
+          "sortOrder": 25
+        },
+        {
+          "number": "24",
+          "x": 925,
+          "y": 156,
+          "sortOrder": 26
+        },
+        {
+          "number": "26",
+          "x": 975,
+          "y": 156,
+          "sortOrder": 27
+        },
+        {
+          "number": "28",
+          "x": 1025,
+          "y": 156,
+          "sortOrder": 28
+        }
+      ]
+    },
+    {
+      "code": "T02",
+      "number": "2",
+      "label": "Tisch 2",
+      "shape": "rectangle",
+      "x": 1175,
+      "y": 75,
+      "width": 275,
+      "height": 50,
+      "rotation": 0,
+      "sortOrder": 2,
+      "seats": [
+        {
+          "number": "1",
+          "x": 1213,
+          "y": 44,
+          "sortOrder": 1
+        },
+        {
+          "number": "3",
+          "x": 1263,
+          "y": 44,
+          "sortOrder": 2
+        },
+        {
+          "number": "5",
+          "x": 1313,
+          "y": 44,
+          "sortOrder": 3
+        },
+        {
+          "number": "7",
+          "x": 1363,
+          "y": 44,
+          "sortOrder": 4
+        },
+        {
+          "number": "9",
+          "x": 1413,
+          "y": 44,
+          "sortOrder": 5
+        },
+        {
+          "number": "2",
+          "x": 1213,
+          "y": 156,
+          "sortOrder": 6
+        },
+        {
+          "number": "4",
+          "x": 1263,
+          "y": 156,
+          "sortOrder": 7
+        },
+        {
+          "number": "6",
+          "x": 1313,
+          "y": 156,
+          "sortOrder": 8
+        },
+        {
+          "number": "8",
+          "x": 1363,
+          "y": 156,
+          "sortOrder": 9
+        },
+        {
+          "number": "10",
+          "x": 1413,
+          "y": 156,
+          "sortOrder": 10
+        }
+      ]
+    },
+    {
+      "code": "T03",
+      "number": "3",
+      "label": "Tisch 3",
+      "shape": "rectangle",
+      "x": 238,
+      "y": 278,
+      "width": 825,
+      "height": 50,
+      "rotation": 0,
+      "sortOrder": 3,
+      "seats": [
+        {
+          "number": "1",
+          "x": 275,
+          "y": 246,
+          "sortOrder": 1
+        },
+        {
+          "number": "3",
+          "x": 325,
+          "y": 246,
+          "sortOrder": 2
+        },
+        {
+          "number": "5",
+          "x": 375,
+          "y": 246,
+          "sortOrder": 3
+        },
+        {
+          "number": "7",
+          "x": 425,
+          "y": 246,
+          "sortOrder": 4
+        },
+        {
+          "number": "9",
+          "x": 475,
+          "y": 246,
+          "sortOrder": 5
+        },
+        {
+          "number": "11",
+          "x": 525,
+          "y": 246,
+          "sortOrder": 6
+        },
+        {
+          "number": "13",
+          "x": 575,
+          "y": 246,
+          "sortOrder": 7
+        },
+        {
+          "number": "15",
+          "x": 625,
+          "y": 246,
+          "sortOrder": 8
+        },
+        {
+          "number": "17",
+          "x": 675,
+          "y": 246,
+          "sortOrder": 9
+        },
+        {
+          "number": "19",
+          "x": 725,
+          "y": 246,
+          "sortOrder": 10
+        },
+        {
+          "number": "21",
+          "x": 775,
+          "y": 246,
+          "sortOrder": 11
+        },
+        {
+          "number": "23",
+          "x": 825,
+          "y": 246,
+          "sortOrder": 12
+        },
+        {
+          "number": "25",
+          "x": 875,
+          "y": 246,
+          "sortOrder": 13
+        },
+        {
+          "number": "27",
+          "x": 925,
+          "y": 246,
+          "sortOrder": 14
+        },
+        {
+          "number": "29",
+          "x": 975,
+          "y": 246,
+          "sortOrder": 15
+        },
+        {
+          "number": "31",
+          "x": 1025,
+          "y": 246,
+          "sortOrder": 16
+        },
+        {
+          "number": "2",
+          "x": 275,
+          "y": 359,
+          "sortOrder": 17
+        },
+        {
+          "number": "4",
+          "x": 325,
+          "y": 359,
+          "sortOrder": 18
+        },
+        {
+          "number": "6",
+          "x": 375,
+          "y": 359,
+          "sortOrder": 19
+        },
+        {
+          "number": "8",
+          "x": 425,
+          "y": 359,
+          "sortOrder": 20
+        },
+        {
+          "number": "10",
+          "x": 475,
+          "y": 359,
+          "sortOrder": 21
+        },
+        {
+          "number": "12",
+          "x": 525,
+          "y": 359,
+          "sortOrder": 22
+        },
+        {
+          "number": "14",
+          "x": 575,
+          "y": 359,
+          "sortOrder": 23
+        },
+        {
+          "number": "16",
+          "x": 625,
+          "y": 359,
+          "sortOrder": 24
+        },
+        {
+          "number": "18",
+          "x": 675,
+          "y": 359,
+          "sortOrder": 25
+        },
+        {
+          "number": "20",
+          "x": 725,
+          "y": 359,
+          "sortOrder": 26
+        },
+        {
+          "number": "22",
+          "x": 775,
+          "y": 359,
+          "sortOrder": 27
+        },
+        {
+          "number": "24",
+          "x": 825,
+          "y": 359,
+          "sortOrder": 28
+        },
+        {
+          "number": "26",
+          "x": 875,
+          "y": 359,
+          "sortOrder": 29
+        },
+        {
+          "number": "28",
+          "x": 925,
+          "y": 359,
+          "sortOrder": 30
+        },
+        {
+          "number": "30",
+          "x": 975,
+          "y": 359,
+          "sortOrder": 31
+        },
+        {
+          "number": "32",
+          "x": 1025,
+          "y": 359,
+          "sortOrder": 32
+        }
+      ]
+    },
+    {
+      "code": "T04",
+      "number": "4",
+      "label": "Tisch 4",
+      "shape": "rectangle",
+      "x": 238,
+      "y": 479,
+      "width": 825,
+      "height": 50,
+      "rotation": 0,
+      "sortOrder": 4,
+      "seats": [
+        {
+          "number": "1",
+          "x": 275,
+          "y": 448,
+          "sortOrder": 1
+        },
+        {
+          "number": "3",
+          "x": 325,
+          "y": 448,
+          "sortOrder": 2
+        },
+        {
+          "number": "5",
+          "x": 375,
+          "y": 448,
+          "sortOrder": 3
+        },
+        {
+          "number": "7",
+          "x": 425,
+          "y": 448,
+          "sortOrder": 4
+        },
+        {
+          "number": "9",
+          "x": 475,
+          "y": 448,
+          "sortOrder": 5
+        },
+        {
+          "number": "11",
+          "x": 525,
+          "y": 448,
+          "sortOrder": 6
+        },
+        {
+          "number": "13",
+          "x": 575,
+          "y": 448,
+          "sortOrder": 7
+        },
+        {
+          "number": "15",
+          "x": 625,
+          "y": 448,
+          "sortOrder": 8
+        },
+        {
+          "number": "17",
+          "x": 675,
+          "y": 448,
+          "sortOrder": 9
+        },
+        {
+          "number": "19",
+          "x": 725,
+          "y": 448,
+          "sortOrder": 10
+        },
+        {
+          "number": "21",
+          "x": 775,
+          "y": 448,
+          "sortOrder": 11
+        },
+        {
+          "number": "23",
+          "x": 825,
+          "y": 448,
+          "sortOrder": 12
+        },
+        {
+          "number": "25",
+          "x": 875,
+          "y": 448,
+          "sortOrder": 13
+        },
+        {
+          "number": "27",
+          "x": 925,
+          "y": 448,
+          "sortOrder": 14
+        },
+        {
+          "number": "29",
+          "x": 975,
+          "y": 448,
+          "sortOrder": 15
+        },
+        {
+          "number": "31",
+          "x": 1025,
+          "y": 448,
+          "sortOrder": 16
+        },
+        {
+          "number": "2",
+          "x": 275,
+          "y": 560,
+          "sortOrder": 17
+        },
+        {
+          "number": "4",
+          "x": 325,
+          "y": 560,
+          "sortOrder": 18
+        },
+        {
+          "number": "6",
+          "x": 375,
+          "y": 560,
+          "sortOrder": 19
+        },
+        {
+          "number": "8",
+          "x": 425,
+          "y": 560,
+          "sortOrder": 20
+        },
+        {
+          "number": "10",
+          "x": 475,
+          "y": 560,
+          "sortOrder": 21
+        },
+        {
+          "number": "12",
+          "x": 525,
+          "y": 560,
+          "sortOrder": 22
+        },
+        {
+          "number": "14",
+          "x": 575,
+          "y": 560,
+          "sortOrder": 23
+        },
+        {
+          "number": "16",
+          "x": 625,
+          "y": 560,
+          "sortOrder": 24
+        },
+        {
+          "number": "18",
+          "x": 675,
+          "y": 560,
+          "sortOrder": 25
+        },
+        {
+          "number": "20",
+          "x": 725,
+          "y": 560,
+          "sortOrder": 26
+        },
+        {
+          "number": "22",
+          "x": 775,
+          "y": 560,
+          "sortOrder": 27
+        },
+        {
+          "number": "24",
+          "x": 825,
+          "y": 560,
+          "sortOrder": 28
+        },
+        {
+          "number": "26",
+          "x": 875,
+          "y": 560,
+          "sortOrder": 29
+        },
+        {
+          "number": "28",
+          "x": 925,
+          "y": 560,
+          "sortOrder": 30
+        },
+        {
+          "number": "30",
+          "x": 975,
+          "y": 560,
+          "sortOrder": 31
+        },
+        {
+          "number": "32",
+          "x": 1025,
+          "y": 560,
+          "sortOrder": 32
+        }
+      ]
+    },
+    {
+      "code": "T05",
+      "number": "5",
+      "label": "Tisch 5",
+      "shape": "rectangle",
+      "x": 1175,
+      "y": 479,
+      "width": 275,
+      "height": 50,
+      "rotation": 0,
+      "sortOrder": 5,
+      "seats": [
+        {
+          "number": "1",
+          "x": 1213,
+          "y": 448,
+          "sortOrder": 1
+        },
+        {
+          "number": "3",
+          "x": 1263,
+          "y": 448,
+          "sortOrder": 2
+        },
+        {
+          "number": "5",
+          "x": 1313,
+          "y": 448,
+          "sortOrder": 3
+        },
+        {
+          "number": "7",
+          "x": 1363,
+          "y": 448,
+          "sortOrder": 4
+        },
+        {
+          "number": "9",
+          "x": 1413,
+          "y": 448,
+          "sortOrder": 5
+        },
+        {
+          "number": "2",
+          "x": 1213,
+          "y": 560,
+          "sortOrder": 6
+        },
+        {
+          "number": "4",
+          "x": 1263,
+          "y": 560,
+          "sortOrder": 7
+        },
+        {
+          "number": "6",
+          "x": 1313,
+          "y": 560,
+          "sortOrder": 8
+        },
+        {
+          "number": "8",
+          "x": 1363,
+          "y": 560,
+          "sortOrder": 9
+        },
+        {
+          "number": "10",
+          "x": 1413,
+          "y": 560,
+          "sortOrder": 10
+        }
+      ]
+    },
+    {
+      "code": "T06",
+      "number": "6",
+      "label": "Tisch 6",
+      "shape": "rectangle",
+      "x": 338,
+      "y": 713,
+      "width": 725,
+      "height": 50,
+      "rotation": 0,
+      "sortOrder": 6,
+      "seats": [
+        {
+          "number": "1",
+          "x": 375,
+          "y": 681,
+          "sortOrder": 1
+        },
+        {
+          "number": "3",
+          "x": 425,
+          "y": 681,
+          "sortOrder": 2
+        },
+        {
+          "number": "5",
+          "x": 475,
+          "y": 681,
+          "sortOrder": 3
+        },
+        {
+          "number": "7",
+          "x": 525,
+          "y": 681,
+          "sortOrder": 4
+        },
+        {
+          "number": "9",
+          "x": 575,
+          "y": 681,
+          "sortOrder": 5
+        },
+        {
+          "number": "11",
+          "x": 625,
+          "y": 681,
+          "sortOrder": 6
+        },
+        {
+          "number": "13",
+          "x": 675,
+          "y": 681,
+          "sortOrder": 7
+        },
+        {
+          "number": "15",
+          "x": 725,
+          "y": 681,
+          "sortOrder": 8
+        },
+        {
+          "number": "17",
+          "x": 775,
+          "y": 681,
+          "sortOrder": 9
+        },
+        {
+          "number": "19",
+          "x": 825,
+          "y": 681,
+          "sortOrder": 10
+        },
+        {
+          "number": "21",
+          "x": 875,
+          "y": 681,
+          "sortOrder": 11
+        },
+        {
+          "number": "23",
+          "x": 925,
+          "y": 681,
+          "sortOrder": 12
+        },
+        {
+          "number": "25",
+          "x": 975,
+          "y": 681,
+          "sortOrder": 13
+        },
+        {
+          "number": "27",
+          "x": 1025,
+          "y": 681,
+          "sortOrder": 14
+        },
+        {
+          "number": "2",
+          "x": 375,
+          "y": 794,
+          "sortOrder": 15
+        },
+        {
+          "number": "4",
+          "x": 425,
+          "y": 794,
+          "sortOrder": 16
+        },
+        {
+          "number": "6",
+          "x": 475,
+          "y": 794,
+          "sortOrder": 17
+        },
+        {
+          "number": "8",
+          "x": 525,
+          "y": 794,
+          "sortOrder": 18
+        },
+        {
+          "number": "10",
+          "x": 575,
+          "y": 794,
+          "sortOrder": 19
+        },
+        {
+          "number": "12",
+          "x": 625,
+          "y": 794,
+          "sortOrder": 20
+        },
+        {
+          "number": "14",
+          "x": 675,
+          "y": 794,
+          "sortOrder": 21
+        },
+        {
+          "number": "16",
+          "x": 725,
+          "y": 794,
+          "sortOrder": 22
+        },
+        {
+          "number": "18",
+          "x": 775,
+          "y": 794,
+          "sortOrder": 23
+        },
+        {
+          "number": "20",
+          "x": 825,
+          "y": 794,
+          "sortOrder": 24
+        },
+        {
+          "number": "22",
+          "x": 875,
+          "y": 794,
+          "sortOrder": 25
+        },
+        {
+          "number": "24",
+          "x": 925,
+          "y": 794,
+          "sortOrder": 26
+        },
+        {
+          "number": "26",
+          "x": 975,
+          "y": 794,
+          "sortOrder": 27
+        },
+        {
+          "number": "28",
+          "x": 1025,
+          "y": 794,
+          "sortOrder": 28
+        }
+      ]
+    },
+    {
+      "code": "T07",
+      "number": "7",
+      "label": "Tisch 7",
+      "shape": "rectangle",
+      "x": 1175,
+      "y": 713,
+      "width": 275,
+      "height": 50,
+      "rotation": 0,
+      "sortOrder": 7,
+      "seats": [
+        {
+          "number": "1",
+          "x": 1213,
+          "y": 681,
+          "sortOrder": 1
+        },
+        {
+          "number": "3",
+          "x": 1263,
+          "y": 681,
+          "sortOrder": 2
+        },
+        {
+          "number": "5",
+          "x": 1313,
+          "y": 681,
+          "sortOrder": 3
+        },
+        {
+          "number": "7",
+          "x": 1363,
+          "y": 681,
+          "sortOrder": 4
+        },
+        {
+          "number": "9",
+          "x": 1413,
+          "y": 681,
+          "sortOrder": 5
+        },
+        {
+          "number": "2",
+          "x": 1213,
+          "y": 794,
+          "sortOrder": 6
+        },
+        {
+          "number": "4",
+          "x": 1263,
+          "y": 794,
+          "sortOrder": 7
+        },
+        {
+          "number": "6",
+          "x": 1313,
+          "y": 794,
+          "sortOrder": 8
+        },
+        {
+          "number": "8",
+          "x": 1363,
+          "y": 794,
+          "sortOrder": 9
+        },
+        {
+          "number": "10",
+          "x": 1413,
+          "y": 794,
+          "sortOrder": 10
+        }
+      ]
+    },
+    {
+      "code": "T08",
+      "number": "8",
+      "label": "Tisch 8",
+      "shape": "rectangle",
+      "x": 338,
+      "y": 912,
+      "width": 725,
+      "height": 50,
+      "rotation": 0,
+      "sortOrder": 8,
+      "seats": [
+        {
+          "number": "1",
+          "x": 375,
+          "y": 881,
+          "sortOrder": 1
+        },
+        {
+          "number": "3",
+          "x": 425,
+          "y": 881,
+          "sortOrder": 2
+        },
+        {
+          "number": "5",
+          "x": 475,
+          "y": 881,
+          "sortOrder": 3
+        },
+        {
+          "number": "7",
+          "x": 525,
+          "y": 881,
+          "sortOrder": 4
+        },
+        {
+          "number": "9",
+          "x": 575,
+          "y": 881,
+          "sortOrder": 5
+        },
+        {
+          "number": "11",
+          "x": 625,
+          "y": 881,
+          "sortOrder": 6
+        },
+        {
+          "number": "13",
+          "x": 675,
+          "y": 881,
+          "sortOrder": 7
+        },
+        {
+          "number": "15",
+          "x": 725,
+          "y": 881,
+          "sortOrder": 8
+        },
+        {
+          "number": "17",
+          "x": 775,
+          "y": 881,
+          "sortOrder": 9
+        },
+        {
+          "number": "19",
+          "x": 825,
+          "y": 881,
+          "sortOrder": 10
+        },
+        {
+          "number": "21",
+          "x": 875,
+          "y": 881,
+          "sortOrder": 11
+        },
+        {
+          "number": "23",
+          "x": 925,
+          "y": 881,
+          "sortOrder": 12
+        },
+        {
+          "number": "25",
+          "x": 975,
+          "y": 881,
+          "sortOrder": 13
+        },
+        {
+          "number": "27",
+          "x": 1025,
+          "y": 881,
+          "sortOrder": 14
+        },
+        {
+          "number": "2",
+          "x": 375,
+          "y": 993,
+          "sortOrder": 15
+        },
+        {
+          "number": "4",
+          "x": 425,
+          "y": 993,
+          "sortOrder": 16
+        },
+        {
+          "number": "6",
+          "x": 475,
+          "y": 993,
+          "sortOrder": 17
+        },
+        {
+          "number": "8",
+          "x": 525,
+          "y": 993,
+          "sortOrder": 18
+        },
+        {
+          "number": "10",
+          "x": 575,
+          "y": 993,
+          "sortOrder": 19
+        },
+        {
+          "number": "12",
+          "x": 625,
+          "y": 993,
+          "sortOrder": 20
+        },
+        {
+          "number": "14",
+          "x": 675,
+          "y": 993,
+          "sortOrder": 21
+        },
+        {
+          "number": "16",
+          "x": 725,
+          "y": 993,
+          "sortOrder": 22
+        },
+        {
+          "number": "18",
+          "x": 775,
+          "y": 993,
+          "sortOrder": 23
+        },
+        {
+          "number": "20",
+          "x": 825,
+          "y": 993,
+          "sortOrder": 24
+        },
+        {
+          "number": "22",
+          "x": 875,
+          "y": 993,
+          "sortOrder": 25
+        },
+        {
+          "number": "24",
+          "x": 925,
+          "y": 993,
+          "sortOrder": 26
+        },
+        {
+          "number": "26",
+          "x": 975,
+          "y": 993,
+          "sortOrder": 27
+        },
+        {
+          "number": "28",
+          "x": 1025,
+          "y": 993,
+          "sortOrder": 28
+        }
+      ]
+    }
+  ]
+}
