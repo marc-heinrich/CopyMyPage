@@ -25,6 +25,13 @@ AGENTS.md
 DESIGN.md
 docs/UI_STYLE_GUIDE.md
 
+# Local agent and browser tool state
+.agents/
+.codex/
+.continue/
+.playwright-cli/
+.playwright-mcp/
+
 # Local-only media & design drafts
 media_local/
 blueprints/
