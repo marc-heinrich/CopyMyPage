@@ -5,12 +5,16 @@ CREATE TABLE IF NOT EXISTS `#__copymypage_ticket_carts` (
   `user_id` int unsigned NOT NULL DEFAULT 0,
   `status` tinyint unsigned NOT NULL DEFAULT 0,
   `booking_id` int unsigned DEFAULT NULL,
+  `payment_provider` varchar(255) DEFAULT NULL,
+  `terms_accepted_at` datetime DEFAULT NULL,
+  `terms_snapshot` mediumtext DEFAULT NULL,
   `revision` int unsigned NOT NULL DEFAULT 0,
   `expires_at` datetime NOT NULL,
   `created` datetime NOT NULL,
   `modified` datetime NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `idx_copymypage_ticket_cart_token` (`token_hash`),
+  KEY `idx_copymypage_ticket_cart_booking` (`booking_id`),
   KEY `idx_copymypage_ticket_cart_status_expiry` (`status`,`expires_at`),
   KEY `idx_copymypage_ticket_cart_user_status` (`user_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 DEFAULT COLLATE=utf8mb4_unicode_ci;

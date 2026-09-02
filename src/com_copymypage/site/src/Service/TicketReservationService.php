@@ -467,7 +467,7 @@ final class TicketReservationService
             $alreadyApplied = $this->quantitiesMatch($current, $quantities);
             $seating        = $this->seatSelection->getInventoryConstraints([$eventId])[$eventId] ?? null;
 
-            if ($seating !== null && empty($seating['ready'])) {
+            if ($seating === null || empty($seating['ready'])) {
                 throw new \DomainException(
                     Text::_('COM_COPYMYPAGE_TICKET_SELECTION_ERROR_SEATING_NOT_READY')
                 );
@@ -680,44 +680,42 @@ final class TicketReservationService
     {
         $availability = $this->catalog->getAvailability($event, $held);
 
-        if ($seating !== null) {
-            if (empty($seating['ready'])) {
-                $availability['bookable'] = false;
-                $availability['remaining'] = 0;
-                $availability['status'] = 'unavailable';
-            } else {
-                $seatCapacity  = max(0, (int) ($seating['capacity'] ?? 0));
-                $seatRemaining = max(0, $seatCapacity - $held);
-                $availability['remaining'] = $availability['capacity'] === null
-                    ? $seatRemaining
-                    : min((int) $availability['remaining'], $seatRemaining);
+        if ($seating === null || empty($seating['ready'])) {
+            $availability['bookable'] = false;
+            $availability['remaining'] = 0;
+            $availability['status'] = 'unavailable';
+        } else {
+            $seatCapacity  = max(0, (int) ($seating['capacity'] ?? 0));
+            $seatRemaining = max(0, $seatCapacity - $held);
+            $availability['remaining'] = $availability['capacity'] === null
+                ? $seatRemaining
+                : min((int) $availability['remaining'], $seatRemaining);
 
-                if ($availability['saleOpen']) {
-                    $availability['bookable'] = $availability['remaining'] > 0;
-                    $availability['status']   = $availability['bookable']
-                        ? 'available'
-                        : 'sold-out';
-                }
+            if ($availability['saleOpen']) {
+                $availability['bookable'] = $availability['remaining'] > 0;
+                $availability['status']   = $availability['bookable']
+                    ? 'available'
+                    : 'sold-out';
+            }
 
-                $availability['capacity'] = $availability['capacity'] === null
-                    ? $seatCapacity
-                    : min((int) $availability['capacity'], $seatCapacity);
-                $availability['used'] = max(
-                    0,
-                    (int) $availability['capacity'] - (int) $availability['remaining']
-                );
-                $availability['progress'] = (int) $availability['capacity'] > 0
-                    ? min(
-                        100,
-                        max(
-                            0,
-                            (int) round(
-                                ($availability['used'] / (int) $availability['capacity']) * 100
-                            )
+            $availability['capacity'] = $availability['capacity'] === null
+                ? $seatCapacity
+                : min((int) $availability['capacity'], $seatCapacity);
+            $availability['used'] = max(
+                0,
+                (int) $availability['capacity'] - (int) $availability['remaining']
+            );
+            $availability['progress'] = (int) $availability['capacity'] > 0
+                ? min(
+                    100,
+                    max(
+                        0,
+                        (int) round(
+                            ($availability['used'] / (int) $availability['capacity']) * 100
                         )
                     )
-                    : 100;
-            }
+                )
+                : 100;
         }
 
         $capacity     = $availability['capacity'];
