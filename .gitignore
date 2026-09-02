@@ -24,6 +24,7 @@ cache/
 AGENTS.md
 DESIGN.md
 docs/UI_STYLE_GUIDE.md
+docs/DPCALENDAR_BOOKING_FLOW.md
 
 # Local agent and browser tool state
 .agents/
