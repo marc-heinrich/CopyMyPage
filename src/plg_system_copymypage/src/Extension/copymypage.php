@@ -24,6 +24,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Router\Route;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\ImageHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\PreloaderHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\ProfileHelper;
@@ -106,7 +107,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     {
         return [
             'onAfterInitialise'    => 'onAfterInitialise',
-            'onAfterRoute'         => ['guardDPCalendarPaymentCallback', Priority::MAX],
+            'onAfterRoute'         => ['guardDPCalendarRoutes', Priority::MAX],
             'onContentAfterDelete' => 'onContentAfterDelete',
             'onContentAfterSave'   => 'onContentAfterSave',
             'onContentChangeState' => 'onContentChangeState',
@@ -134,6 +135,189 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         $this->registerHelperServices($container);
         $this->configurePasswordResetRoute();
         $this->registerProfileRouteCompatibility();
+    }
+
+    /**
+     * Guard CopyMyPage-owned DPCalendar routes before their controllers run.
+     *
+     * @param   AfterRouteEvent  $event  The after-route event.
+     *
+     * @return  void
+     *
+     * @since   0.0.19
+     */
+    public function guardDPCalendarRoutes(AfterRouteEvent $event): void
+    {
+        $this->guardDPCalendarBookingForm($event);
+        $this->guardDPCalendarPaymentCallback($event);
+    }
+
+    /**
+     * Keep CopyMyPage ticket events inside the seat-aware booking workflow.
+     *
+     * Native deletion and cancellation remain available so their normal seat
+     * release hooks can run. Only native add, edit and save entry points are blocked.
+     *
+     * @param   AfterRouteEvent  $event  The after-route event.
+     *
+     * @return  void
+     *
+     * @since   0.0.19
+     */
+    private function guardDPCalendarBookingForm(AfterRouteEvent $event): void
+    {
+        $app = $this->getApplication();
+
+        if (!$app instanceof CMSWebApplicationInterface || !$app->isClient('site')) {
+            return;
+        }
+
+        $input = $app->getInput();
+        $task  = $input->getCmd('task', '');
+        $view  = $input->getCmd('view', '');
+
+        $guardedTasks = [
+            'bookingform.add',
+            'bookingform.apply',
+            'bookingform.edit',
+            'bookingform.editAssociations',
+            'bookingform.save',
+            'bookingform.save2copy',
+            'bookingform.save2menu',
+            'bookingform.save2new',
+        ];
+
+        if (
+            $input->getCmd('option', '') !== 'com_dpcalendar'
+            || ($view !== 'bookingform' && !\in_array($task, $guardedTasks, true))
+            || ($view === 'bookingform' && $task !== '' && !\in_array($task, $guardedTasks, true))
+        ) {
+            return;
+        }
+
+        $eventIds = [];
+
+        try {
+            $eventIds = $this->getDPCalendarBookingFormEventIds();
+
+            if ($eventIds === []) {
+                return;
+            }
+
+            if (!$this->containsCopyMyPageTicketEvent($eventIds)) {
+                return;
+            }
+        } catch (\Throwable $exception) {
+            Log::add(
+                'CopyMyPage native DPCalendar booking guard failed (' . $exception::class . ').',
+                Log::ERROR,
+                'com_copymypage'
+            );
+        }
+
+        $app->getLanguage()->load(
+            'com_copymypage',
+            JPATH_SITE . '/components/com_copymypage',
+            null,
+            true
+        );
+        $app->enqueueMessage(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_INTRO'), 'notice');
+        $app->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
+        $app->setHeader('Pragma', 'no-cache', true);
+        $url = 'index.php?option=com_copymypage&view=ticketselection';
+
+        if ($eventIds !== []) {
+            $url .= '&event_id=' . $eventIds[0];
+        }
+
+        $app->redirect(Route::_($url, false));
+    }
+
+    /**
+     * Resolve event IDs carried by DPCalendar's new and existing booking forms.
+     *
+     * @return list<int>
+     *
+     * @since  0.0.19
+     */
+    private function getDPCalendarBookingFormEventIds(): array
+    {
+        $input    = $this->getApplication()->getInput();
+        $eventIds = [$input->getInt('e_id', 0)];
+        $jform    = $input->post->get('jform', [], 'array');
+        $formIds  = \is_array($jform['event_id'] ?? null)
+            ? array_keys($jform['event_id'])
+            : [$jform['event_id'] ?? 0];
+        $eventIds     = array_merge($eventIds, $formIds);
+        $bookingId    = max(0, $input->getInt('b_id', 0));
+        $bookingToken = substr(trim($input->getString('token', '')), 0, 255);
+
+        if ($bookingId > 0 || $bookingToken !== '') {
+            $db    = Factory::getContainer()->get(DatabaseInterface::class);
+            $query = $db->getQuery(true)
+                ->select('DISTINCT ' . $db->quoteName('t.event_id'))
+                ->from($db->quoteName('#__dpcalendar_tickets', 't'))
+                ->join(
+                    'INNER',
+                    $db->quoteName('#__dpcalendar_bookings', 'b')
+                        . ' ON ' . $db->quoteName('b.id') . ' = ' . $db->quoteName('t.booking_id')
+                );
+            $bookingConditions = [];
+
+            if ($bookingId > 0) {
+                $bookingConditions[] = $db->quoteName('t.booking_id') . ' = :bookingId';
+                $query->bind(':bookingId', $bookingId, ParameterType::INTEGER);
+            }
+
+            if ($bookingToken !== '') {
+                $bookingConditions[] = $db->quoteName('b.token') . ' = :bookingToken';
+                $query->bind(':bookingToken', $bookingToken);
+            }
+
+            $query->where('(' . implode(' OR ', $bookingConditions) . ')');
+            $eventIds = array_merge($eventIds, (array) $db->setQuery($query)->loadColumn());
+        }
+
+        $eventIds = array_values(array_unique(array_filter(
+            array_map('intval', $eventIds),
+            static fn(int $eventId): bool => $eventId > 0
+        )));
+        sort($eventIds, SORT_NUMERIC);
+
+        return array_slice($eventIds, 0, 50);
+    }
+
+    /**
+     * Check assignments first, then include public catalogue events which still
+     * need an assignment and therefore have no CopyMyPage seating row yet.
+     *
+     * @param   list<int>  $eventIds  Normalized DPCalendar event IDs.
+     *
+     * @return  bool
+     *
+     * @since   0.0.19
+     */
+    private function containsCopyMyPageTicketEvent(array $eventIds): bool
+    {
+        $db    = Factory::getContainer()->get(DatabaseInterface::class);
+        $query = $db->getQuery(true)
+            ->select('COUNT(*)')
+            ->from($db->quoteName('#__copymypage_event_seating'))
+            ->where($db->quoteName('event_id') . ' IN (' . implode(',', $eventIds) . ')');
+
+        if ((int) $db->setQuery($query)->loadResult() > 0) {
+            return true;
+        }
+
+        $requested = array_fill_keys($eventIds, true);
+
+        foreach (Factory::getContainer()->get(TicketCatalogService::class)->getUpcomingEvents() as $event) {
+            if (isset($requested[(int) ($event->id ?? 0)])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
