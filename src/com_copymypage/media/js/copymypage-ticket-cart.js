@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.19
+ * @since       0.0.20
  */
 
 (function (window, document, Joomla) {
@@ -75,6 +75,11 @@
     const selectAll = (root, selector) => isValidSelector(selector)
         ? Array.from(root.querySelectorAll(selector))
         : [];
+
+    const ownsEventTarget = (root, target, config) => root instanceof Element
+        && target instanceof Element
+        && isValidSelector(config.rootSelector)
+        && target.closest(config.rootSelector) === root;
 
     const getEventId = (element, config) => {
         const attribute = isObject(config.attributes) ? config.attributes.eventId : '';
@@ -392,6 +397,67 @@
         }
 
         updateEventSubmitState(input.closest(formSelector), true, config);
+        updateQuantityControls(input, config);
+    };
+
+    const updateQuantityControls = (input, config) => {
+        if (!(input instanceof HTMLInputElement) || !isObject(config.selectors)) {
+            return;
+        }
+
+        const priceGroup = input.closest('.cmp-ticket-selection-price');
+
+        if (!(priceGroup instanceof Element)) {
+            return;
+        }
+
+        const minimum = Number.isFinite(Number(input.min)) ? Number(input.min) : 0;
+        const maximum = input.max !== '' && Number.isFinite(Number(input.max))
+            ? Number(input.max)
+            : Number.POSITIVE_INFINITY;
+        const value = Number(input.value);
+        const quantity = Number.isFinite(value) ? value : minimum;
+        const decrement = select(priceGroup, config.selectors.quantityDecrement);
+        const increment = select(priceGroup, config.selectors.quantityIncrement);
+
+        if (decrement instanceof HTMLButtonElement) {
+            decrement.disabled = input.disabled || quantity <= minimum;
+        }
+
+        if (increment instanceof HTMLButtonElement) {
+            increment.disabled = input.disabled || quantity >= maximum;
+        }
+    };
+
+    const changeQuantity = (button, root, config, direction) => {
+        if (!(button instanceof HTMLButtonElement) || !isObject(config.selectors)) {
+            return;
+        }
+
+        const priceGroup = button.closest('.cmp-ticket-selection-price');
+        const input = priceGroup instanceof Element
+            ? select(priceGroup, config.selectors.quantity)
+            : null;
+
+        if (!(input instanceof HTMLInputElement) || input.disabled) {
+            return;
+        }
+
+        const step = Number(input.step);
+        const increment = Number.isFinite(step) && step > 0 ? step : 1;
+        const minimum = Number.isFinite(Number(input.min)) ? Number(input.min) : 0;
+        const maximum = input.max !== '' && Number.isFinite(Number(input.max))
+            ? Number(input.max)
+            : Number.POSITIVE_INFINITY;
+        const current = Number.isFinite(Number(input.value)) ? Number(input.value) : minimum;
+        const next = Math.min(
+            maximum,
+            Math.max(minimum, current + direction * increment)
+        );
+
+        input.value = String(next);
+        input.dispatchEvent(new Event('input', {bubbles: true}));
+        updateQuantitySubmitState(input, config);
     };
 
     const updateEvent = (root, eventState, config) => {
@@ -444,6 +510,7 @@
             input.max = String(Math.max(0, Number(price.limit) || 0));
             input.value = String(Math.max(0, Number(price.quantity) || 0));
             input.disabled = !eventState.canReserve || Number(price.limit) < 1;
+            updateQuantityControls(input, config);
         });
 
         const form = select(eventElement, config.selectors.eventForm);
@@ -672,6 +739,7 @@
         selectAll(root, config.selectors.quantity).forEach((input) => {
             if (input instanceof HTMLInputElement) {
                 input.value = '0';
+                updateQuantityControls(input, config);
             }
         });
         selectAll(root, config.selectors.eventForm).forEach((form) => {
@@ -792,9 +860,42 @@
         selectAll(root, config.selectors.eventForm).forEach((form) => {
             updateEventSubmitState(form, true, config);
         });
-        root.addEventListener('submit', (event) => handleSubmit(event, root, config));
-        root.addEventListener('input', (event) => updateQuantitySubmitState(event.target, config));
-        root.addEventListener('change', (event) => updateQuantitySubmitState(event.target, config));
+        selectAll(root, config.selectors.quantity).forEach((input) => {
+            updateQuantityControls(input, config);
+        });
+        root.addEventListener('submit', (event) => {
+            if (ownsEventTarget(root, event.target, config)) {
+                handleSubmit(event, root, config);
+            }
+        });
+        root.addEventListener('input', (event) => {
+            if (ownsEventTarget(root, event.target, config)) {
+                updateQuantitySubmitState(event.target, config);
+            }
+        });
+        root.addEventListener('change', (event) => {
+            if (ownsEventTarget(root, event.target, config)) {
+                updateQuantitySubmitState(event.target, config);
+            }
+        });
+        root.addEventListener('click', (event) => {
+            const target = event.target instanceof Element ? event.target : null;
+
+            if (!target || !ownsEventTarget(root, target, config)) {
+                return;
+            }
+
+            const decrement = target.closest(config.selectors.quantityDecrement);
+            const increment = target.closest(config.selectors.quantityIncrement);
+
+            if (decrement instanceof HTMLButtonElement) {
+                event.preventDefault();
+                changeQuantity(decrement, root, config, -1);
+            } else if (increment instanceof HTMLButtonElement) {
+                event.preventDefault();
+                changeQuantity(increment, root, config, 1);
+            }
+        });
     };
 
     runtime.init = (context) => {

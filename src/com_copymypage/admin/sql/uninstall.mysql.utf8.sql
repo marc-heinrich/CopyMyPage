@@ -17,3 +17,12 @@ DROP TABLE IF EXISTS `#__copymypage_addresses`;
 DELETE FROM `#__mail_templates`
 WHERE `template_id` = 'com_copymypage.contact.copy'
   AND `extension` = 'com_copymypage';
+
+-- Remove only the language-specific DPCalendar rows owned by CopyMyPage.
+DELETE FROM `#__mail_templates`
+WHERE `template_id` IN (
+    'com_dpcalendar.booking.user.new',
+    'com_dpcalendar.booking.user.pay'
+  )
+  AND `extension` = 'com_copymypage'
+  AND `language` IN ('de-DE', 'en-GB', 'es-ES', 'fr-FR', 'it-IT');

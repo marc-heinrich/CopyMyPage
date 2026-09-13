@@ -91,7 +91,15 @@ final class AccountMenuProvider
         $layout = strtolower(trim($layout));
         $layout = \in_array(
             $layout,
-            ['default', 'profile', 'profile.address', 'profile.edit', 'security', 'security.edit'],
+            [
+                'default',
+                'profile',
+                'profile.address',
+                'profile.edit',
+                'security',
+                'security.edit',
+                'tickets',
+            ],
             true
         )
             ? $layout

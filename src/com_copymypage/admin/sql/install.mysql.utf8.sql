@@ -176,6 +176,7 @@ CREATE TABLE IF NOT EXISTS `#__copymypage_event_seats` (
   `event_id` int unsigned NOT NULL,
   `seat_id` int unsigned NOT NULL,
   `status` tinyint unsigned NOT NULL DEFAULT 0,
+  `allocation_type` tinyint unsigned NOT NULL DEFAULT 0,
   `cart_id` int unsigned DEFAULT NULL,
   `price_index` int unsigned DEFAULT NULL,
   `assignment_order` int unsigned DEFAULT NULL,
@@ -211,3 +212,20 @@ VALUES
     '',
     '{"tags":["sitename","name","email","subject","body","url","customfields","contactname"]}'
   );
+
+-- Localised customer mail templates for managed DPCalendar bookings.
+-- Language-specific rows win over DPCalendar's empty-language defaults.
+-- INSERT IGNORE preserves administrator customisations.
+INSERT IGNORE INTO `#__mail_templates`
+  (`template_id`, `extension`, `language`, `subject`, `body`, `htmlbody`, `attachments`, `params`)
+VALUES
+  ('com_dpcalendar.booking.user.new', 'com_copymypage', 'de-DE', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.new', 'com_copymypage', 'en-GB', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.new', 'com_copymypage', 'es-ES', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.new', 'com_copymypage', 'fr-FR', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.new', 'com_copymypage', 'it-IT', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.pay', 'com_copymypage', 'de-DE', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.pay', 'com_copymypage', 'en-GB', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.pay', 'com_copymypage', 'es-ES', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.pay', 'com_copymypage', 'fr-FR', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}'),
+  ('com_dpcalendar.booking.user.pay', 'com_copymypage', 'it-IT', 'COM_COPYMYPAGE_BOOKING_MAIL_SUBJECT', 'COM_COPYMYPAGE_BOOKING_MAIL_BODY', 'COM_COPYMYPAGE_BOOKING_MAIL_HTMLBODY', '', '{"tags":["sitename","user","booking","events"]}');

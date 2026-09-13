@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "namespace": "Joomla\\Component\\CopyMyPage\\Site\\WebAsset\\AssetItem",
@@ -28,7 +28,7 @@
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.min.css",
-      "version": "0.0.19",
+      "version": "0.0.20",
       "dependencies": [
         "uikit",
         "template.fonts"
@@ -181,7 +181,7 @@
       "type": "script",
       "class": "TicketCartAssetItem",
       "uri": "com_copymypage/copymypage-ticket-cart.min.js",
-      "version": "0.0.19",
+      "version": "0.0.20",
       "dependencies": [
         "core",
         "uikit",
@@ -197,7 +197,7 @@
       "type": "script",
       "class": "TicketSeatsAssetItem",
       "uri": "com_copymypage/copymypage-seat-selection.min.js",
-      "version": "0.0.19",
+      "version": "0.0.20",
       "dependencies": [
         "core",
         "uikit",
@@ -227,7 +227,7 @@
       "name": "copymypage.order-review",
       "type": "script",
       "uri": "com_copymypage/copymypage-order-review.min.js",
-      "version": "0.0.19",
+      "version": "0.0.20",
       "dependencies": [
         "core",
         "copymypage.content.drawer"

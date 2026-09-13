@@ -150,7 +150,7 @@ final class BookingCompletionService
         $state['managed']     = false;
         $state['scope']       = 'unknown';
 
-        return array_replace($state, $this->getPresentation(-1, false, false));
+        return array_replace($state, $this->getPresentation(-1, false, false, false));
     }
 
     /**
@@ -161,6 +161,7 @@ final class BookingCompletionService
         $bookingStatus     = (int) ($booking->state ?? -1);
         $paymentRequired   = (float) ($booking->price ?? 0.0) > 0;
         $transactionStarted = trim((string) ($booking->transaction_id ?? '')) !== '';
+        $hasAccount        = (int) ($booking->user_id ?? 0) > 0;
 
         return array_replace(
             [
@@ -168,6 +169,7 @@ final class BookingCompletionService
                 'bookingUid'        => trim((string) ($booking->uid ?? '')),
                 'completed'         => $bookingStatus === 1,
                 'events'            => [],
+                'hasAccount'        => $hasAccount,
                 'integrityOk'       => true,
                 'managed'           => false,
                 'paymentRequired'   => $paymentRequired,
@@ -176,7 +178,12 @@ final class BookingCompletionService
                 'ticketCount'       => 0,
                 'transactionStarted' => $transactionStarted,
             ],
-            $this->getPresentation($bookingStatus, $paymentRequired, $transactionStarted)
+            $this->getPresentation(
+                $bookingStatus,
+                $paymentRequired,
+                $transactionStarted,
+                $hasAccount
+            )
         );
     }
 
@@ -186,14 +193,15 @@ final class BookingCompletionService
     private function getPresentation(
         int $bookingStatus,
         bool $paymentRequired,
-        bool $transactionStarted
+        bool $transactionStarted,
+        bool $hasAccount
     ): array {
         return match ($bookingStatus) {
             1 => [
                 'icon'     => 'check',
-                'introKey' => $paymentRequired
-                    ? 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_COMPLETE_PAID_INTRO'
-                    : 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_COMPLETE_FREE_INTRO',
+                'introKey' => $hasAccount
+                    ? 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_COMPLETE_ACCOUNT_INTRO'
+                    : 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_COMPLETE_GUEST_INTRO',
                 'titleKey' => 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_COMPLETE_TITLE',
                 'tone'     => 'success',
             ],
@@ -215,7 +223,7 @@ final class BookingCompletionService
                 'icon'     => 'close',
                 'introKey' => 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_CANCELLED_INTRO',
                 'titleKey' => 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_CANCELLED_TITLE',
-                'tone'     => 'danger',
+                'tone'     => 'warning',
             ],
             7 => [
                 'icon'     => 'reply',

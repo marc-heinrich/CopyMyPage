@@ -122,9 +122,19 @@ $continueUrl = !empty($this->allComplete) ? trim((string) ($this->continueUrl ??
         ></div>
 
         <?php if ($events === []) : ?>
-            <div class="cmp-seat-selection__notice" role="status">
-                <p><?php echo $escape(Text::_('COM_COPYMYPAGE_SEAT_SELECTION_EMPTY')); ?></p>
-            </div>
+            <?php echo LayoutHelper::render(
+                'copymypage.tickets.message',
+                [
+                    'ariaLive' => 'polite',
+                    'body'     => Text::_('COM_COPYMYPAGE_SEAT_SELECTION_EMPTY'),
+                    'class'    => 'cmp-seat-selection__message',
+                    'icon'     => 'warning',
+                    'id'       => 'cmp-seat-selection-empty',
+                    'role'     => 'status',
+                    'title'    => Text::_('COM_COPYMYPAGE_SEAT_SELECTION_EMPTY_TITLE'),
+                    'tone'     => 'warning',
+                ]
+            ); ?>
         <?php else : ?>
             <section
                 class="cmp-seat-selection__events"
@@ -318,7 +328,7 @@ $continueUrl = !empty($this->allComplete) ? trim((string) ($this->continueUrl ??
                                 ></span>
                                 <span
                                     class="cmp-ticket-selection-event__icon"
-                                    uk-accordion-icon
+                                    uk-icon="icon: chevron-down"
                                     aria-hidden="true"
                                 ></span>
                             </a>
@@ -396,36 +406,57 @@ $continueUrl = !empty($this->allComplete) ? trim((string) ($this->continueUrl ??
                                                     Text::_('COM_COPYMYPAGE_SEAT_SELECTION_LEGEND_LABEL')
                                                 ); ?>"
                                             >
-                                                <span class="cmp-seat-selection-legend__item">
-                                                    <span
-                                                        class="cmp-seat-selection-legend__seat
-                                                            cmp-seat-selection-legend__seat--available"
-                                                        aria-hidden="true"
-                                                    ></span>
-                                                    <?php echo $escape(
-                                                        Text::_('COM_COPYMYPAGE_SEAT_SELECTION_LEGEND_AVAILABLE')
-                                                    ); ?>
-                                                </span>
-                                                <span class="cmp-seat-selection-legend__item">
-                                                    <span
-                                                        class="cmp-seat-selection-legend__seat
-                                                            cmp-seat-selection-legend__seat--selected"
-                                                        aria-hidden="true"
-                                                    >✓</span>
-                                                    <?php echo $escape(
-                                                        Text::_('COM_COPYMYPAGE_SEAT_SELECTION_LEGEND_SELECTED')
-                                                    ); ?>
-                                                </span>
-                                                <span class="cmp-seat-selection-legend__item">
-                                                    <span
-                                                        class="cmp-seat-selection-legend__seat
-                                                            cmp-seat-selection-legend__seat--unavailable"
-                                                        aria-hidden="true"
-                                                    >×</span>
-                                                    <?php echo $escape(
-                                                        Text::_('COM_COPYMYPAGE_SEAT_SELECTION_LEGEND_UNAVAILABLE')
-                                                    ); ?>
-                                                </span>
+                                                <?php
+                                                $legendItems = [
+                                                    [
+                                                        'key' => 'AVAILABLE',
+                                                        'mark' => '',
+                                                        'state' => 'available',
+                                                    ],
+                                                    [
+                                                        'key' => 'SELECTED',
+                                                        'mark' => '✓',
+                                                        'state' => 'selected',
+                                                    ],
+                                                    [
+                                                        'key' => 'HOTLINE',
+                                                        'mark' => 'H',
+                                                        'state' => 'hotline',
+                                                    ],
+                                                    [
+                                                        'key' => 'UNAVAILABLE',
+                                                        'mark' => '×',
+                                                        'state' => 'unavailable',
+                                                    ],
+                                                ];
+                                                ?>
+                                                <?php foreach ($legendItems as $legendItem) : ?>
+                                                    <?php
+                                                    $legendKey = 'COM_COPYMYPAGE_SEAT_SELECTION_LEGEND_'
+                                                        . $legendItem['key'];
+                                                    $legendLabel = Text::_($legendKey);
+                                                    ?>
+                                                    <span class="cmp-seat-selection-legend__item">
+                                                        <span
+                                                            class="cmp-seat-selection-legend__seat
+                                                                cmp-seat-selection-legend__seat--<?php echo $escape(
+                                                                    $legendItem['state']
+                                                                ); ?>"
+                                                            aria-hidden="true"
+                                                        ><?php echo $escape($legendItem['mark']); ?></span>
+                                                        <span class="visually-hidden">
+                                                            <?php echo $escape($legendLabel); ?>
+                                                        </span>
+                                                        <span
+                                                            class="cmp-seat-selection-legend__label-full"
+                                                            aria-hidden="true"
+                                                        ><?php echo $escape($legendLabel); ?></span>
+                                                        <span
+                                                            class="cmp-seat-selection-legend__label-short"
+                                                            aria-hidden="true"
+                                                        ><?php echo $escape(Text::_($legendKey . '_SHORT')); ?></span>
+                                                    </span>
+                                                <?php endforeach; ?>
                                             </div>
 
                                             <div class="cmp-seat-selection-event__tools">
@@ -684,11 +715,26 @@ $continueUrl = !empty($this->allComplete) ? trim((string) ($this->continueUrl ??
                                                                 $seatStatus = strtolower(trim((string) ($seat['status'] ?? 'unavailable')));
                                                                 $seatStatus = \in_array(
                                                                     $seatStatus,
-                                                                    ['available', 'selected', 'unavailable'],
+                                                                    ['available', 'selected', 'hotline', 'unavailable'],
                                                                     true
                                                                 ) ? $seatStatus : 'unavailable';
-                                                                $isSelected   = $seatStatus === 'selected';
-                                                                $isUnavailable = !$isReady || $seatStatus === 'unavailable';
+                                                                $isSelected = $seatStatus === 'selected';
+                                                                $isUnavailable = !$isReady || \in_array(
+                                                                    $seatStatus,
+                                                                    ['hotline', 'unavailable'],
+                                                                    true
+                                                                );
+                                                                $seatLabel = trim((string) (
+                                                                    $seat['accessibleLabel']
+                                                                    ?? $seat['label']
+                                                                    ?? ''
+                                                                ));
+                                                                $seatMark = match ($seatStatus) {
+                                                                    'selected' => '✓',
+                                                                    'hotline' => 'H',
+                                                                    'unavailable' => '×',
+                                                                    default => '',
+                                                                };
                                                                 $inputId = 'cmp-seat-selection-seat-' . $eventId . '-' . $seatId;
                                                                 ?>
                                                                 <span
@@ -720,19 +766,19 @@ $continueUrl = !empty($this->allComplete) ? trim((string) ($this->continueUrl ??
                                                                     <label
                                                                         class="cmp-seat-selection-seat__label"
                                                                         for="<?php echo $escape($inputId); ?>"
-                                                                        title="<?php echo $escape($seat['label'] ?? ''); ?>"
+                                                                        title="<?php echo $escape($seatLabel); ?>"
                                                                     >
                                                                         <span class="visually-hidden">
-                                                                            <?php echo $escape($seat['label'] ?? ''); ?>
+                                                                            <?php echo $escape($seatLabel); ?>
                                                                         </span>
                                                                         <span aria-hidden="true">
                                                                             <?php echo $escape($seat['number'] ?? ''); ?>
                                                                         </span>
-                                                                        <?php if ($isSelected || $isUnavailable) : ?>
+                                                                        <?php if ($seatMark !== '') : ?>
                                                                             <span
                                                                                 class="cmp-seat-selection-seat__mark"
                                                                                 aria-hidden="true"
-                                                                            ><?php echo $isSelected ? '✓' : '×'; ?></span>
+                                                                            ><?php echo $escape($seatMark); ?></span>
                                                                         <?php endif; ?>
                                                                     </label>
                                                                 </span>
@@ -836,7 +882,7 @@ $continueUrl = !empty($this->allComplete) ? trim((string) ($this->continueUrl ??
             </section>
         <?php endif; ?>
 
-        <nav class="cmp-seat-selection__navigation">
+        <nav class="cmp-seat-selection__navigation<?php echo $events === [] ? ' cmp-seat-selection__navigation--message' : ''; ?>">
             <a
                 class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--back cmp-seat-selection__back"
                 href="<?php echo $escape($backUrl); ?>"

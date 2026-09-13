@@ -50,6 +50,7 @@ class DisplayController extends BaseController
         'profile.edit',
         'security',
         'security.edit',
+        'tickets',
     ];
 
     /**

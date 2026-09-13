@@ -105,17 +105,19 @@ $regionsUrl = Route::_(
         </header>
 
         <?php if ($this->blocked || !$this->form) : ?>
-            <section class="cmp-customer-data__blocked" role="alert">
-                <h2><?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_BLOCKED_TITLE')); ?></h2>
-                <p><?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_BLOCKED_MESSAGE')); ?></p>
-                <a
-                    class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--back cmp-customer-data__back"
-                    href="<?php echo $escape($backUrl); ?>"
-                >
-                    <span uk-icon="icon: chevron-left" aria-hidden="true"></span>
-                    <span><?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_BACK')); ?></span>
-                </a>
-            </section>
+            <?php echo LayoutHelper::render(
+                'copymypage.tickets.message',
+                [
+                    'ariaLive' => 'assertive',
+                    'body'     => Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_BLOCKED_MESSAGE'),
+                    'class'    => 'cmp-customer-data__message',
+                    'icon'     => 'warning',
+                    'id'       => 'cmp-customer-data-blocked',
+                    'role'     => 'alert',
+                    'title'    => Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_BLOCKED_TITLE'),
+                    'tone'     => 'warning',
+                ]
+            ); ?>
         <?php else : ?>
             <?php if ($showModeSwitcher) : ?>
                 <ul
@@ -361,18 +363,20 @@ $regionsUrl = Route::_(
                     </li>
                 </ul>
             <?php endif; ?>
+        <?php endif; ?>
 
-            <nav
-                class="cmp-customer-data__navigation"
-                aria-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_NAVIGATION_LABEL')); ?>"
+        <nav
+            class="cmp-customer-data__navigation"
+            aria-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_NAVIGATION_LABEL')); ?>"
+        >
+            <a
+                class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--back cmp-customer-data__back"
+                href="<?php echo $escape($backUrl); ?>"
             >
-                <a
-                    class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--back cmp-customer-data__back"
-                    href="<?php echo $escape($backUrl); ?>"
-                >
-                    <span uk-icon="icon: chevron-left" aria-hidden="true"></span>
-                    <span><?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_BACK')); ?></span>
-                </a>
+                <span uk-icon="icon: chevron-left" aria-hidden="true"></span>
+                <span><?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_BACK')); ?></span>
+            </a>
+            <?php if (!$this->blocked && $this->form) : ?>
                 <button
                     class="uk-button uk-button-primary cmp-button cmp-button--primary validate cmp-customer-data__continue"
                     type="submit"
@@ -384,7 +388,7 @@ $regionsUrl = Route::_(
                     <span><?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_CONTINUE')); ?></span>
                     <span uk-icon="icon: chevron-right" aria-hidden="true"></span>
                 </button>
-            </nav>
-        <?php endif; ?>
+            <?php endif; ?>
+        </nav>
     </div>
 </div>

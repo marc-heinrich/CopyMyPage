@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.19
+ * @since       0.0.20
  */
 
 (function (window, document, Joomla) {
@@ -23,6 +23,7 @@
     const tableFocusUpdateFrames = runtime.tableFocusUpdateFrames instanceof WeakMap
         ? runtime.tableFocusUpdateFrames
         : new WeakMap();
+    const fittedViewportBlockSizeProperty = '--cmp-seat-map-fitted-block-size';
     let zoomFitFrame = Number.isInteger(runtime.zoomFitFrame) ? runtime.zoomFitFrame : null;
     let tableFocusResizeObserver = runtime.tableFocusResizeObserver || null;
 
@@ -477,10 +478,37 @@
             label.append(mark);
         }
 
-        const markText = status === 'selected' ? '✓' : '×';
+        const markText = status === 'selected' ? '✓' : (status === 'hotline' ? 'H' : '×');
 
         if (mark.textContent !== markText) {
             mark.textContent = markText;
+        }
+    };
+
+    const updateSeatLabel = (seatElement, seat) => {
+        const label = seatElement.querySelector('.cmp-seat-selection-seat__label');
+
+        if (!(label instanceof HTMLLabelElement) || !isObject(seat)) {
+            return;
+        }
+
+        const accessibleLabel = typeof seat.accessibleLabel === 'string'
+            && seat.accessibleLabel.trim() !== ''
+            ? seat.accessibleLabel.trim()
+            : (typeof seat.label === 'string' ? seat.label.trim() : '');
+
+        if (accessibleLabel === '') {
+            return;
+        }
+
+        if (label.title !== accessibleLabel) {
+            label.title = accessibleLabel;
+        }
+
+        const hiddenLabel = label.querySelector('.visually-hidden');
+
+        if (hiddenLabel instanceof HTMLElement && hiddenLabel.textContent.trim() !== accessibleLabel) {
+            hiddenLabel.textContent = accessibleLabel;
         }
     };
 
@@ -493,17 +521,20 @@
                 return;
             }
 
-            const status = ['available', 'selected', 'unavailable'].includes(seat.status)
+            const status = ['available', 'selected', 'hotline', 'unavailable'].includes(seat.status)
                 ? seat.status
                 : 'unavailable';
             const input = seatElement.querySelector('input[type="checkbox"]');
 
             replaceModifierClass(seatElement, 'cmp-seat-selection-seat--', status);
             updateSeatMark(seatElement, status);
+            updateSeatLabel(seatElement, seat);
 
             if (input instanceof HTMLInputElement) {
                 const checked = status === 'selected';
-                const disabled = !eventState.ready || status === 'unavailable';
+                const disabled = !eventState.ready
+                    || status === 'hotline'
+                    || status === 'unavailable';
 
                 if (input.checked !== checked) {
                     input.checked = checked;
@@ -1012,6 +1043,22 @@
         };
     };
 
+    const updateFittedViewportBlockSize = (viewport, shell) => {
+        const viewportStyles = window.getComputedStyle(viewport);
+        const blockInsets = Number.parseFloat(viewportStyles.paddingBlockStart)
+            + Number.parseFloat(viewportStyles.paddingBlockEnd)
+            + Number.parseFloat(viewportStyles.borderBlockStartWidth)
+            + Number.parseFloat(viewportStyles.borderBlockEndWidth);
+        const fittedCanvasHeight = shell.getBoundingClientRect().height;
+
+        if (Number.isFinite(blockInsets) && fittedCanvasHeight > 0) {
+            viewport.style.setProperty(
+                fittedViewportBlockSizeProperty,
+                `${Math.ceil(fittedCanvasHeight + blockInsets)}px`
+            );
+        }
+    };
+
     const updateZoomButtons = (eventElement, zoom, zoomConfig, config) => {
         if (!isObject(config.selectors)) {
             return;
@@ -1087,6 +1134,13 @@
         const shell = select(eventElement, config.selectors.zoomCanvas);
         const zoomConfig = getZoomConfig(config);
 
+        const fitViewportBlockSize = document.body.classList.contains('is-small')
+            && window.matchMedia('(orientation: portrait)').matches;
+
+        if (viewport instanceof HTMLElement) {
+            viewport.style.removeProperty(fittedViewportBlockSizeProperty);
+        }
+
         if (!(viewport instanceof HTMLElement) || !(shell instanceof HTMLElement) || !zoomConfig
             || viewport.clientWidth === 0 || viewport.clientHeight === 0) {
             return;
@@ -1099,7 +1153,7 @@
         }
 
         const viewportSize = getViewportContentSize(viewport);
-        const initial = Math.min(
+        let initial = Math.min(
             1,
             viewportSize.width / canvasSize.width,
             viewportSize.height / canvasSize.height
@@ -1121,6 +1175,23 @@
         state.measured = true;
         zoomStates.set(shell, state);
         setZoom(eventElement, initial, config, false);
+
+        if (fitViewportBlockSize) {
+            updateFittedViewportBlockSize(viewport, shell);
+
+            const fittedViewportWidth = getViewportContentSize(viewport).width;
+            const refitted = Math.min(initial, fittedViewportWidth / canvasSize.width);
+
+            if (Number.isFinite(refitted) && refitted > 0 && refitted < initial) {
+                initial = refitted;
+                state.initial = initial;
+                state.minimum = Math.min(zoomConfig.minimum, initial);
+                zoomStates.set(shell, state);
+                setZoom(eventElement, initial, config, false);
+                updateFittedViewportBlockSize(viewport, shell);
+            }
+        }
+
         viewport.scrollLeft = 0;
         viewport.scrollTop = 0;
     };

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <layout
+    title="COM_COPYMYPAGE_DASHBOARD_NAV_TICKETS"
+    option="COM_COPYMYPAGE_DASHBOARD_NAV_TICKETS"
+  >
+    <message><![CDATA[COM_COPYMYPAGE_DASHBOARD_TICKETS_LEAD]]></message>
+  </layout>
+  <fields name="params">
+    <fieldset name="basic">
+      <field
+        name="copymypage_account_key"
+        type="hidden"
+        default="tickets"
+      />
+      <field
+        name="copymypage_account_icon"
+        type="hidden"
+        default="tag"
+      />
+    </fieldset>
+  </fields>
+</metadata>

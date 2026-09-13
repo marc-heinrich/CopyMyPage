@@ -114,11 +114,6 @@ final class DashboardHelper
                     'icon'  => 'bag',
                 ],
                 [
-                    'key'   => 'tickets',
-                    'label' => 'COM_COPYMYPAGE_DASHBOARD_FUTURE_TICKETS',
-                    'icon'  => 'tag',
-                ],
-                [
                     'key'   => 'posts',
                     'label' => 'COM_COPYMYPAGE_DASHBOARD_FUTURE_POSTS',
                     'icon'  => 'file-text',

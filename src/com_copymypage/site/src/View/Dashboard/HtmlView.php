@@ -43,6 +43,13 @@ class HtmlView extends BaseHtmlView
     protected array $accountMenu = [];
 
     /**
+     * Confirmed tickets owned by the current user.
+     *
+     * @var list<array<string, mixed>>
+     */
+    protected array $tickets = [];
+
+    /**
      * Routed profile destination.
      */
     protected string $profileUrl = '';
@@ -164,7 +171,11 @@ class HtmlView extends BaseHtmlView
         $this->securityUrl       = $accountMenuProvider->getDashboardUrl($app, 'security');
         $this->securityEditUrl   = $accountMenuProvider->getDashboardUrl($app, 'security.edit');
 
-        if ($layout !== 'default') {
+        if ($layout === 'tickets') {
+            $this->tickets = \is_array($dashboard['tickets'] ?? null)
+                ? $dashboard['tickets']
+                : [];
+        } elseif ($layout !== 'default') {
             $this->data              = $dashboard['data'] ?? null;
             $this->form              = $dashboard['form'] ?? null;
             $this->profileAvatarForm = $dashboard['avatarForm'] ?? null;
@@ -223,6 +234,7 @@ class HtmlView extends BaseHtmlView
             'profile.edit'    => Text::_('COM_COPYMYPAGE_PROFILE_EDIT_TITLE'),
             'security'        => Text::_('COM_COPYMYPAGE_SECURITY_TITLE'),
             'security.edit'   => Text::_('COM_COPYMYPAGE_SECURITY_EDIT_TITLE'),
+            'tickets'         => Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_TITLE'),
             default           => Text::_('COM_COPYMYPAGE_VIEW_DASHBOARD_TITLE'),
         };
 

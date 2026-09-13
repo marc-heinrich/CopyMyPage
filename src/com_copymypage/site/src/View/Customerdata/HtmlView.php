@@ -17,6 +17,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Log\Log;
 use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
+use Joomla\Component\CopyMyPage\Site\Helper\CopyMyPageHelper;
 use Joomla\Component\CopyMyPage\Site\Service\CustomerDataService;
 
 /**
@@ -85,6 +86,13 @@ final class HtmlView extends BaseHtmlView
         $this->showAccountOption = (bool) ($state['showAccountOption'] ?? false);
         $this->formFieldNames    = $service->getFormFieldNames();
         $this->markupAttributes  = $service->getMarkupAttributes();
+
+        if ($this->captchaEnabled && $this->accountForm !== null) {
+            CopyMyPageHelper::prepareCaptchaLanguageOverrides(
+                $this->accountForm,
+                $app->getLanguage()
+            );
+        }
 
         $this->prepareDocument();
 

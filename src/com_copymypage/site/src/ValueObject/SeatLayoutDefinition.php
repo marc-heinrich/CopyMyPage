@@ -17,8 +17,9 @@ namespace Joomla\Component\CopyMyPage\Site\ValueObject;
 final readonly class SeatLayoutDefinition
 {
     /**
-     * @param   list<array<string, int|string>>  $areas   Non-interactive stage and aisle geometry.
-     * @param   list<LayoutTableDefinition>      $tables  Physical tables in display order.
+     * @param   list<array<string, int|string>>                          $areas              Non-interactive stage and aisle geometry.
+     * @param   list<LayoutTableDefinition>                              $tables             Physical tables in display order.
+     * @param   array{seatCodes: list<string>, tableCodes: list<string>} $hotlineAllocation  Validated Hotline references.
      */
     public function __construct(
         public int $schemaVersion,
@@ -29,6 +30,7 @@ final readonly class SeatLayoutDefinition
         public int $height,
         public array $areas,
         public array $tables,
+        public array $hotlineAllocation,
         public string $hash
     ) {
     }
@@ -53,7 +55,7 @@ final readonly class SeatLayoutDefinition
      */
     public function toArray(): array
     {
-        return [
+        $definition = [
             'alias'         => $this->alias,
             'areas'         => $this->areas,
             'canvas'        => [
@@ -68,5 +70,56 @@ final readonly class SeatLayoutDefinition
             'title'         => $this->title,
             'version'       => $this->version,
         ];
+
+        if (
+            $this->hotlineAllocation['tableCodes'] !== []
+            || $this->hotlineAllocation['seatCodes'] !== []
+        ) {
+            $definition['allocations'] = [
+                'hotline' => $this->buildHotlineEntries(),
+            ];
+        }
+
+        return $definition;
+    }
+
+    /**
+     * Return the canonical, input-compatible Hotline allocation entries.
+     *
+     * @return list<array{all?: true, seats?: list<string>, table: string}>
+     */
+    private function buildHotlineEntries(): array
+    {
+        $tableCodes = array_fill_keys($this->hotlineAllocation['tableCodes'], true);
+        $seatCodes  = array_fill_keys($this->hotlineAllocation['seatCodes'], true);
+        $entries    = [];
+
+        foreach ($this->tables as $table) {
+            if (isset($tableCodes[$table->code])) {
+                $entries[] = [
+                    'all'   => true,
+                    'table' => $table->code,
+                ];
+
+                continue;
+            }
+
+            $seatNumbers = [];
+
+            foreach ($table->seats as $seat) {
+                if (isset($seatCodes[$seat->code])) {
+                    $seatNumbers[] = $seat->number;
+                }
+            }
+
+            if ($seatNumbers !== []) {
+                $entries[] = [
+                    'seats' => $seatNumbers,
+                    'table' => $table->code,
+                ];
+            }
+        }
+
+        return $entries;
     }
 }

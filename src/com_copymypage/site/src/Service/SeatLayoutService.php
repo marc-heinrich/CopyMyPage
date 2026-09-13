@@ -134,6 +134,92 @@ final class SeatLayoutService
     }
 
     /**
+     * Return the immutable Hotline allocation stored with one published layout.
+     *
+     * @return array{
+     *     layoutAlias: string,
+     *     layoutVersion: int,
+     *     seatCodes: list<string>,
+     *     tableCodes: list<string>
+     * }
+     */
+    public function getHotlineAllocation(int $layoutId): array
+    {
+        if ($layoutId <= 0) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_LAYOUT'));
+        }
+
+        $query = $this->db->getQuery(true)
+            ->select(
+                $this->db->quoteName(
+                    ['alias', 'version', 'geometry_json']
+                )
+            )
+            ->from($this->db->quoteName('#__copymypage_seat_layouts'))
+            ->where($this->db->quoteName('id') . ' = :layoutId')
+            ->where($this->db->quoteName('status') . ' = ' . self::STATUS_PUBLISHED)
+            ->bind(':layoutId', $layoutId, ParameterType::INTEGER);
+        $row = $this->db->setQuery($query)->loadObject();
+
+        if (!\is_object($row)) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_LAYOUT'));
+        }
+
+        try {
+            $geometry = json_decode(
+                (string) $row->geometry_json,
+                true,
+                64,
+                JSON_THROW_ON_ERROR
+            );
+        } catch (\JsonException $exception) {
+            throw new \DomainException(
+                Text::_('COM_COPYMYPAGE_SEAT_LAYOUT_ERROR_CORRUPT'),
+                0,
+                $exception
+            );
+        }
+
+        if (!\is_array($geometry) || array_is_list($geometry)) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_SEAT_LAYOUT_ERROR_CORRUPT'));
+        }
+
+        $allocation = [
+            'seatCodes'  => [],
+            'tableCodes' => [],
+        ];
+
+        if (array_key_exists('allocations', $geometry)) {
+            $allocations = $geometry['allocations'];
+
+            if (
+                !\is_array($allocations)
+                || array_is_list($allocations)
+                || array_keys($allocations) !== ['hotline']
+                || !\is_array($allocations['hotline'])
+                || array_is_list($allocations['hotline'])
+            ) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_SEAT_LAYOUT_ERROR_CORRUPT'));
+            }
+
+            $allocation = $allocations['hotline'];
+            $keys       = array_keys($allocation);
+            sort($keys, SORT_STRING);
+
+            if ($keys !== ['seatCodes', 'tableCodes']) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_SEAT_LAYOUT_ERROR_CORRUPT'));
+            }
+        }
+
+        return [
+            'layoutAlias'   => (string) $row->alias,
+            'layoutVersion' => (int) $row->version,
+            'seatCodes'     => $allocation['seatCodes'],
+            'tableCodes'    => $allocation['tableCodes'],
+        ];
+    }
+
+    /**
      * Validate and atomically import one allowlisted bundled JSON definition.
      *
      * @return array<string, bool|int|string>
@@ -161,6 +247,17 @@ final class SeatLayoutService
             }
 
             $now = gmdate('Y-m-d H:i:s');
+            $geometry = ['areas' => $definition->areas];
+
+            if (
+                $definition->hotlineAllocation['tableCodes'] !== []
+                || $definition->hotlineAllocation['seatCodes'] !== []
+            ) {
+                $geometry['allocations'] = [
+                    'hotline' => $definition->hotlineAllocation,
+                ];
+            }
+
             $row = (object) [
                 'alias'          => $definition->alias,
                 'version'        => $definition->version,
@@ -169,7 +266,7 @@ final class SeatLayoutService
                 'logical_width'  => $definition->width,
                 'logical_height' => $definition->height,
                 'geometry_json'  => json_encode(
-                    ['areas' => $definition->areas],
+                    $geometry,
                     JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
                 ),
                 'definition_hash' => $definition->hash,
@@ -264,7 +361,8 @@ final class SeatLayoutService
         }
 
         try {
-            $data = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
+            $data  = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
+            $shape = json_decode($json, false, 64, JSON_THROW_ON_ERROR);
         } catch (\JsonException $exception) {
             throw new \DomainException(
                 Text::_('COM_COPYMYPAGE_SEAT_LAYOUT_ERROR_JSON'),
@@ -273,9 +371,11 @@ final class SeatLayoutService
             );
         }
 
-        if (!\is_array($data) || array_is_list($data)) {
+        if (!\is_array($data) || array_is_list($data) || !\is_object($shape)) {
             throw $this->invalidDefinition('root');
         }
+
+        $this->assertAllocationJsonShape($shape);
 
         return $this->normaliseDefinition($data);
     }
@@ -289,7 +389,7 @@ final class SeatLayoutService
     {
         $this->assertKeys(
             $data,
-            ['alias', 'areas', 'canvas', 'schemaVersion', 'tables', 'title', 'version'],
+            ['alias', 'allocations', 'areas', 'canvas', 'schemaVersion', 'tables', 'title', 'version'],
             ['alias', 'canvas', 'schemaVersion', 'tables', 'title', 'version'],
             'root'
         );
@@ -315,6 +415,9 @@ final class SeatLayoutService
         $height = $this->requireInt($canvas, 'height', 1, self::MAX_LOGICAL_SIZE, 'canvas');
         $areas  = $this->normaliseAreas($data['areas'] ?? [], $width, $height);
         $tables = $this->normaliseTables($data['tables'], $width, $height);
+        $hotlineAllocation = array_key_exists('allocations', $data)
+            ? $this->normaliseAllocations($data['allocations'], $tables)
+            : ['seatCodes' => [], 'tableCodes' => []];
         $seatCount = array_sum(
             array_map(
                 static fn(LayoutTableDefinition $table): int => \count($table->seats),
@@ -335,6 +438,7 @@ final class SeatLayoutService
             $height,
             $areas,
             $tables,
+            $hotlineAllocation,
             ''
         );
         $canonical = json_encode(
@@ -351,8 +455,162 @@ final class SeatLayoutService
             $height,
             $areas,
             $tables,
+            $hotlineAllocation,
             hash('sha256', $canonical)
         );
+    }
+
+    private function assertAllocationJsonShape(object $root): void
+    {
+        if (!property_exists($root, 'allocations')) {
+            return;
+        }
+
+        if (!\is_object($root->allocations)) {
+            throw $this->invalidDefinition('allocations');
+        }
+
+        if (!property_exists($root->allocations, 'hotline')) {
+            return;
+        }
+
+        if (!\is_array($root->allocations->hotline)) {
+            throw $this->invalidDefinition('allocations.hotline');
+        }
+
+        foreach ($root->allocations->hotline as $index => $entry) {
+            if (!\is_object($entry)) {
+                throw $this->invalidDefinition('allocations.hotline.' . $index);
+            }
+        }
+    }
+
+    /**
+     * @param   list<LayoutTableDefinition>  $tables
+     *
+     * @return array{seatCodes: list<string>, tableCodes: list<string>}
+     */
+    private function normaliseAllocations(mixed $allocations, array $tables): array
+    {
+        if (!\is_array($allocations) || ($allocations !== [] && array_is_list($allocations))) {
+            throw $this->invalidDefinition('allocations');
+        }
+
+        $this->assertKeys($allocations, ['hotline'], [], 'allocations');
+
+        if (!array_key_exists('hotline', $allocations)) {
+            return ['seatCodes' => [], 'tableCodes' => []];
+        }
+
+        $entries = $allocations['hotline'];
+
+        if (!\is_array($entries) || !array_is_list($entries)) {
+            throw $this->invalidDefinition('allocations.hotline');
+        }
+
+        $tablesByCode = [];
+
+        foreach ($tables as $table) {
+            $seatsByNumber = [];
+
+            foreach ($table->seats as $seat) {
+                $seatsByNumber[$seat->number] = $seat->code;
+            }
+
+            $tablesByCode[$table->code] = $seatsByNumber;
+        }
+
+        $seatCodes            = [];
+        $seatCodesSeen        = [];
+        $tableCodes           = [];
+        $wholeTablesSeen      = [];
+        $tablesWithSeatsSeen  = [];
+
+        foreach ($entries as $index => $entry) {
+            $path = 'allocations.hotline.' . $index;
+
+            if (!\is_array($entry) || array_is_list($entry)) {
+                throw $this->invalidDefinition($path);
+            }
+
+            $this->assertKeys($entry, ['all', 'seats', 'table'], ['table'], $path);
+            $tableCode = $this->requireString(
+                $entry,
+                'table',
+                64,
+                $path,
+                '/^[A-Z0-9][A-Z0-9_-]*$/'
+            );
+
+            if (!isset($tablesByCode[$tableCode])) {
+                throw $this->invalidDefinition($path . '.table');
+            }
+
+            $hasAll   = array_key_exists('all', $entry);
+            $hasSeats = array_key_exists('seats', $entry);
+
+            if ($hasAll === $hasSeats) {
+                throw $this->invalidDefinition($path);
+            }
+
+            if ($hasAll) {
+                if (
+                    $entry['all'] !== true
+                    || isset($wholeTablesSeen[$tableCode])
+                    || isset($tablesWithSeatsSeen[$tableCode])
+                ) {
+                    throw $this->invalidDefinition($path);
+                }
+
+                $wholeTablesSeen[$tableCode] = true;
+                $tableCodes[]                = $tableCode;
+
+                continue;
+            }
+
+            $seatNumbers = $entry['seats'];
+
+            if (!\is_array($seatNumbers) || !array_is_list($seatNumbers) || $seatNumbers === []) {
+                throw $this->invalidDefinition($path . '.seats');
+            }
+
+            if (isset($wholeTablesSeen[$tableCode])) {
+                throw $this->invalidDefinition($path);
+            }
+
+            foreach ($seatNumbers as $seatIndex => $seatNumber) {
+                $seatPath = $path . '.seats.' . $seatIndex;
+
+                if (
+                    !\is_string($seatNumber)
+                    || $seatNumber !== trim($seatNumber)
+                    || $seatNumber === ''
+                    || mb_strlen($seatNumber, 'UTF-8') > 32
+                    || !isset($tablesByCode[$tableCode][$seatNumber])
+                ) {
+                    throw $this->invalidDefinition($seatPath);
+                }
+
+                $seatCode = $tablesByCode[$tableCode][$seatNumber];
+
+                if (isset($seatCodesSeen[$seatCode])) {
+                    throw $this->invalidDefinition($seatPath);
+                }
+
+                $seatCodesSeen[$seatCode] = true;
+                $seatCodes[]              = $seatCode;
+            }
+
+            $tablesWithSeatsSeen[$tableCode] = true;
+        }
+
+        sort($seatCodes, SORT_STRING);
+        sort($tableCodes, SORT_STRING);
+
+        return [
+            'seatCodes'  => $seatCodes,
+            'tableCodes' => $tableCodes,
+        ];
     }
 
     /**

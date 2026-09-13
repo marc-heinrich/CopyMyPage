@@ -54,7 +54,14 @@ try {
         ];
 }
 
-// Preserve DPCalendar's complete native success view for unrelated bookings only.
+// Preserve DPCalendar's native detail view for unrelated bookings.
+if (($state['scope'] ?? '') === 'unmanaged' && $this->getLayout() === 'default') {
+    require JPATH_SITE . '/components/com_dpcalendar/tmpl/booking/default.php';
+
+    return;
+}
+
+// Preserve DPCalendar's native success view for unrelated bookings.
 if (($state['scope'] ?? '') === 'unmanaged' && (int) ($state['state'] ?? -1) === 1) {
     require JPATH_SITE . '/components/com_dpcalendar/tmpl/booking/order.php';
 

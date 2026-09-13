@@ -91,7 +91,9 @@ final class PaymentReconciliationService
                 ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
             $this->db->setQuery($query)->execute();
 
-            if ($this->db->getAffectedRows() !== 1) {
+            // The cart is already locked and validated. Starting immediately after
+            // checkout can write the same second-precision timestamp, changing no row.
+            if (!\in_array($this->db->getAffectedRows(), [0, 1], true)) {
                 throw new \RuntimeException('The CopyMyPage payment attempt could not be claimed.');
             }
 

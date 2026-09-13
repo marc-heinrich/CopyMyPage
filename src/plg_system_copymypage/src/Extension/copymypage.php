@@ -34,6 +34,7 @@ use Joomla\Component\CopyMyPage\Site\Helper\Helpers\TemplateTokenHelper;
 use Joomla\Component\CopyMyPage\Site\Helper\Helpers\UserHelper;
 use Joomla\Component\CopyMyPage\Site\Repository\ProfileAddressRepository;
 use Joomla\Component\CopyMyPage\Site\Service\AccountMenuProvider;
+use Joomla\Component\CopyMyPage\Site\Service\AccountTicketsService;
 use Joomla\Component\CopyMyPage\Site\Service\AddressCatalogService;
 use Joomla\Component\CopyMyPage\Site\Service\AvatarService;
 use Joomla\Component\CopyMyPage\Site\Service\BookingCompletionService;
@@ -149,14 +150,16 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     public function guardDPCalendarRoutes(AfterRouteEvent $event): void
     {
         $this->guardDPCalendarBookingForm($event);
+        $this->guardDPCalendarCustomerDetails($event);
+        $this->guardDPCalendarCustomerBookingMutation($event);
         $this->guardDPCalendarPaymentCallback($event);
     }
 
     /**
      * Keep CopyMyPage ticket events inside the seat-aware booking workflow.
      *
-     * Native deletion and cancellation remain available so their normal seat
-     * release hooks can run. Only native add, edit and save entry points are blocked.
+     * Native add, edit and save entry points are blocked here. Customer-side
+     * cancellation and deletion are handled by a separate booking guard.
      *
      * @param   AfterRouteEvent  $event  The after-route event.
      *
@@ -318,6 +321,265 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         }
 
         return false;
+    }
+
+    /**
+     * Redirect managed native booking and ticket details to CopyMyPage.
+     *
+     * Payment, PDF and QR/check-in tasks remain untouched because this guard
+     * only handles taskless default detail views.
+     *
+     * @param   AfterRouteEvent  $event  The after-route event.
+     *
+     * @return  void
+     *
+     * @since   0.0.20
+     */
+    private function guardDPCalendarCustomerDetails(AfterRouteEvent $event): void
+    {
+        $app = $this->getApplication();
+
+        if (!$app instanceof CMSWebApplicationInterface || !$app->isClient('site')) {
+            return;
+        }
+
+        $input  = $app->getInput();
+        $view   = $input->getCmd('view', '');
+        $layout = $input->getCmd('layout', 'default');
+
+        if (
+            $input->getCmd('option', '') !== 'com_dpcalendar'
+            || $input->getCmd('task', '') !== ''
+            || !\in_array($view, ['booking', 'ticket'], true)
+            || !\in_array($layout, ['', 'default'], true)
+        ) {
+            return;
+        }
+
+        try {
+            $db         = Factory::getContainer()->get(DatabaseInterface::class);
+            $identifier = max(0, $input->getInt($view === 'booking' ? 'b_id' : 't_id', 0));
+            $uid        = trim($input->getString('uid', ''));
+            $conditions = [];
+            $query      = $db->getQuery(true)
+                ->select('COUNT(*)')
+                ->from($db->quoteName('#__copymypage_ticket_carts', 'c'));
+
+            if ($view === 'booking') {
+                $query->join(
+                    'INNER',
+                    $db->quoteName('#__dpcalendar_bookings', 'b')
+                        . ' ON ' . $db->quoteName('b.id') . ' = ' . $db->quoteName('c.booking_id')
+                );
+
+                if ($identifier > 0) {
+                    $conditions[] = $db->quoteName('b.id') . ' = :identifier';
+                    $query->bind(':identifier', $identifier, ParameterType::INTEGER);
+                }
+
+                if ($uid !== '') {
+                    $conditions[] = $db->quoteName('b.uid') . ' = :uid';
+                    $query->bind(':uid', $uid);
+                }
+
+                $token = trim($input->getString('token', ''));
+
+                if ($token !== '') {
+                    $conditions[] = $db->quoteName('b.token') . ' = :token';
+                    $query->bind(':token', $token);
+                }
+            } else {
+                $query->join(
+                    'INNER',
+                    $db->quoteName('#__dpcalendar_tickets', 't')
+                        . ' ON ' . $db->quoteName('t.booking_id') . ' = ' . $db->quoteName('c.booking_id')
+                );
+
+                if ($identifier > 0) {
+                    $conditions[] = $db->quoteName('t.id') . ' = :identifier';
+                    $query->bind(':identifier', $identifier, ParameterType::INTEGER);
+                }
+
+                if ($uid !== '') {
+                    $uid          = str_replace(':', '-', $uid);
+                    $conditions[] = $db->quoteName('t.uid') . ' = :uid';
+                    $query->bind(':uid', $uid);
+                }
+            }
+
+            if ($conditions === []) {
+                return;
+            }
+
+            $query->where('(' . implode(' OR ', $conditions) . ')');
+
+            if ((int) $db->setQuery($query)->loadResult() < 1) {
+                return;
+            }
+        } catch (\Throwable $exception) {
+            Log::add(
+                'CopyMyPage DPCalendar customer detail guard failed (' . $exception::class . ').',
+                Log::ERROR,
+                'com_copymypage'
+            );
+
+            return;
+        }
+
+        $app->getLanguage()->load(
+            'com_copymypage',
+            JPATH_SITE . '/components/com_copymypage',
+            null,
+            true
+        );
+        $app->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
+        $app->setHeader('Pragma', 'no-cache', true);
+
+        if (max(0, (int) ($app->getIdentity()->id ?? 0)) > 0) {
+            $app->enqueueMessage(Text::_('COM_COPYMYPAGE_BOOKING_DETAIL_REDIRECTED_ACCOUNT'), 'notice');
+
+            try {
+                $app->redirect(
+                    Factory::getContainer()
+                        ->get(AccountMenuProvider::class)
+                        ->getDashboardUrl($app, 'tickets')
+                );
+            } catch (\Throwable $exception) {
+                Log::add(
+                    'CopyMyPage DPCalendar detail dashboard redirect failed ('
+                        . $exception::class . ').',
+                    Log::ERROR,
+                    'com_copymypage'
+                );
+            }
+        }
+
+        $app->enqueueMessage(Text::_('COM_COPYMYPAGE_BOOKING_DETAIL_REDIRECTED_GUEST'), 'notice');
+        $app->redirect(Route::_('index.php?option=com_copymypage&view=ticketselection', false));
+    }
+
+    /**
+     * Block native customer cancellation and deletion for managed bookings.
+     *
+     * The payment-provider return task booking.paycancel is intentionally not
+     * guarded so DPCalendar can run its normal abort and seat-release hooks.
+     *
+     * @param   AfterRouteEvent  $event  The after-route event.
+     *
+     * @return  void
+     *
+     * @since   0.0.20
+     */
+    private function guardDPCalendarCustomerBookingMutation(AfterRouteEvent $event): void
+    {
+        $app = $this->getApplication();
+
+        if (!$app instanceof CMSWebApplicationInterface || !$app->isClient('site')) {
+            return;
+        }
+
+        $input = $app->getInput();
+        $task  = $input->getCmd('task', '');
+
+        if (
+            $input->getCmd('option', '') !== 'com_dpcalendar'
+            || !\in_array(
+                $task,
+                ['booking.abort', 'booking.cancel', 'bookingform.delete', 'ticketform.delete'],
+                true
+            )
+        ) {
+            return;
+        }
+
+        $bookingId = max(0, $input->getInt('b_id', 0));
+
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+
+            if ($task === 'ticketform.delete') {
+                $ticketId = max(0, $input->getInt('t_id', 0));
+
+                if ($ticketId < 1) {
+                    return;
+                }
+
+                $query = $db->getQuery(true)
+                    ->select($db->quoteName('booking_id'))
+                    ->from($db->quoteName('#__dpcalendar_tickets'))
+                    ->where($db->quoteName('id') . ' = :ticketId')
+                    ->bind(':ticketId', $ticketId, ParameterType::INTEGER);
+                $bookingId = max(0, (int) $db->setQuery($query, 0, 1)->loadResult());
+            } elseif ($bookingId < 1) {
+                $bookingToken = trim($input->getString(
+                    'dptoken',
+                    $input->getString('token', '')
+                ));
+
+                if ($bookingToken === '') {
+                    return;
+                }
+
+                $query = $db->getQuery(true)
+                    ->select($db->quoteName('id'))
+                    ->from($db->quoteName('#__dpcalendar_bookings'))
+                    ->where($db->quoteName('token') . ' = :bookingToken')
+                    ->bind(':bookingToken', $bookingToken);
+                $bookingId = max(0, (int) $db->setQuery($query, 0, 1)->loadResult());
+            }
+
+            if ($bookingId < 1) {
+                return;
+            }
+
+            $query = $db->getQuery(true)
+                ->select('COUNT(*)')
+                ->from($db->quoteName('#__copymypage_ticket_carts'))
+                ->where($db->quoteName('booking_id') . ' = :bookingId')
+                ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
+
+            if ((int) $db->setQuery($query)->loadResult() < 1) {
+                return;
+            }
+        } catch (\Throwable $exception) {
+            Log::add(
+                'CopyMyPage customer booking mutation guard failed for booking ID '
+                    . $bookingId . ' (' . $exception::class . ').',
+                Log::ERROR,
+                'com_copymypage'
+            );
+
+            return;
+        }
+
+        $app->getLanguage()->load(
+            'com_copymypage',
+            JPATH_SITE . '/components/com_copymypage',
+            null,
+            true
+        );
+        $app->enqueueMessage(Text::_('COM_COPYMYPAGE_BOOKING_CUSTOMER_MUTATION_BLOCKED'), 'notice');
+        $app->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0', true);
+        $app->setHeader('Pragma', 'no-cache', true);
+
+        if (max(0, (int) ($app->getIdentity()->id ?? 0)) > 0) {
+            try {
+                $app->redirect(
+                    Factory::getContainer()
+                        ->get(AccountMenuProvider::class)
+                        ->getDashboardUrl($app, 'tickets')
+                );
+            } catch (\Throwable $exception) {
+                Log::add(
+                    'CopyMyPage customer booking guard dashboard redirect failed ('
+                        . $exception::class . ').',
+                    Log::ERROR,
+                    'com_copymypage'
+                );
+            }
+        }
+
+        $app->redirect(Route::_('index.php?option=com_copymypage&view=ticketselection', false));
     }
 
     /**
@@ -1094,6 +1356,18 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                     static fn(Container $container): TicketSeatProjectionService
                         => new TicketSeatProjectionService(
                             $container->get(DatabaseInterface::class)
+                        ),
+                    true
+                );
+            }
+
+            if (!$container->has(AccountTicketsService::class)) {
+                $container->share(
+                    AccountTicketsService::class,
+                    static fn(Container $container): AccountTicketsService
+                        => new AccountTicketsService(
+                            $container->get(DatabaseInterface::class),
+                            $container->get(TicketSeatProjectionService::class)
                         ),
                     true
                 );

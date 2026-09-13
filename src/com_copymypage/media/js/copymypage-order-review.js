@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.19
+ * @since       0.0.20
  */
 
 (function (window, document) {
@@ -12,6 +12,9 @@
     const formSelector = '[data-cmp-order-review-form]';
     const continueSelector = '[data-cmp-order-review-continue]';
     const termsSelector = '[data-cmp-order-review-terms]';
+    const paymentSelector = '[data-cmp-order-review-payment-total]';
+    const totalLabelSelector = '[data-cmp-order-review-total-label]';
+    const totalValueSelector = '[data-cmp-order-review-total-value]';
     const formSynchronisers = new WeakMap();
 
     const initialiseForm = (form) => {
@@ -29,6 +32,9 @@
 
         const continueButton = form.querySelector(continueSelector);
         const terms = form.querySelector(termsSelector);
+        const paymentInputs = Array.from(form.querySelectorAll(paymentSelector));
+        const totalLabel = form.querySelector(totalLabelSelector);
+        const totalValue = form.querySelector(totalValueSelector);
 
         if (!(continueButton instanceof HTMLButtonElement)) {
             return;
@@ -43,15 +49,37 @@
             continueButton.disabled = disabled;
             continueButton.setAttribute('aria-disabled', disabled ? 'true' : 'false');
         };
+        const syncPaymentTotal = () => {
+            if (!(totalLabel instanceof HTMLElement) || !(totalValue instanceof HTMLElement)) {
+                return;
+            }
 
-        formSynchronisers.set(form, syncContinueButton);
+            const selectedPayment = paymentInputs.find((input) => (
+                input instanceof HTMLInputElement && input.checked
+            ));
+
+            totalLabel.textContent = selectedPayment
+                ? totalLabel.dataset.cmpOrderReviewSelectedLabel || ''
+                : totalLabel.dataset.cmpOrderReviewBaseLabel || '';
+            totalValue.textContent = selectedPayment
+                ? selectedPayment.dataset.cmpOrderReviewPaymentTotal || ''
+                : totalValue.dataset.cmpOrderReviewBaseTotal || '';
+        };
+        const syncForm = () => {
+            syncContinueButton();
+            syncPaymentTotal();
+        };
+
+        formSynchronisers.set(form, syncForm);
 
         if (terms instanceof HTMLInputElement) {
             terms.addEventListener('change', syncContinueButton);
         }
 
-        form.addEventListener('reset', () => window.setTimeout(syncContinueButton, 0));
-        syncContinueButton();
+        paymentInputs.forEach((input) => input.addEventListener('change', syncPaymentTotal));
+
+        form.addEventListener('reset', () => window.setTimeout(syncForm, 0));
+        syncForm();
     };
 
     const initialise = (scope = document) => {

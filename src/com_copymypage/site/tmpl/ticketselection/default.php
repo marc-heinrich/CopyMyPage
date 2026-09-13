@@ -35,6 +35,8 @@ foreach ($this->markupAttributes as $key => $attribute) {
 
 $revisionField = $validFieldName($this->formFieldNames['expectedCartRevision'] ?? '');
 $cartRevision  = max(0, (int) ($this->cart['cartRevision'] ?? 0));
+$quantityDecrementAttribute = $validAttribute($this->markupAttributes['quantityDecrement'] ?? '');
+$quantityIncrementAttribute = $validAttribute($this->markupAttributes['quantityIncrement'] ?? '');
 
 $reserveAction = Route::_('index.php?option=com_copymypage&task=ticketcart.reserve');
 $basketUrl     = Route::_('index.php?option=com_copymypage&view=basket');
@@ -61,10 +63,19 @@ $canContinue   = !empty($this->cart['continuable']);
         ); ?>
 
         <?php if ($this->events === []) : ?>
-            <div class="cmp-ticket-selection__notice" role="status">
-                <span uk-icon="icon: info" aria-hidden="true"></span>
-                <p><?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_EMPTY')); ?></p>
-            </div>
+            <?php echo LayoutHelper::render(
+                'copymypage.tickets.message',
+                [
+                    'ariaLive' => 'polite',
+                    'body'     => Text::_('COM_COPYMYPAGE_TICKET_SELECTION_EMPTY'),
+                    'class'    => 'cmp-ticket-selection__message',
+                    'icon'     => 'info',
+                    'id'       => 'cmp-ticket-selection-empty',
+                    'role'     => 'status',
+                    'title'    => Text::_('COM_COPYMYPAGE_TICKET_SELECTION_EMPTY_TITLE'),
+                    'tone'     => 'info',
+                ]
+            ); ?>
         <?php else : ?>
             <section
                 class="cmp-ticket-selection__events"
@@ -160,7 +171,7 @@ $canContinue   = !empty($this->cart['continuable']);
                                 <?php if ($canReserve) : ?>
                                     <span
                                         class="cmp-ticket-selection-event__icon"
-                                        uk-accordion-icon
+                                        uk-icon="icon: chevron-down"
                                         aria-hidden="true"
                                     ></span>
                                 <?php endif; ?>
@@ -210,21 +221,47 @@ $canContinue   = !empty($this->cart['continuable']);
                                                             </label>
                                                         </div>
                                                         <div class="controls">
-                                                            <input
-                                                                id="<?php echo $escape($inputId); ?>"
-                                                                class="uk-input form-control cmp-ticket-selection-price__quantity"
-                                                                type="number"
-                                                                name="quantities[<?php echo $priceIndex; ?>]"
-                                                                value="<?php echo $quantity; ?>"
-                                                                min="0"
-                                                                max="<?php echo $limit; ?>"
-                                                                step="1"
-                                                                inputmode="numeric"
-                                                                <?php echo !$canReserve || $limit < 1 ? ' disabled' : ''; ?>
-                                                                <?php if (($attributes['quantity'] ?? '') !== '') : ?>
-                                                                    <?php echo $attributes['quantity']; ?>
-                                                                <?php endif; ?>
-                                                            >
+                                                            <div class="cmp-ticket-selection-price__quantity-control">
+                                                                <button
+                                                                    class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--icon"
+                                                                    type="button"
+                                                                    <?php if ($quantityDecrementAttribute !== '') : ?>
+                                                                        <?php echo $quantityDecrementAttribute; ?>="1"
+                                                                    <?php endif; ?>
+                                                                    aria-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_QUANTITY_DECREMENT')); ?>"
+                                                                    aria-controls="<?php echo $escape($inputId); ?>"
+                                                                    <?php echo !$canReserve || $quantity < 1 ? ' disabled' : ''; ?>
+                                                                >
+                                                                    <span uk-icon="icon: minus" aria-hidden="true"></span>
+                                                                </button>
+                                                                <input
+                                                                    id="<?php echo $escape($inputId); ?>"
+                                                                    class="uk-input form-control cmp-ticket-selection-price__quantity"
+                                                                    type="number"
+                                                                    name="quantities[<?php echo $priceIndex; ?>]"
+                                                                    value="<?php echo $quantity; ?>"
+                                                                    min="0"
+                                                                    max="<?php echo $limit; ?>"
+                                                                    step="1"
+                                                                    inputmode="numeric"
+                                                                    <?php echo !$canReserve || $limit < 1 ? ' disabled' : ''; ?>
+                                                                    <?php if (($attributes['quantity'] ?? '') !== '') : ?>
+                                                                        <?php echo $attributes['quantity']; ?>
+                                                                    <?php endif; ?>
+                                                                >
+                                                                <button
+                                                                    class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--icon"
+                                                                    type="button"
+                                                                    <?php if ($quantityIncrementAttribute !== '') : ?>
+                                                                        <?php echo $quantityIncrementAttribute; ?>="1"
+                                                                    <?php endif; ?>
+                                                                    aria-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_QUANTITY_INCREMENT')); ?>"
+                                                                    aria-controls="<?php echo $escape($inputId); ?>"
+                                                                    <?php echo !$canReserve || $limit < 1 || $quantity >= $limit ? ' disabled' : ''; ?>
+                                                                >
+                                                                    <span uk-icon="icon: plus" aria-hidden="true"></span>
+                                                                </button>
+                                                            </div>
                                                             <?php if (trim((string) ($price['description'] ?? '')) !== '') : ?>
                                                                 <small class="form-text">
                                                                     <?php echo $escape($price['description']); ?>

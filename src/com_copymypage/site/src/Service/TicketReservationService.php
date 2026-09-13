@@ -41,6 +41,10 @@ final class TicketReservationService
 
     private const QUANTITY_ATTRIBUTE = 'data-cmp-ticket-selection-quantity';
 
+    private const QUANTITY_DECREMENT_ATTRIBUTE = 'data-cmp-ticket-selection-quantity-decrement';
+
+    private const QUANTITY_INCREMENT_ATTRIBUTE = 'data-cmp-ticket-selection-quantity-increment';
+
     private const CONTINUE_ATTRIBUTE = 'data-cmp-ticket-selection-continue';
 
     private const CART_ATTRIBUTE = 'data-cmp-ticket-cart';
@@ -93,6 +97,8 @@ final class TicketReservationService
                 'eventStatus'     => '[' . self::EVENT_STATUS_ATTRIBUTE . ']',
                 'eventAvailable'  => '[' . self::EVENT_AVAILABLE_ATTRIBUTE . ']',
                 'quantity'        => '[' . self::QUANTITY_ATTRIBUTE . ']',
+                'quantityDecrement' => '[' . self::QUANTITY_DECREMENT_ATTRIBUTE . ']',
+                'quantityIncrement' => '[' . self::QUANTITY_INCREMENT_ATTRIBUTE . ']',
                 'continue'        => '[' . self::CONTINUE_ATTRIBUTE . ']',
                 'cart'            => '[' . self::CART_ATTRIBUTE . ']',
                 'cartEmpty'       => '[' . self::CART_EMPTY_ATTRIBUTE . ']',
@@ -165,6 +171,8 @@ final class TicketReservationService
             'root'            => self::ROOT_ATTRIBUTE,
             'event'           => self::EVENT_ATTRIBUTE,
             'eventId'         => self::EVENT_ID_ATTRIBUTE,
+            'quantityDecrement' => self::QUANTITY_DECREMENT_ATTRIBUTE,
+            'quantityIncrement' => self::QUANTITY_INCREMENT_ATTRIBUTE,
             'eventForm'       => self::EVENT_FORM_ATTRIBUTE,
             'eventStatus'     => self::EVENT_STATUS_ATTRIBUTE,
             'eventAvailable'  => self::EVENT_AVAILABLE_ATTRIBUTE,

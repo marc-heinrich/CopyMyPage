@@ -226,9 +226,10 @@ final class OrderCheckoutService
                 ->where($this->db->quoteName('booking_id') . ' = :bookingId')
                 ->order($this->db->quoteName('id') . ' ASC')
                 ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
+            $query->setQuery((string) $query . ' FOR UPDATE');
             $cartIds = array_map(
                 'intval',
-                (array) $this->db->setQuery((string) $query . ' FOR UPDATE')->loadColumn()
+                (array) $this->db->setQuery($query)->loadColumn()
             );
 
             if ($cartIds === []) {
@@ -843,7 +844,8 @@ final class OrderCheckoutService
             ->order($this->db->quoteName('assignment_order') . ' ASC')
             ->order($this->db->quoteName('id') . ' ASC')
             ->bind(':cartId', $cartId, ParameterType::INTEGER);
-        $rows     = (array) $this->db->setQuery((string) $query . ' FOR UPDATE')->loadObjectList();
+        $query->setQuery((string) $query . ' FOR UPDATE');
+        $rows     = (array) $this->db->setQuery($query)->loadObjectList();
         $expected = $this->expectedTicketGroups($reviewState);
         $actual   = [];
 
@@ -955,7 +957,8 @@ final class OrderCheckoutService
             ->order($this->db->quoteName('type') . ' ASC')
             ->order($this->db->quoteName('id') . ' ASC')
             ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
-        $tickets = (array) $this->db->setQuery((string) $query . ' FOR UPDATE')->loadObjectList();
+        $query->setQuery((string) $query . ' FOR UPDATE');
+        $tickets = (array) $this->db->setQuery($query)->loadObjectList();
         $groups  = [];
 
         foreach ($tickets as $ticket) {

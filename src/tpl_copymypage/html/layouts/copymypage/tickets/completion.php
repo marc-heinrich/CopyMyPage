@@ -19,9 +19,6 @@ $escape = static fn(mixed $value): string => htmlspecialchars(
     'UTF-8'
 );
 $state          = \is_array($displayData['state'] ?? null) ? $displayData['state'] : [];
-$bookingUid     = trim((string) ($state['bookingUid'] ?? ''));
-$completed      = !empty($state['completed']);
-$events         = \is_array($state['events'] ?? null) ? $state['events'] : [];
 $icon           = (string) ($state['icon'] ?? 'warning');
 $integrityOk    = !empty($state['integrityOk']);
 $managed        = !empty($state['managed']);
@@ -42,6 +39,18 @@ if (!\in_array($tone, ['danger', 'info', 'success', 'warning'], true)) {
 if (!\in_array($icon, ['check', 'clock', 'close', 'refresh', 'reply', 'warning'], true)) {
     $icon = 'warning';
 }
+
+$details = [];
+
+if ($managed && !$integrityOk) {
+    $details[] = [
+        'body'  => Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_DATA_ERROR'),
+        'title' => Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_DATA_ERROR_TITLE'),
+    ];
+}
+
+$announcementRole = \in_array($tone, ['danger', 'warning'], true) ? 'alert' : 'status';
+$announcementLive = $announcementRole === 'alert' ? 'assertive' : 'polite';
 ?>
 <div class="cmp-booking-completion">
     <div class="uk-container cmp-booking-completion__container">
@@ -55,130 +64,25 @@ if (!\in_array($icon, ['check', 'clock', 'close', 'refresh', 'reply', 'warning']
             ); ?>
         <?php endif; ?>
 
-        <section class="cmp-booking-completion__panel" aria-labelledby="cmp-booking-completion-title">
-            <header class="cmp-booking-completion__status cmp-booking-completion__status--<?php echo $escape($tone); ?>">
-                <span
-                    class="cmp-booking-completion__status-icon"
-                    uk-icon="icon: <?php echo $escape($icon); ?>; ratio: 1.4"
-                    aria-hidden="true"
-                ></span>
-                <div>
-                    <p class="cmp-booking-completion__eyebrow">
-                        <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_LABEL')); ?>
-                    </p>
-                    <h1 id="cmp-booking-completion-title">
-                        <?php echo $escape(Text::_((string) ($state['titleKey'] ?? 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_UNKNOWN_TITLE'))); ?>
-                    </h1>
-                    <p><?php echo $escape(Text::_((string) ($state['introKey'] ?? 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_UNKNOWN_INTRO'))); ?></p>
-                </div>
-            </header>
+        <?php echo LayoutHelper::render(
+            'copymypage.tickets.message',
+            [
+                'ariaLive'   => $announcementLive,
+                'body'       => Text::_((string) ($state['introKey'] ?? 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_UNKNOWN_INTRO')),
+                'class'      => 'cmp-booking-completion__message',
+                'details'    => $details,
+                'eyebrow'    => Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_LABEL'),
+                'headingTag' => 'h1',
+                'icon'       => $icon,
+                'id'         => 'cmp-booking-completion-status',
+                'role'       => $announcementRole,
+                'title'      => Text::_((string) ($state['titleKey'] ?? 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_UNKNOWN_TITLE')),
+                'tone'       => $tone,
+            ]
+        ); ?>
 
-            <?php if ($bookingUid !== '') : ?>
-                <dl class="cmp-booking-completion__booking-data">
-                    <div>
-                        <dt><?php echo $escape(Text::_('COM_DPCALENDAR_BOOKING_FIELD_ID_LABEL')); ?></dt>
-                        <dd><?php echo $escape($bookingUid); ?></dd>
-                    </div>
-                </dl>
-            <?php endif; ?>
-
-            <?php if ($managed && !$integrityOk) : ?>
-                <div class="cmp-booking-completion__integrity-warning" role="alert">
-                    <strong><?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_DATA_ERROR_TITLE')); ?></strong>
-                    <p><?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_DATA_ERROR')); ?></p>
-                </div>
-            <?php endif; ?>
-
-            <?php if ($events !== []) : ?>
-                <section class="cmp-booking-completion__tickets" aria-labelledby="cmp-booking-completion-tickets-title">
-                    <h2 id="cmp-booking-completion-tickets-title">
-                        <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_TICKETS_TITLE')); ?>
-                    </h2>
-                    <ul class="cmp-booking-completion__events">
-                        <?php foreach ($events as $event) : ?>
-                            <li class="cmp-booking-completion__event">
-                                <h3><?php echo $escape($event['title'] ?? ''); ?></h3>
-                                <ul class="cmp-booking-completion__ticket-list">
-                                    <?php foreach ((array) ($event['tickets'] ?? []) as $ticket) : ?>
-                                        <li class="cmp-booking-completion__ticket">
-                                            <span class="cmp-booking-completion__ticket-copy">
-                                                <strong><?php echo $escape($ticket['typeLabel'] ?? ''); ?></strong>
-                                                <?php if ((string) ($ticket['seatLabel'] ?? '') !== '') : ?>
-                                                    <span>
-                                                        <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_SEAT_LABEL')); ?>:
-                                                        <?php echo $escape($ticket['seatLabel']); ?>
-                                                    </span>
-                                                <?php endif; ?>
-                                            </span>
-
-                                            <?php if ($completed && (string) ($ticket['url'] ?? '') !== '') : ?>
-                                                <a
-                                                    class="uk-button uk-button-default cmp-button cmp-button--secondary"
-                                                    href="<?php echo $escape($ticket['url']); ?>"
-                                                >
-                                                    <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_ACTION_TICKET')); ?>
-                                                </a>
-                                            <?php endif; ?>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </section>
-            <?php endif; ?>
-
-            <?php if ($showResume) : ?>
-                <form
-                    class="cmp-form cmp-booking-completion__resume-form"
-                    action="<?php echo $escape($paymentAction); ?>"
-                    method="post"
-                >
-                    <input
-                        type="hidden"
-                        name="cmp_payment_handoff"
-                        value="<?php echo $escape($paymentHandoff); ?>"
-                    >
-                    <div class="cmp-form__actions cmp-booking-completion__actions">
-                        <button
-                            class="uk-button uk-button-primary cmp-button cmp-button--primary"
-                            type="submit"
-                        >
-                            <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_ACTION_RESUME')); ?>
-                        </button>
-                    </div>
-                    <?php echo HTMLHelper::_('form.token'); ?>
-                </form>
-            <?php endif; ?>
-
+        <?php if ($showBack || $showRefresh || $showResume) : ?>
             <div class="cmp-booking-completion__actions">
-                <?php if ($completed && (string) ($displayData['invoiceUrl'] ?? '') !== '') : ?>
-                    <a
-                        class="uk-button uk-button-default cmp-button cmp-button--secondary"
-                        href="<?php echo $escape($displayData['invoiceUrl']); ?>"
-                    >
-                        <?php echo $escape(Text::_('COM_DPCALENDAR_INVOICE')); ?>
-                    </a>
-                <?php endif; ?>
-
-                <?php if ($completed && (string) ($displayData['receiptUrl'] ?? '') !== '') : ?>
-                    <a
-                        class="uk-button uk-button-default cmp-button cmp-button--secondary"
-                        href="<?php echo $escape($displayData['receiptUrl']); ?>"
-                    >
-                        <?php echo $escape(Text::_('COM_DPCALENDAR_RECEIPT')); ?>
-                    </a>
-                <?php endif; ?>
-
-                <?php if ($showRefresh && (string) ($displayData['refreshUrl'] ?? '') !== '') : ?>
-                    <a
-                        class="uk-button uk-button-default cmp-button cmp-button--secondary"
-                        href="<?php echo $escape($displayData['refreshUrl']); ?>"
-                    >
-                        <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_ACTION_REFRESH')); ?>
-                    </a>
-                <?php endif; ?>
-
                 <?php if ($showBack && (string) ($displayData['selectionUrl'] ?? '') !== '') : ?>
                     <a
                         class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--back"
@@ -188,7 +92,41 @@ if (!\in_array($icon, ['check', 'clock', 'close', 'refresh', 'reply', 'warning']
                         <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_ACTION_BACK')); ?>
                     </a>
                 <?php endif; ?>
+
+                <?php if ($showRefresh || $showResume) : ?>
+                    <div class="cmp-booking-completion__actions-next">
+                        <?php if ($showRefresh && (string) ($displayData['refreshUrl'] ?? '') !== '') : ?>
+                            <a
+                                class="uk-button uk-button-default cmp-button cmp-button--secondary"
+                                href="<?php echo $escape($displayData['refreshUrl']); ?>"
+                            >
+                                <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_ACTION_REFRESH')); ?>
+                            </a>
+                        <?php endif; ?>
+
+                        <?php if ($showResume) : ?>
+                            <form
+                                class="cmp-form cmp-booking-completion__resume-form"
+                                action="<?php echo $escape($paymentAction); ?>"
+                                method="post"
+                            >
+                                <input
+                                    type="hidden"
+                                    name="cmp_payment_handoff"
+                                    value="<?php echo $escape($paymentHandoff); ?>"
+                                >
+                                <button
+                                    class="uk-button uk-button-primary cmp-button cmp-button--primary"
+                                    type="submit"
+                                >
+                                    <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_ACTION_RESUME')); ?>
+                                </button>
+                                <?php echo HTMLHelper::_('form.token'); ?>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
-        </section>
+        <?php endif; ?>
     </div>
 </div>

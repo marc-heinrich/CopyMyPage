@@ -455,6 +455,15 @@ final class SeatSelectionService
                     EventSeatInventoryService::SEAT_STATUS_BLOCKED,
                 ]) . ') THEN 1 ELSE 0 END) AS '
                 . $this->db->quoteName('invalid_status_count'))
+            ->select('SUM(CASE WHEN ' . $this->db->quoteName('i.allocation_type')
+                . ' NOT IN (' . implode(',', [
+                    EventSeatInventoryService::SEAT_ALLOCATION_STANDARD,
+                    EventSeatInventoryService::SEAT_ALLOCATION_HOTLINE,
+                ]) . ') OR (' . $this->db->quoteName('i.allocation_type') . ' = '
+                . EventSeatInventoryService::SEAT_ALLOCATION_HOTLINE
+                . ' AND ' . $this->db->quoteName('i.status') . ' <> '
+                . EventSeatInventoryService::SEAT_STATUS_BLOCKED . ') THEN 1 ELSE 0 END) AS '
+                . $this->db->quoteName('invalid_allocation_count'))
             ->from($this->db->quoteName('#__copymypage_event_seating', 'a'))
             ->innerJoin($this->db->quoteName('#__copymypage_seat_layouts', 'l')
                 . ' ON ' . $this->db->quoteName('l.id') . ' = ' . $this->db->quoteName('a.layout_id'))
@@ -476,13 +485,15 @@ final class SeatSelectionService
             $blocked      = max(0, (int) $row->blocked_count);
             $booked       = max(0, (int) $row->booked_count);
             $invalidStatuses = max(0, (int) $row->invalid_status_count);
+            $invalidAllocations = max(0, (int) $row->invalid_allocation_count);
             $ready        = (int) $row->assignment_status === EventSeatInventoryService::EVENT_STATUS_READY
                 && (int) $row->layout_status === SeatLayoutService::STATUS_PUBLISHED
                 && $layoutCount > 0
                 && $layoutCount <= self::MAX_SEAT_IDS
                 && $materialized === $layoutCount
                 && $inventoryCount === $layoutCount
-                && $invalidStatuses === 0;
+                && $invalidStatuses === 0
+                && $invalidAllocations === 0;
 
             $result[$eventId] = [
                 'assigned'     => true,
@@ -762,13 +773,15 @@ final class SeatSelectionService
 
     private function rowCanBeSelected(object $row, int $cartId): bool
     {
-        return (int) $row->status === EventSeatInventoryService::SEAT_STATUS_AVAILABLE
+        return (int) ($row->allocation_type ?? -1)
+            === EventSeatInventoryService::SEAT_ALLOCATION_STANDARD
+            && ((int) $row->status === EventSeatInventoryService::SEAT_STATUS_AVAILABLE
             || ((int) $row->status === EventSeatInventoryService::SEAT_STATUS_HELD
-                && (int) $row->cart_id === $cartId);
+                && (int) $row->cart_id === $cartId));
     }
 
     /**
-     * Convert validated relational rows to the public three-state projection.
+     * Convert validated relational rows to the public four-state projection.
      *
      * @param   list<int>  $eventIds
      *
@@ -811,6 +824,7 @@ final class SeatSelectionService
                 $this->db->quoteName('s.sort_order', 'seat_sort'),
                 $this->db->quoteName('i.id', 'inventory_id'),
                 $this->db->quoteName('i.status', 'inventory_status'),
+                $this->db->quoteName('i.allocation_type'),
                 $this->db->quoteName('i.cart_id'),
                 $this->db->quoteName('c.status', 'held_cart_status'),
                 $this->db->quoteName('c.expires_at', 'held_cart_expires'),
@@ -894,39 +908,57 @@ final class SeatSelectionService
             if ($inventoryId > 0) {
                 $result[$eventId]['materializedCount']++;
                 $inventoryStatus = (int) $row->inventory_status;
+                $allocationType  = (int) ($row->allocation_type ?? -1);
+                $seatStateValid  = EventSeatInventoryService::isValidSeatState(
+                    $inventoryStatus,
+                    $allocationType
+                );
                 $result[$eventId]['statusesValid'] = $result[$eventId]['statusesValid']
-                    && \in_array(
-                        $inventoryStatus,
-                        [
-                            EventSeatInventoryService::SEAT_STATUS_AVAILABLE,
-                            EventSeatInventoryService::SEAT_STATUS_HELD,
-                            EventSeatInventoryService::SEAT_STATUS_BOOKED,
-                            EventSeatInventoryService::SEAT_STATUS_BLOCKED,
-                        ],
-                        true
-                    );
+                    && $seatStateValid;
                 $holdActive      = (int) ($row->held_cart_status ?? -1)
                     === TicketCartContextService::STATUS_ACTIVE
                     && (string) ($row->held_cart_expires ?? '') > $now;
 
-                if ($inventoryStatus === EventSeatInventoryService::SEAT_STATUS_AVAILABLE
-                    || ($inventoryStatus === EventSeatInventoryService::SEAT_STATUS_HELD && !$holdActive)) {
+                if (
+                    $seatStateValid
+                    && $allocationType === EventSeatInventoryService::SEAT_ALLOCATION_HOTLINE
+                ) {
+                    $seatStatus = 'hotline';
+                } elseif (
+                    $seatStateValid
+                    && ($inventoryStatus === EventSeatInventoryService::SEAT_STATUS_AVAILABLE
+                        || (
+                            $inventoryStatus === EventSeatInventoryService::SEAT_STATUS_HELD
+                            && !$holdActive
+                        ))
+                ) {
                     $seatStatus = 'available';
-                } elseif ($inventoryStatus === EventSeatInventoryService::SEAT_STATUS_HELD
+                } elseif (
+                    $seatStateValid
+                    && $inventoryStatus === EventSeatInventoryService::SEAT_STATUS_HELD
                     && $holdActive
-                    && (int) $row->cart_id === $cartId) {
+                    && (int) $row->cart_id === $cartId
+                ) {
                     $seatStatus = 'selected';
                 }
             }
 
+            $seatLabel = Text::sprintf(
+                'COM_COPYMYPAGE_SEAT_SELECTION_SEAT_LABEL',
+                (string) $row->table_number,
+                (string) $row->seat_number
+            );
             $seat = [
+                'accessibleLabel' => $seatStatus === 'hotline'
+                    ? Text::sprintf(
+                        'COM_COPYMYPAGE_SEAT_SELECTION_SEAT_HOTLINE_LABEL',
+                        (string) $row->table_number,
+                        (string) $row->seat_number
+                    )
+                    : $seatLabel,
                 'code'      => (string) $row->seat_code,
                 'id'        => $inventoryId,
-                'label'     => Text::sprintf(
-                    'COM_COPYMYPAGE_SEAT_SELECTION_SEAT_LABEL',
-                    (string) $row->table_number,
-                    (string) $row->seat_number
-                ),
+                'label'     => $seatLabel,
                 'number'    => (string) $row->seat_number,
                 'sortOrder' => (int) $row->seat_sort,
                 'status'    => $seatStatus,
@@ -977,6 +1009,7 @@ final class SeatSelectionService
                 $this->db->quoteName('i.id', 'inventory_id'),
                 $this->db->quoteName('i.seat_id'),
                 $this->db->quoteName('i.status'),
+                $this->db->quoteName('i.allocation_type'),
                 $this->db->quoteName('i.cart_id'),
                 $this->db->quoteName('i.price_index'),
                 $this->db->quoteName('i.assignment_order'),
@@ -1190,15 +1223,9 @@ final class SeatSelectionService
         $statusesValid = true;
 
         foreach ($rows as $row) {
-            if (!\in_array(
+            if (!EventSeatInventoryService::isValidSeatState(
                 (int) $row->status,
-                [
-                    EventSeatInventoryService::SEAT_STATUS_AVAILABLE,
-                    EventSeatInventoryService::SEAT_STATUS_HELD,
-                    EventSeatInventoryService::SEAT_STATUS_BOOKED,
-                    EventSeatInventoryService::SEAT_STATUS_BLOCKED,
-                ],
-                true
+                (int) ($row->allocation_type ?? -1)
             )) {
                 $statusesValid = false;
 

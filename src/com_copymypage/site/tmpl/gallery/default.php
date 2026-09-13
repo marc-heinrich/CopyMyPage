@@ -22,12 +22,10 @@ $viewClass = 'cmp-gallery-view';
 ?>
 <section id="gallery-view" class="<?php echo $escape($viewClass); ?>">
     <div class="uk-container">
-        <div class="cmp-gallery-view__header">
-            <h1 class="cmp-gallery-view__title">
+        <div class="cmp-gallery-view__header cmp-section-header">
+            <h1 class="cmp-gallery-view__title cmp-section-header__headline">
                 <?php echo $escape($this->headline); ?>
             </h1>
-
-            <hr class="cmp-gallery-view__divider uk-divider-small">
 
             <?php if ($this->summary !== '') : ?>
                 <p class="cmp-gallery-view__meta">

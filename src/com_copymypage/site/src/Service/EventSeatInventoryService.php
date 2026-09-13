@@ -35,6 +35,37 @@ final class EventSeatInventoryService
 
     public const SEAT_STATUS_BLOCKED = 3;
 
+    public const SEAT_ALLOCATION_STANDARD = 0;
+
+    public const SEAT_ALLOCATION_HOTLINE = 1;
+
+    public static function isValidSeatState(int $status, int $allocationType): bool
+    {
+        if (!\in_array(
+            $status,
+            [
+                self::SEAT_STATUS_AVAILABLE,
+                self::SEAT_STATUS_HELD,
+                self::SEAT_STATUS_BOOKED,
+                self::SEAT_STATUS_BLOCKED,
+            ],
+            true
+        )) {
+            return false;
+        }
+
+        if (!\in_array(
+            $allocationType,
+            [self::SEAT_ALLOCATION_STANDARD, self::SEAT_ALLOCATION_HOTLINE],
+            true
+        )) {
+            return false;
+        }
+
+        return $allocationType !== self::SEAT_ALLOCATION_HOTLINE
+            || $status === self::SEAT_STATUS_BLOCKED;
+    }
+
     public function __construct(
         private readonly DatabaseInterface $db,
         private readonly SeatLayoutService $layoutService
@@ -193,6 +224,10 @@ final class EventSeatInventoryService
                 throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_LAYOUT'));
             }
 
+            $hotlineAllocation = $this->normaliseHotlineAllocation(
+                $this->layoutService->getHotlineAllocation($layoutId)
+            );
+
             $assignment = $this->loadAssignment($eventId, true);
 
             if ($assignment !== null) {
@@ -277,12 +312,24 @@ final class EventSeatInventoryService
                 );
             }
 
+            [$lockedLayout, $seatRows] = $this->loadAndLockExactInventory($eventId, $stored);
+            $hotlineMutation = $this->applyHotlineAllocationLocked(
+                $eventId,
+                $stored,
+                $lockedLayout,
+                $seatRows,
+                $hotlineAllocation,
+                $userId,
+                !$created && $missingSeatIds === []
+            );
+
             $this->db->transactionCommit();
             $transactionOpen = false;
 
             return [
                 'eventId'          => $eventId,
                 'inventoryVersion' => (int) $stored->inventory_version,
+                'hotlineCount'     => $hotlineMutation['hotlineCount'],
                 'layoutId'         => $layoutId,
                 'seatCount'        => (int) $stored->seat_count,
                 'status'           => (int) $stored->status,
@@ -359,16 +406,7 @@ final class EventSeatInventoryService
             foreach ($seatRows as $seatRow) {
                 $seatStatus = (int) $seatRow->status;
 
-                if (!\in_array(
-                    $seatStatus,
-                    [
-                        self::SEAT_STATUS_AVAILABLE,
-                        self::SEAT_STATUS_HELD,
-                        self::SEAT_STATUS_BOOKED,
-                        self::SEAT_STATUS_BLOCKED,
-                    ],
-                    true
-                )) {
+                if (!$this->isValidSeatRow($seatRow)) {
                     throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
                 }
 
@@ -515,6 +553,255 @@ final class EventSeatInventoryService
     }
 
     /**
+     * Persist the complete event-specific Hotline allocation.
+     *
+     * The allocation references the assigned immutable layout by alias/version
+     * and expands stable table/seat codes into this event's materialised rows.
+     * Reapplying the same allocation is deliberately a no-op.
+     *
+     * @param   array<string, mixed>  $rawAllocation
+     *
+     * @return array<string, int|string>
+     */
+    public function setHotlineAllocation(
+        int $eventId,
+        array $rawAllocation,
+        int $userId
+    ): array {
+        if ($eventId <= 0) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_EVENT'));
+        }
+
+        $allocation      = $this->normaliseHotlineAllocation($rawAllocation);
+        $transactionOpen = false;
+        $userId          = max(0, $userId);
+
+        try {
+            $this->db->transactionStart();
+            $transactionOpen = true;
+
+            // Keep the shared lock order: DPCalendar event, event assignment,
+            // then every materialised event seat in deterministic order.
+            $event = $this->loadEvent($eventId, true);
+
+            if ($event === null) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_EVENT'));
+            }
+
+            if (!$this->isUpcoming($event)) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_EVENT_STARTED'));
+            }
+
+            $assignment = $this->loadAssignment($eventId, true);
+
+            if ($assignment === null || !\in_array(
+                (int) $assignment->status,
+                [self::EVENT_STATUS_DRAFT, self::EVENT_STATUS_READY],
+                true
+            )) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_STATUS_CONFLICT'));
+            }
+
+            [$layout, $seatRows] = $this->loadAndLockExactInventory($eventId, $assignment);
+            $mutation = $this->applyHotlineAllocationLocked(
+                $eventId,
+                $assignment,
+                $layout,
+                $seatRows,
+                $allocation,
+                $userId,
+                true
+            );
+
+            $this->db->transactionCommit();
+            $transactionOpen = false;
+
+            $result = $this->buildMutationResult(
+                $assignment,
+                \count($seatRows),
+                $mutation['changedCount']
+            );
+            $result['hotlineCount'] = $mutation['hotlineCount'];
+
+            return $result;
+        } catch (\DomainException $exception) {
+            if ($transactionOpen) {
+                $this->db->transactionRollback();
+            }
+
+            throw $exception;
+        } catch (\Throwable $exception) {
+            if ($transactionOpen) {
+                $this->db->transactionRollback();
+            }
+
+            throw new \RuntimeException(
+                Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_SAVE'),
+                0,
+                $exception
+            );
+        }
+    }
+
+    /**
+     * Apply a validated Hotline target while the event, assignment and complete
+     * materialised inventory are already locked by the caller.
+     *
+     * @param   array<string, int|string>  $layout
+     * @param   list<object>               $seatRows
+     * @param   array{
+     *     layoutAlias: string,
+     *     layoutVersion: int,
+     *     seatCodes: list<string>,
+     *     tableCodes: list<string>
+     * }  $allocation
+     *
+     * @return array{changedCount: int, hotlineCount: int}
+     */
+    private function applyHotlineAllocationLocked(
+        int $eventId,
+        object $assignment,
+        array $layout,
+        array $seatRows,
+        array $allocation,
+        int $userId,
+        bool $advanceInventoryVersion
+    ): array {
+        if (
+            (string) $layout['alias'] !== $allocation['layoutAlias']
+            || (int) $layout['version'] !== $allocation['layoutVersion']
+        ) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_LAYOUT'));
+        }
+
+        [$seatIdsByTable, $seatIdsByCode] = $this->loadLayoutSeatReferences(
+            (int) $layout['id']
+        );
+        $targetSeatIds = [];
+
+        foreach ($allocation['tableCodes'] as $tableCode) {
+            if (!isset($seatIdsByTable[$tableCode])) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+            }
+
+            foreach ($seatIdsByTable[$tableCode] as $seatId) {
+                if (isset($targetSeatIds[$seatId])) {
+                    throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+                }
+
+                $targetSeatIds[$seatId] = true;
+            }
+        }
+
+        foreach ($allocation['seatCodes'] as $seatCode) {
+            $seatId = $seatIdsByCode[$seatCode] ?? 0;
+
+            if ($seatId < 1 || isset($targetSeatIds[$seatId])) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+            }
+
+            $targetSeatIds[$seatId] = true;
+        }
+
+        $rowsBySeatId          = [];
+        $currentHotlineSeatIds = [];
+
+        foreach ($seatRows as $seatRow) {
+            if (!$this->isValidSeatRow($seatRow)) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+            }
+
+            $seatId                 = (int) $seatRow->seat_id;
+            $rowsBySeatId[$seatId] = $seatRow;
+
+            if ((int) $seatRow->allocation_type === self::SEAT_ALLOCATION_HOTLINE) {
+                $currentHotlineSeatIds[$seatId] = true;
+            }
+        }
+
+        $newHotlineSeatIds = [];
+
+        foreach (array_keys($targetSeatIds) as $seatId) {
+            $seatRow = $rowsBySeatId[$seatId] ?? null;
+
+            if (!\is_object($seatRow)) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+            }
+
+            if ((int) $seatRow->allocation_type === self::SEAT_ALLOCATION_HOTLINE) {
+                continue;
+            }
+
+            if (
+                (int) $seatRow->allocation_type !== self::SEAT_ALLOCATION_STANDARD
+                || (int) $seatRow->status !== self::SEAT_STATUS_AVAILABLE
+            ) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+            }
+
+            $newHotlineSeatIds[] = $seatId;
+        }
+
+        $releasedHotlineSeatIds = array_map(
+            'intval',
+            array_keys(array_diff_key($currentHotlineSeatIds, $targetSeatIds))
+        );
+        $changedCount = \count($newHotlineSeatIds) + \count($releasedHotlineSeatIds);
+
+        if ($changedCount > 0) {
+            $onlineUnbookedCount = 0;
+
+            foreach ($seatRows as $seatRow) {
+                $seatId = (int) $seatRow->seat_id;
+                $status = isset($targetSeatIds[$seatId])
+                    ? self::SEAT_STATUS_BLOCKED
+                    : (isset($currentHotlineSeatIds[$seatId])
+                        ? self::SEAT_STATUS_AVAILABLE
+                        : (int) $seatRow->status);
+
+                if (!\in_array($status, [self::SEAT_STATUS_BLOCKED, self::SEAT_STATUS_BOOKED], true)) {
+                    $onlineUnbookedCount++;
+                }
+            }
+
+            if ($onlineUnbookedCount < $this->getActiveCartQuantity($eventId)) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+            }
+
+            sort($newHotlineSeatIds, SORT_NUMERIC);
+            sort($releasedHotlineSeatIds, SORT_NUMERIC);
+            $now = gmdate('Y-m-d H:i:s');
+
+            $this->updateAllocatedSeats(
+                $eventId,
+                $newHotlineSeatIds,
+                self::SEAT_STATUS_BLOCKED,
+                self::SEAT_ALLOCATION_HOTLINE,
+                $now,
+                $userId
+            );
+            $this->updateAllocatedSeats(
+                $eventId,
+                $releasedHotlineSeatIds,
+                self::SEAT_STATUS_AVAILABLE,
+                self::SEAT_ALLOCATION_STANDARD,
+                $now,
+                $userId
+            );
+
+            if ($advanceInventoryVersion) {
+                $this->advanceInventoryVersion($eventId, $now, $userId);
+                $assignment->inventory_version = (int) $assignment->inventory_version + 1;
+            }
+        }
+
+        return [
+            'changedCount' => $changedCount,
+            'hotlineCount' => \count($targetSeatIds),
+        ];
+    }
+
+    /**
      * Atomically apply one backend availability target to a complete seat batch.
      *
      * @param   array<int|string, mixed>  $rawSeatIds  Layout seat IDs.
@@ -570,18 +857,7 @@ final class EventSeatInventoryService
             $rowsBySeatId = [];
 
             foreach ($seatRows as $seatRow) {
-                $status = (int) $seatRow->status;
-
-                if (!\in_array(
-                    $status,
-                    [
-                        self::SEAT_STATUS_AVAILABLE,
-                        self::SEAT_STATUS_HELD,
-                        self::SEAT_STATUS_BOOKED,
-                        self::SEAT_STATUS_BLOCKED,
-                    ],
-                    true
-                )) {
+                if (!$this->isValidSeatRow($seatRow)) {
                     throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
                 }
 
@@ -599,6 +875,10 @@ final class EventSeatInventoryService
                 }
 
                 $currentStatus = (int) $seatRow->status;
+
+                if ((int) $seatRow->allocation_type !== self::SEAT_ALLOCATION_STANDARD) {
+                    throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+                }
 
                 if ($targetStatus === self::SEAT_STATUS_BLOCKED) {
                     if (!\in_array(
@@ -662,6 +942,10 @@ final class EventSeatInventoryService
                 $query     = $this->db->getQuery(true)
                     ->update($this->db->quoteName('#__copymypage_event_seats'))
                     ->set($this->db->quoteName('status') . ' = ' . $targetStatus)
+                    ->set(
+                        $this->db->quoteName('allocation_type') . ' = '
+                            . self::SEAT_ALLOCATION_STANDARD
+                    )
                     ->set($this->db->quoteName('cart_id') . ' = NULL')
                     ->set($this->db->quoteName('price_index') . ' = NULL')
                     ->set($this->db->quoteName('assignment_order') . ' = NULL')
@@ -762,6 +1046,7 @@ final class EventSeatInventoryService
                         'id',
                         'seat_id',
                         'status',
+                        'allocation_type',
                         'cart_id',
                         'price_index',
                         'assignment_order',
@@ -776,6 +1061,188 @@ final class EventSeatInventoryService
             ->order($this->db->quoteName('id') . ' ASC');
 
         return (array) $this->db->setQuery((string) $query . ' FOR UPDATE')->loadObjectList();
+    }
+
+    private function isValidSeatRow(object $seatRow): bool
+    {
+        $allocationType = (int) ($seatRow->allocation_type ?? -1);
+
+        if (!self::isValidSeatState((int) ($seatRow->status ?? -1), $allocationType)) {
+            return false;
+        }
+
+        return $allocationType !== self::SEAT_ALLOCATION_HOTLINE
+            || (
+                $seatRow->cart_id === null
+                && $seatRow->price_index === null
+                && $seatRow->assignment_order === null
+                && $seatRow->ticket_id === null
+            );
+    }
+
+    /**
+     * @param   array<string, mixed>  $rawAllocation
+     *
+     * @return array{
+     *     layoutAlias: string,
+     *     layoutVersion: int,
+     *     seatCodes: list<string>,
+     *     tableCodes: list<string>
+     * }
+     */
+    private function normaliseHotlineAllocation(array $rawAllocation): array
+    {
+        $expectedKeys = ['layoutAlias', 'layoutVersion', 'seatCodes', 'tableCodes'];
+        $actualKeys   = array_keys($rawAllocation);
+        sort($actualKeys, SORT_STRING);
+
+        if ($actualKeys !== $expectedKeys) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+        }
+
+        $layoutAlias = $rawAllocation['layoutAlias'];
+
+        if (
+            !\is_string($layoutAlias)
+            || $layoutAlias !== trim($layoutAlias)
+            || mb_strlen($layoutAlias, 'UTF-8') > 64
+            || preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $layoutAlias) !== 1
+        ) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_LAYOUT'));
+        }
+
+        $layoutVersion = $rawAllocation['layoutVersion'];
+
+        if (!\is_int($layoutVersion) || $layoutVersion < 1) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_LAYOUT'));
+        }
+
+        $tableCodes = $this->normaliseAllocationCodes(
+            $rawAllocation['tableCodes'],
+            64
+        );
+        $seatCodes = $this->normaliseAllocationCodes(
+            $rawAllocation['seatCodes'],
+            96
+        );
+
+        if (\count($tableCodes) + \count($seatCodes) > SeatLayoutService::MAX_SEATS) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+        }
+
+        return [
+            'layoutAlias'   => $layoutAlias,
+            'layoutVersion' => $layoutVersion,
+            'seatCodes'     => $seatCodes,
+            'tableCodes'    => $tableCodes,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function normaliseAllocationCodes(mixed $rawCodes, int $maximumLength): array
+    {
+        if (!\is_array($rawCodes) || !array_is_list($rawCodes)) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+        }
+
+        $codes = [];
+        $seen  = [];
+
+        foreach ($rawCodes as $rawCode) {
+            if (
+                !\is_string($rawCode)
+                || $rawCode !== trim($rawCode)
+                || mb_strlen($rawCode, 'UTF-8') > $maximumLength
+                || preg_match('/^[A-Z0-9][A-Z0-9_-]*$/', $rawCode) !== 1
+                || isset($seen[$rawCode])
+            ) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+            }
+
+            $seen[$rawCode] = true;
+            $codes[]        = $rawCode;
+        }
+
+        sort($codes, SORT_STRING);
+
+        return $codes;
+    }
+
+    /**
+     * @return array{0: array<string, list<int>>, 1: array<string, int>}
+     */
+    private function loadLayoutSeatReferences(int $layoutId): array
+    {
+        $query = $this->db->getQuery(true)
+            ->select(
+                $this->db->quoteName(
+                    ['t.table_code', 's.seat_code', 's.id', 't.sort_order', 's.sort_order']
+                )
+            )
+            ->from($this->db->quoteName('#__copymypage_layout_tables', 't'))
+            ->innerJoin(
+                $this->db->quoteName('#__copymypage_seats', 's')
+                    . ' ON ' . $this->db->quoteName('s.layout_table_id')
+                    . ' = ' . $this->db->quoteName('t.id')
+            )
+            ->where($this->db->quoteName('t.layout_id') . ' = :layoutId')
+            ->order($this->db->quoteName('t.sort_order') . ' ASC')
+            ->order($this->db->quoteName('s.sort_order') . ' ASC')
+            ->order($this->db->quoteName('s.id') . ' ASC')
+            ->bind(':layoutId', $layoutId, ParameterType::INTEGER);
+        $byTable = [];
+        $byCode  = [];
+
+        foreach ((array) $this->db->setQuery($query)->loadObjectList() as $row) {
+            $tableCode = (string) $row->table_code;
+            $seatCode  = (string) $row->seat_code;
+            $seatId    = (int) $row->id;
+
+            if ($tableCode === '' || $seatCode === '' || $seatId < 1 || isset($byCode[$seatCode])) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_EVENT_SEATING_ERROR_INVENTORY'));
+            }
+
+            $byTable[$tableCode][] = $seatId;
+            $byCode[$seatCode]     = $seatId;
+        }
+
+        return [$byTable, $byCode];
+    }
+
+    /**
+     * @param   list<int>  $seatIds
+     */
+    private function updateAllocatedSeats(
+        int $eventId,
+        array $seatIds,
+        int $status,
+        int $allocationType,
+        string $modified,
+        int $userId
+    ): void {
+        if ($seatIds === []) {
+            return;
+        }
+
+        $query = $this->db->getQuery(true)
+            ->update($this->db->quoteName('#__copymypage_event_seats'))
+            ->set($this->db->quoteName('status') . ' = ' . $status)
+            ->set($this->db->quoteName('allocation_type') . ' = ' . $allocationType)
+            ->set($this->db->quoteName('cart_id') . ' = NULL')
+            ->set($this->db->quoteName('price_index') . ' = NULL')
+            ->set($this->db->quoteName('assignment_order') . ' = NULL')
+            ->set($this->db->quoteName('ticket_id') . ' = NULL')
+            ->set($this->db->quoteName('block_note') . ' = ' . $this->db->quote(''))
+            ->set($this->db->quoteName('modified') . ' = :modified')
+            ->set($this->db->quoteName('modified_by') . ' = :modifiedBy')
+            ->where($this->db->quoteName('event_id') . ' = :eventId')
+            ->where($this->db->quoteName('seat_id') . ' IN (' . implode(',', $seatIds) . ')')
+            ->bind(':modified', $modified)
+            ->bind(':modifiedBy', $userId, ParameterType::INTEGER)
+            ->bind(':eventId', $eventId, ParameterType::INTEGER);
+        $this->db->setQuery($query)->execute();
     }
 
     /**
@@ -990,7 +1457,15 @@ final class EventSeatInventoryService
             ->insert($this->db->quoteName('#__copymypage_event_seats'))
             ->columns(
                 $this->db->quoteName(
-                    ['event_id', 'seat_id', 'status', 'created', 'modified', 'modified_by']
+                    [
+                        'event_id',
+                        'seat_id',
+                        'status',
+                        'allocation_type',
+                        'created',
+                        'modified',
+                        'modified_by',
+                    ]
                 )
             );
 
@@ -1002,6 +1477,7 @@ final class EventSeatInventoryService
                         $eventId,
                         $seatId,
                         self::SEAT_STATUS_AVAILABLE,
+                        self::SEAT_ALLOCATION_STANDARD,
                         $this->db->quote($now),
                         $this->db->quote($now),
                         $userId,

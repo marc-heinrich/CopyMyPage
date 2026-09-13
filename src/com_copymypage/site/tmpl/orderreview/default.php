@@ -16,9 +16,7 @@ use Joomla\CMS\Layout\LayoutHelper;
 /** @var \Joomla\Component\CopyMyPage\Site\View\Orderreview\HtmlView $this */
 
 $escape = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-$introKey = $this->blocked
-    ? 'COM_COPYMYPAGE_ORDER_REVIEW_BLOCKED_MESSAGE'
-    : 'COM_COPYMYPAGE_ORDER_REVIEW_INTRO';
+$introKey = 'COM_COPYMYPAGE_ORDER_REVIEW_INTRO';
 $customer  = $this->customer;
 $fullName  = trim((string) ($customer['firstName'] ?? '') . ' ' . (string) ($customer['lastName'] ?? ''));
 $streetLine = trim((string) ($customer['street'] ?? '') . ' ' . (string) ($customer['houseNumber'] ?? ''));
@@ -68,15 +66,22 @@ $buttonKey = $this->blocked
             method="post"
             data-cmp-order-review-form
         >
-        <section
-            class="cmp-customer-data__blocked cmp-order-review__status<?php echo $this->blocked ? ' cmp-order-review__status--blocked' : ''; ?>"
-            <?php echo $this->blocked ? 'role="alert" aria-labelledby="cmp-order-review-status-title"' : ''; ?>
-        >
-            <?php if ($this->blocked) : ?>
-                <h2 id="cmp-order-review-status-title">
-                    <?php echo $escape(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_BLOCKED_TITLE')); ?>
-                </h2>
-            <?php else : ?>
+        <?php if ($this->blocked) : ?>
+            <?php echo LayoutHelper::render(
+                'copymypage.tickets.message',
+                [
+                    'ariaLive' => 'assertive',
+                    'body'     => Text::_('COM_COPYMYPAGE_ORDER_REVIEW_BLOCKED_MESSAGE'),
+                    'class'    => 'cmp-order-review__message',
+                    'icon'     => 'warning',
+                    'id'       => 'cmp-order-review-blocked',
+                    'role'     => 'alert',
+                    'title'    => Text::_('COM_COPYMYPAGE_ORDER_REVIEW_BLOCKED_TITLE'),
+                    'tone'     => 'warning',
+                ]
+            ); ?>
+        <?php else : ?>
+            <section class="cmp-customer-data__blocked cmp-order-review__status">
                 <div class="cmp-order-review__content">
                     <section class="cmp-order-review__section" aria-labelledby="cmp-order-review-tickets-title">
                         <h3 id="cmp-order-review-tickets-title" class="cmp-order-review__section-title">
@@ -198,7 +203,6 @@ $buttonKey = $this->blocked
                                         <?php
                                         $providerId = 'cmp-order-review-provider-' . $index;
                                         $description = trim((string) ($provider['description'] ?? ''));
-                                        $fee = max(0.0, (float) ($provider['fee'] ?? 0.0));
                                         ?>
                                         <label class="cmp-order-review__payment-option" for="<?php echo $escape($providerId); ?>">
                                             <input
@@ -207,6 +211,7 @@ $buttonKey = $this->blocked
                                                 type="radio"
                                                 name="payment_provider"
                                                 value="<?php echo $escape($provider['id'] ?? ''); ?>"
+                                                data-cmp-order-review-payment-total="<?php echo $escape($provider['totalFormatted'] ?? ''); ?>"
                                                 required
                                                 <?php echo $providerCount === 1 ? 'checked' : ''; ?>
                                             >
@@ -215,18 +220,6 @@ $buttonKey = $this->blocked
                                                 <?php if ($description !== '') : ?>
                                                     <small><?php echo $escape($description); ?></small>
                                                 <?php endif; ?>
-                                                <?php if ($fee > 0) : ?>
-                                                    <small>
-                                                        <?php echo $escape(Text::sprintf(
-                                                            'COM_COPYMYPAGE_ORDER_REVIEW_PAYMENT_FEE',
-                                                            (string) ($provider['feeFormatted'] ?? '')
-                                                        )); ?>
-                                                    </small>
-                                                <?php endif; ?>
-                                            </span>
-                                            <span class="cmp-order-review__payment-total">
-                                                <span><?php echo $escape(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_PAYMENT_METHOD_TOTAL')); ?></span>
-                                                <strong><?php echo $escape($provider['totalFormatted'] ?? ''); ?></strong>
                                             </span>
                                         </label>
                                     <?php endforeach; ?>
@@ -308,9 +301,16 @@ $buttonKey = $this->blocked
                     </div>
                 <?php endif; ?>
 
-                <footer class="cmp-order-review__total">
-                    <span><?php echo $escape(Text::_($totalLabelKey)); ?></span>
-                    <strong><?php echo $escape($displayTotal); ?></strong>
+                <footer class="cmp-order-review__total" aria-live="polite">
+                    <span
+                        data-cmp-order-review-total-label
+                        data-cmp-order-review-base-label="<?php echo $escape(Text::_($totalLabelKey)); ?>"
+                        data-cmp-order-review-selected-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_TICKET_SELECTION_CART_TOTAL')); ?>"
+                    ><?php echo $escape(Text::_($totalLabelKey)); ?></span>
+                    <strong
+                        data-cmp-order-review-total-value
+                        data-cmp-order-review-base-total="<?php echo $escape($displayTotal); ?>"
+                    ><?php echo $escape($displayTotal); ?></strong>
                 </footer>
 
                 <p id="cmp-order-review-payment-note" class="cmp-order-review__payment-note">
@@ -318,8 +318,8 @@ $buttonKey = $this->blocked
                         ? 'COM_COPYMYPAGE_ORDER_REVIEW_PAYMENT_NOTE'
                         : 'COM_COPYMYPAGE_ORDER_REVIEW_ORDER_FREE_NOTE')); ?>
                 </p>
-            <?php endif; ?>
-        </section>
+            </section>
+        <?php endif; ?>
 
         <nav
             class="cmp-customer-data__navigation cmp-order-review__navigation"

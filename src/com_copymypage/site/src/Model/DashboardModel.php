@@ -16,6 +16,7 @@ use Joomla\CMS\Form\Form;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 use Joomla\CMS\User\User;
 use Joomla\Component\CopyMyPage\Site\Helper\DashboardHelper;
+use Joomla\Component\CopyMyPage\Site\Service\AccountTicketsService;
 use Joomla\Component\CopyMyPage\Site\Service\AvatarService;
 use Joomla\Registry\Registry;
 
@@ -44,10 +45,17 @@ class DashboardModel extends BaseDatabaseModel
             ->get(AvatarService::class)
             ->getAvatar($identity);
 
-        if ($layout === 'default') {
+        if (\in_array($layout, ['default', 'tickets'], true)) {
             $extraData['avatar'] = $avatar;
+            $dashboard           = DashboardHelper::buildDashboardData($identity, $extraData);
 
-            return DashboardHelper::buildDashboardData($identity, $extraData);
+            if ($layout === 'tickets') {
+                $dashboard['tickets'] = Factory::getContainer()
+                    ->get(AccountTicketsService::class)
+                    ->getForUser((int) $identity->id);
+            }
+
+            return $dashboard;
         }
 
         $userData        = $extraData['userData'] ?? null;
