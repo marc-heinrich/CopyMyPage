@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.19
+ * @since       0.0.21
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Service;
@@ -240,6 +240,7 @@ final class TicketReservationService
         $events   = $this->catalog->getUpcomingEvents();
         $eventIds = array_map(static fn(\stdClass $event): int => (int) $event->id, $events);
         $held     = $this->getHeldQuantities($eventIds);
+        $sold     = $this->getConfirmedSoldQuantities($eventIds);
         $seating  = $this->seatSelection->getInventoryConstraints($eventIds);
         $cart     = $this->cartContext->getActiveCart();
         $rows     = $cart === null ? [] : $this->loadCartItems((int) $cart->id);
@@ -251,7 +252,8 @@ final class TicketReservationService
             $availability = $this->buildAvailability(
                 $event,
                 $held[$eventId] ?? 0,
-                $seating[$eventId] ?? null
+                $seating[$eventId] ?? null,
+                $sold[$eventId] ?? 0
             );
             $eventCurrent = $current[$eventId] ?? [];
             $currentTotal = array_sum($eventCurrent);
@@ -368,6 +370,7 @@ final class TicketReservationService
 
         $eventIds = array_map(static fn(\stdClass $event): int => (int) $event->id, $events);
         $held     = $this->getHeldQuantities($eventIds);
+        $sold     = $this->getConfirmedSoldQuantities($eventIds);
         $seating  = $this->seatSelection->getInventoryConstraints($eventIds);
         $result   = [];
 
@@ -376,7 +379,8 @@ final class TicketReservationService
             $availability     = $this->buildAvailability(
                 $event,
                 $held[$eventId] ?? 0,
-                $seating[$eventId] ?? null
+                $seating[$eventId] ?? null,
+                $sold[$eventId] ?? 0
             );
             $availability['selectionUrl'] = $availability['bookable']
                 ? $this->getSelectionUrl($eventId)
@@ -426,6 +430,48 @@ final class TicketReservationService
 
         foreach ((array) $this->db->setQuery($query)->loadObjectList() as $row) {
             $result[(int) $row->event_id] = max(0, (int) $row->quantity);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Count completed DPCalendar tickets assigned to sellable CopyMyPage seats.
+     * A booked seat alone is not a sale while its paid booking is still pending.
+     *
+     * @param   array<int, int|string>  $eventIds
+     *
+     * @return array<int, int>
+     */
+    private function getConfirmedSoldQuantities(array $eventIds): array
+    {
+        $eventIds = $this->normalizeEventIds($eventIds);
+
+        if ($eventIds === []) {
+            return [];
+        }
+
+        $query = $this->db->getQuery(true)
+            ->select($this->db->quoteName('s.event_id'))
+            ->select('COUNT(' . $this->db->quoteName('s.id') . ') AS ' . $this->db->quoteName('sold'))
+            ->from($this->db->quoteName('#__copymypage_event_seats', 's'))
+            ->innerJoin($this->db->quoteName('#__dpcalendar_tickets', 't')
+                . ' ON ' . $this->db->quoteName('t.id') . ' = ' . $this->db->quoteName('s.ticket_id')
+                . ' AND ' . $this->db->quoteName('t.event_id') . ' = ' . $this->db->quoteName('s.event_id'))
+            ->innerJoin($this->db->quoteName('#__dpcalendar_bookings', 'b')
+                . ' ON ' . $this->db->quoteName('b.id') . ' = ' . $this->db->quoteName('t.booking_id'))
+            ->where($this->db->quoteName('s.event_id') . ' IN (' . implode(',', $eventIds) . ')')
+            ->where($this->db->quoteName('s.status') . ' = ' . EventSeatInventoryService::SEAT_STATUS_BOOKED)
+            ->where($this->db->quoteName('s.allocation_type') . ' = '
+                . EventSeatInventoryService::SEAT_ALLOCATION_STANDARD)
+            ->where($this->db->quoteName('b.state') . ' = 1')
+            ->where($this->db->quoteName('t.state') . ' IN (1, 9)')
+            ->group($this->db->quoteName('s.event_id'));
+
+        $result = [];
+
+        foreach ((array) $this->db->setQuery($query)->loadObjectList() as $row) {
+            $result[(int) $row->event_id] = max(0, (int) $row->sold);
         }
 
         return $result;
@@ -683,10 +729,12 @@ final class TicketReservationService
     private function buildAvailability(
         \stdClass $event,
         int $held,
-        ?array $seating = null
+        ?array $seating = null,
+        int $sold = 0
     ): array
     {
         $availability = $this->catalog->getAvailability($event, $held);
+        $sellableCapacity = null;
 
         if ($seating === null || empty($seating['ready'])) {
             $availability['bookable'] = false;
@@ -694,6 +742,10 @@ final class TicketReservationService
             $availability['status'] = 'unavailable';
         } else {
             $seatCapacity  = max(0, (int) ($seating['capacity'] ?? 0));
+            $sellableCapacity = max(0, (int) ($seating['sellableCapacity'] ?? 0));
+            if ($availability['capacity'] !== null) {
+                $sellableCapacity = min((int) $availability['capacity'], $sellableCapacity);
+            }
             $seatRemaining = max(0, $seatCapacity - $held);
             $availability['remaining'] = $availability['capacity'] === null
                 ? $seatRemaining
@@ -713,18 +765,12 @@ final class TicketReservationService
                 0,
                 (int) $availability['capacity'] - (int) $availability['remaining']
             );
-            $availability['progress'] = (int) $availability['capacity'] > 0
-                ? min(
-                    100,
-                    max(
-                        0,
-                        (int) round(
-                            ($availability['used'] / (int) $availability['capacity']) * 100
-                        )
-                    )
-                )
-                : 100;
         }
+
+        $sold = max(0, $sold);
+        $availability['progress'] = $sellableCapacity !== null && $sellableCapacity > 0
+            ? min(100, max(0, (int) round(($sold / $sellableCapacity) * 100)))
+            : null;
 
         $capacity     = $availability['capacity'];
         $remaining    = $availability['remaining'];
@@ -762,6 +808,8 @@ final class TicketReservationService
             'bookable'      => $availability['bookable'],
             'saleOpen'      => $availability['saleOpen'],
             'capacity'      => $capacity,
+            'sellableCapacity' => $sellableCapacity,
+            'sold'          => $sold,
             'held'          => $availability['held'],
             'nativeUsed'    => $availability['nativeUsed'],
             'used'          => $availability['used'],
@@ -769,12 +817,12 @@ final class TicketReservationService
             'status'        => $status,
             'statusLabel'   => $label,
             'progress'      => $availability['progress'],
-            'progressLabel' => $capacity === null
+            'progressLabel' => $sellableCapacity === null || $sellableCapacity < 1
                 ? ''
                 : Text::sprintf(
                     'COM_COPYMYPAGE_TICKET_SELECTION_ALLOCATION_PROGRESS',
-                    min($availability['used'], $capacity),
-                    $capacity
+                    $sold,
+                    $sellableCapacity
                 ),
         ];
     }

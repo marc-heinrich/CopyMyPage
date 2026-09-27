@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.19
+ * @since       0.0.21
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Service;
@@ -424,6 +424,7 @@ final class SeatSelectionService
                 'assigned'     => true,
                 'booked'       => 0,
                 'capacity'     => 0,
+                'sellableCapacity' => 0,
                 'layoutCount'  => 0,
                 'materialized' => 0,
                 'ready'        => false,
@@ -499,6 +500,7 @@ final class SeatSelectionService
                 'assigned'     => true,
                 'booked'       => $booked,
                 'capacity'     => max(0, $layoutCount - $blocked - $booked),
+                'sellableCapacity' => max(0, $layoutCount - $blocked),
                 'layoutCount'  => $layoutCount,
                 'materialized' => $materialized,
                 'ready'        => $ready,

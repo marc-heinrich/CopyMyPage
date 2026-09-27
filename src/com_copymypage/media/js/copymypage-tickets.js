@@ -3,7 +3,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.19
+ * @since       0.0.21
  */
 
 (function (window, document, Joomla) {
@@ -240,7 +240,7 @@
             options.centeredSlides = true;
             options.initialSlide = 0;
             options.navigation = false;
-            options.pagination = false;
+            options.pagination = usesFlatLayout ? options.pagination : false;
             root.classList.add('cmp-tickets__swiper--single');
         }
 

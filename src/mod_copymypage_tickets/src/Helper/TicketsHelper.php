@@ -4,7 +4,7 @@
  * @subpackage  Modules.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.19
+ * @since       0.0.21
  */
 
 namespace Joomla\Module\CopyMyPage\Tickets\Site\Helper;
@@ -209,7 +209,7 @@ final class TicketsHelper
                 'grabCursor'     => false,
                 'initialSlide'   => 0,
                 'pagination'     => [
-                    'dynamicBullets' => true,
+                    'dynamicBullets' => false,
                 ],
             ],
             'reducedMotionSwiper'      => [
@@ -237,6 +237,7 @@ final class TicketsHelper
                     'slideShadows' => false,
                     'stretch'      => -8,
                 ],
+                'edgeSwipeDetection'  => 'prevent',
                 'effect'              => 'coverflow',
                 'grabCursor'          => true,
                 'keyboard'            => [
@@ -511,7 +512,8 @@ final class TicketsHelper
     {
         $capacity   = $availability['capacity'] ?? null;
         $nativeUsed = max(0, (int) ($availability['nativeUsed'] ?? 0));
-        $used       = max(0, (int) ($availability['used'] ?? $nativeUsed));
+        $sellableCapacity = $availability['sellableCapacity'] ?? null;
+        $sold       = max(0, (int) ($availability['sold'] ?? 0));
         $remaining  = $capacity === null
             ? null
             : max(0, (int) ($availability['remaining'] ?? 0));
@@ -553,16 +555,15 @@ final class TicketsHelper
         $progressLabel     = '';
         $progress          = null;
 
-        if ($capacity !== null && $capacity > 0) {
-            $visibleUsed = min($used, $capacity);
+        if ($sellableCapacity !== null && $sellableCapacity > 0) {
             $progressLabel = Text::sprintf(
                 'MOD_COPYMYPAGE_TICKETS_ALLOCATION_PROGRESS',
-                $visibleUsed,
-                $capacity
+                $sold,
+                $sellableCapacity
             );
             $progress = isset($availability['progress'])
                 ? min(100, max(0, (int) $availability['progress']))
-                : min(100, max(0, (int) round(($visibleUsed / $capacity) * 100)));
+                : min(100, max(0, (int) round(($sold / $sellableCapacity) * 100)));
         }
 
         return [

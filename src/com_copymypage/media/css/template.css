@@ -3,7 +3,7 @@
  * @subpackage  Templates.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.20
+ * @since       0.0.21
  * @syntax      Joomla! Coding Standards // CSS variables in kebab-case
  * @see         https://developer.joomla.org/coding-standards/css.html
  */
@@ -3354,22 +3354,60 @@ body.is-small .cmp-tickets__swiper.swiper {
     padding: 0 0 var(--cmp-ticket-pagination-space);
 }
 
-body.is-small .swiper-initialized .cmp-tickets__pagination.swiper-pagination-bullets-dynamic {
+body.is-small .cmp-tickets__pagination:not(.swiper-pagination-bullets-dynamic) {
     --swiper-pagination-color: var(--cmp-color-logo-dark);
     --swiper-pagination-bullet-inactive-color: var(--cmp-color-text-muted);
     --swiper-pagination-bullet-size: 0.625rem;
-    inset-inline-start: 50%;
-    inset-inline-end: auto;
-    display: block;
-    block-size: 2.75rem;
+    flex-wrap: wrap;
+    align-content: center;
     gap: 0;
-    line-height: 2.75rem;
-    transform: translateX(-50%);
 }
 
-body.is-small .cmp-tickets__pagination.swiper-pagination-bullets-dynamic
-    .swiper-pagination-bullet {
-    vertical-align: middle;
+body.is-small .cmp-tickets__pagination:not(.swiper-pagination-bullets-dynamic) .swiper-pagination-bullet {
+    flex: 0 0 1.125rem;
+    min-inline-size: 1.125rem;
+    padding-inline: 0;
+}
+
+body.is-small .cmp-tickets__pagination:not(.swiper-pagination-bullets-dynamic)
+    .swiper-pagination-bullet:not(:last-child)::after {
+    display: none;
+}
+
+body.is-small .cmp-tickets__pagination:not(.swiper-pagination-bullets-dynamic)
+    .swiper-pagination-bullet::before {
+    display: block;
+    inline-size: var(--swiper-pagination-bullet-size);
+    block-size: var(--swiper-pagination-bullet-size);
+    border-radius: 50%;
+    background: var(--swiper-pagination-bullet-inactive-color);
+    content: "";
+    opacity: var(--swiper-pagination-bullet-inactive-opacity, 0.2);
+    transform: scale(0.33);
+    transition: transform 0.2s;
+}
+
+body.is-small .cmp-tickets__pagination:not(.swiper-pagination-bullets-dynamic)
+    .swiper-pagination-bullet:has(+ .swiper-pagination-bullet-active)::before,
+body.is-small .cmp-tickets__pagination:not(.swiper-pagination-bullets-dynamic)
+    .swiper-pagination-bullet-active + .swiper-pagination-bullet::before {
+    transform: scale(0.66);
+}
+
+body.is-small .cmp-tickets__pagination:not(.swiper-pagination-bullets-dynamic)
+    .swiper-pagination-bullet-active::before {
+    background: var(--swiper-pagination-color);
+    opacity: var(--swiper-pagination-bullet-opacity, 1);
+    transform: scale(1);
+}
+
+body.is-small .swiper-initialized.cmp-tickets__swiper--single .cmp-tickets__pagination {
+    display: flex;
+}
+
+body.is-small .swiper-initialized.cmp-tickets__swiper--single
+    .cmp-tickets__pagination .swiper-pagination-bullet {
+    display: inline-flex !important;
 }
 
 body.is-small .cmp-tickets__swiper:not(.swiper-initialized) .cmp-tickets__track {
@@ -3407,7 +3445,8 @@ body.is-small .cmp-ticket-card__footer.uk-card-footer {
 @media (prefers-reduced-motion: reduce) {
     .cmp-ticket-card,
     .cmp-ticket-card__media img,
-    .cmp-tickets__nav {
+    .cmp-tickets__nav,
+    body.is-small .cmp-tickets__pagination .swiper-pagination-bullet::before {
         transition: none;
     }
 
@@ -3680,25 +3719,27 @@ body.is-small .cmp-ticket-steps .dp-steps__separator {
     box-shadow: 0 0 0 0.18rem color-mix(in srgb, var(--cmp-color-text-muted) 16%, transparent);
 }
 
-.cmp-ticket-selection-event__icon {
+.cmp-ticket-selection-event__icon,
+.cmp-security-mfa__icon {
     flex: 0 0 auto;
     margin-inline-start: auto;
     color: var(--cmp-color-logo-dark);
     transition: transform 0.3s ease-out;
 }
 
-.cmp-ticket-selection-event__toggle[aria-expanded="true"] .cmp-ticket-selection-event__icon {
+.cmp-ticket-selection-event__toggle[aria-expanded="true"] .cmp-ticket-selection-event__icon,
+.cmp-security-mfa__toggle[aria-expanded="true"] .cmp-security-mfa__icon {
     transform: rotate(180deg);
 }
 
 .cmp-ticket-selection-event__content {
     margin: 0;
     padding: 0 var(--cmp-spacing-lg) var(--cmp-spacing-lg);
+    border-block-start: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.12);
 }
 
 .cmp-ticket-selection-event__form {
     padding-block-start: var(--cmp-spacing-lg);
-    border-block-start: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.1);
 }
 
 .cmp-ticket-selection-event__fieldset {
@@ -3894,19 +3935,6 @@ body:is(.is-tablet, .is-desktop) .cmp-ticket-selection-event__cart-link {
     padding: var(--cmp-spacing-md);
     background: var(--cmp-color-surface);
     border-radius: var(--cmp-border-radius);
-}
-
-.cmp-ticket-cart__empty:not(.cmp-ticket-cart__empty--expired)::after {
-    display: inline-block;
-    inline-size: 1.4em;
-    block-size: 1.4em;
-    margin-inline-start: var(--cmp-spacing-xs);
-    vertical-align: -0.35em;
-    background-color: currentColor;
-    content: "";
-    pointer-events: none;
-    -webkit-mask: url("../images/icons/sad-face.svg") center / contain no-repeat;
-    mask: url("../images/icons/sad-face.svg") center / contain no-repeat;
 }
 
 .cmp-ticket-cart__items {
@@ -4167,7 +4195,6 @@ body.is-small .cmp-ticket-selection-event__actions .cmp-button {
 .cmp-seat-selection-event__form {
     min-inline-size: 0;
     padding-block-start: var(--cmp-spacing-lg);
-    border-block-start: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.1);
 }
 
 .cmp-seat-selection-event__form[aria-busy="true"] {
@@ -5475,11 +5502,17 @@ body.is-small .cmp-seat-selection__continue-wrap {
     border-block-start: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.08);
 }
 
-.cmp-customer-data-account__activation-note {
-    margin: var(--cmp-spacing-md) 0 0;
+.cmp-customer-data-account__activation-note,
+.cmp-customer-data-account__consent :is(.alert, .form-text) {
     color: var(--cmp-color-text-muted);
     font-family: var(--cmp-font-family-body-alt);
+    font-size: var(--cmp-font-size);
+    letter-spacing: var(--cmp-letter-spacing);
     line-height: 1.55;
+}
+
+.cmp-customer-data-account__activation-note {
+    margin: var(--cmp-spacing-md) 0 0;
 }
 
 .cmp-customer-data-account__consent,
@@ -8750,8 +8783,11 @@ body.cmp-component-page--drawer :is(
 }
 
 .cmp-security-mfa__accordion > li {
+    --cmp-security-mfa-card-padding: clamp(1.25rem, 4vw, 1.75rem);
+
     margin: 0;
-    padding: clamp(1.25rem, 4vw, 1.75rem);
+    padding-block: var(--cmp-security-mfa-card-padding);
+    padding-inline: 0;
     background: var(--cmp-color-surface);
     border-radius: var(--cmp-border-radius-lg);
 }
@@ -8760,16 +8796,10 @@ body.cmp-component-page--drawer :is(
     display: flex;
     align-items: center;
     margin: 0;
+    padding-inline: var(--cmp-security-mfa-card-padding);
     gap: var(--cmp-spacing-lg);
     color: var(--cmp-color-logo-dark);
     text-decoration: none;
-}
-
-.cmp-security-mfa__icon {
-    flex: 0 0 auto;
-    margin-left: 0;
-    margin-inline-start: auto;
-    color: var(--cmp-color-logo-dark);
 }
 
 .cmp-security-mfa__summary {
@@ -8851,11 +8881,13 @@ body.cmp-component-page--drawer :is(
 }
 
 .cmp-security-mfa__content {
-    margin-block-start: var(--cmp-spacing-lg);
+    margin: 0;
+    padding: var(--cmp-spacing-lg) var(--cmp-security-mfa-card-padding) 0;
+    border-block-start: var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.12);
 }
 
 body:is(.is-mobile, .is-narrow, .is-small) .cmp-security-mfa__accordion > li {
-    padding: var(--cmp-spacing-lg);
+    --cmp-security-mfa-card-padding: var(--cmp-spacing-lg);
 }
 
 .cmp-form .cmp-profile-form__section.com-users-profile__multifactor {
@@ -11066,6 +11098,24 @@ body:is(.is-small, .is-narrow).com_content.view-article .cmp-article .com-conten
     box-shadow: none;
     cursor: pointer;
     transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+}
+
+.cmp-button:is(.uk-button, .btn) {
+    box-sizing: border-box;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.cmp-button:is(.uk-button, .btn) > .uk-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
+}
+
+.cmp-button:is(.uk-button, .btn) > .uk-icon > svg {
+    display: block;
 }
 
 .cmp-button:is(.uk-button, .btn):hover,

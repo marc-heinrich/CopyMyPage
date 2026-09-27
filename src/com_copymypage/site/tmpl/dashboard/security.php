@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.17
+ * @since       0.0.21
  */
 
 \defined('_JEXEC') or die;
@@ -83,7 +83,7 @@ $this->getDocument()->getWebAssetManager()
                             </span>
                             <span
                                 class="cmp-security-mfa__icon"
-                                uk-accordion-icon
+                                uk-icon="icon: chevron-down"
                                 aria-hidden="true"
                             ></span>
                         </a>

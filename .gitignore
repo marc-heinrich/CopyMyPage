@@ -21,8 +21,6 @@ tmp/
 cache/
 
 # Local agent instructions / documentation
-AGENTS.md
-DESIGN.md
 docs/
 
 # Local agent and browser tool state
