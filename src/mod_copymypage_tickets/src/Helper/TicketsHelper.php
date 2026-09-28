@@ -211,6 +211,8 @@ final class TicketsHelper
                 'pagination'     => [
                     'dynamicBullets' => false,
                 ],
+                'snapToSlideEdge'  => true,
+                'touchEventsTarget' => 'wrapper',
             ],
             'reducedMotionSwiper'      => [
                 'grabCursor' => false,
@@ -255,6 +257,7 @@ final class TicketsHelper
                 'slidesPerView'       => 'auto',
                 'spaceBetween'        => 20,
                 'speed'               => 520,
+                'touchEventsTarget'   => 'container',
                 'watchOverflow'       => true,
             ],
         ];
