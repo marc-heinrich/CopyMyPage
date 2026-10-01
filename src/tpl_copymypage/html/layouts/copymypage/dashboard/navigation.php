@@ -4,7 +4,7 @@
  * @subpackage  Layouts.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.17
+ * @since       0.0.22
  */
 
 \defined('_JEXEC') or die;
@@ -106,6 +106,30 @@ $renderItems = static function (array $nodes, int $depth = 0) use (&$renderItems
     return (string) ob_get_clean();
 };
 ?>
-<nav class="cmp-dashboard-nav" aria-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_NAV_LABEL')); ?>">
-    <?php echo $renderItems($items); ?>
+<nav
+    class="cmp-dashboard-nav"
+    aria-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_NAV_LABEL')); ?>"
+    data-cmp-dashboard-nav
+>
+    <div class="cmp-dashboard-nav__rail">
+        <button
+            class="cmp-dashboard-nav__control cmp-dashboard-nav__control--previous"
+            type="button"
+            aria-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_NAV_PREVIOUS')); ?>"
+            aria-controls="cmp-dashboard-nav-scroll"
+            data-cmp-dashboard-nav-previous
+            hidden
+        ><span uk-icon="icon: chevron-left" aria-hidden="true"></span></button>
+        <div id="cmp-dashboard-nav-scroll" class="cmp-dashboard-nav__scroll" data-cmp-dashboard-nav-scroll>
+            <?php echo $renderItems($items); ?>
+        </div>
+        <button
+            class="cmp-dashboard-nav__control cmp-dashboard-nav__control--next"
+            type="button"
+            aria-label="<?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_NAV_NEXT')); ?>"
+            aria-controls="cmp-dashboard-nav-scroll"
+            data-cmp-dashboard-nav-next
+            hidden
+        ><span uk-icon="icon: chevron-right" aria-hidden="true"></span></button>
+    </div>
 </nav>

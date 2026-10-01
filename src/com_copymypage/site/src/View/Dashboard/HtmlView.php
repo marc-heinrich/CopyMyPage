@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.17
+ * @since       0.0.22
  */
 
 namespace Joomla\Component\CopyMyPage\Site\View\Dashboard;
@@ -242,6 +242,8 @@ class HtmlView extends BaseHtmlView
             $this->document,
             $title
         );
+
+        $this->document->getWebAssetManager()->useScript('copymypage.dashboard.navigation');
 
         parent::display($tpl);
     }

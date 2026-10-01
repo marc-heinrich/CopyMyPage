@@ -752,6 +752,96 @@ return new class () implements ServiceProviderInterface
                     foreach ($manifest->accountMenuBootstrap->item as $item) {
                         $this->ensureAccountMenuItem($db, $componentId, $item);
                     }
+
+                    $this->alignDefaultAccountMenuOrder(
+                        $db,
+                        $componentId,
+                        $manifest->accountMenuBootstrap
+                    );
+                }
+
+                /**
+                 * Migrate only the four untouched defaults from the original menu order.
+                 * Any added, edited or nested account item leaves the administrator's order intact.
+                 */
+                private function alignDefaultAccountMenuOrder(
+                    DatabaseInterface $db,
+                    int $componentId,
+                    \SimpleXMLElement $bootstrap
+                ): bool {
+                    $canonicalKeys = ['overview', 'tickets', 'profile', 'security'];
+                    $legacyKeys    = ['overview', 'profile', 'security', 'tickets'];
+                    $defaults      = [];
+
+                    foreach ($bootstrap->item as $item) {
+                        $defaults[(string) $item['key']] = $item;
+                    }
+
+                    if (array_keys($defaults) !== $canonicalKeys) {
+                        return false;
+                    }
+
+                    $query = $db->getQuery(true)
+                        ->select('*')
+                        ->from($db->quoteName('#__menu'))
+                        ->where($db->quoteName('menutype') . ' = ' . $db->quote('copymypage-account'))
+                        ->order($db->quoteName('lft') . ' ASC');
+                    $rows = $db->setQuery($query)->loadObjectList();
+
+                    if (\count($rows) !== 4) {
+                        return false;
+                    }
+
+                    $registeredAccess = $this->getRegisteredViewLevelId($db);
+
+                    foreach ($rows as $index => $row) {
+                        $key    = $legacyKeys[$index];
+                        $item   = $defaults[$key];
+                        $params = json_decode((string) $row->params, true);
+                        $link   = html_entity_decode(
+                            trim((string) $item['link']),
+                            ENT_QUOTES | ENT_XML1,
+                            'UTF-8'
+                        );
+
+                        if (
+                            (string) $row->title !== trim((string) $item['title'])
+                            || (string) $row->alias !== trim((string) $item['alias'])
+                            || (string) $row->note !== 'copymypage.account.' . $key
+                            || (string) $row->link !== $link
+                            || (string) $row->type !== 'component'
+                            || (int) $row->component_id !== $componentId
+                            || (int) $row->parent_id !== 1
+                            || (int) $row->level !== 1
+                            || (int) $row->rgt !== (int) $row->lft + 1
+                            || (int) $row->published !== 1
+                            || (int) $row->access !== $registeredAccess
+                            || (int) $row->client_id !== 0
+                            || (int) $row->home !== 0
+                            || (string) $row->language !== '*'
+                            || !\is_array($params)
+                            || \count($params) !== 3
+                            || ($params['copymypage_account_icon'] ?? null) !== (string) $item['icon']
+                            || ($params['copymypage_account_key'] ?? null) !== $key
+                            || ($params['menu_show'] ?? null) !== 1
+                        ) {
+                            return false;
+                        }
+                    }
+
+                    $table = new \Joomla\CMS\Table\Menu($db);
+
+                    if (!$table->load((int) $rows[3]->id)) {
+                        throw new \RuntimeException('The default bookings menu item could not be loaded.');
+                    }
+
+                    $table->setLocation((int) $rows[0]->id, 'after');
+
+                    if (!$table->store()) {
+                        throw new \RuntimeException('The default bookings menu item could not be reordered.');
+                    }
+
+                    return true;
                 }
 
                 /**
