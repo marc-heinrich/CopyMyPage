@@ -4,7 +4,7 @@
  * @subpackage  Components.CopyMyPage
  * @copyright   (C) 2026 Open Source Matters, Inc. <https://www.joomla.org>
  * @license     GNU General Public License version 3 or later
- * @since       0.0.17
+ * @since       0.0.22
  */
 
 namespace Joomla\Component\CopyMyPage\Site\Helper;
@@ -106,18 +106,6 @@ final class DashboardHelper
                 'username' => trim((string) $profile['username']),
                 'email'    => trim((string) $profile['email']),
                 'initials' => self::getInitials((string) $profile['name']),
-            ],
-            'futureSections' => [
-                [
-                    'key'   => 'orders',
-                    'label' => 'COM_COPYMYPAGE_DASHBOARD_FUTURE_ORDERS',
-                    'icon'  => 'bag',
-                ],
-                [
-                    'key'   => 'posts',
-                    'label' => 'COM_COPYMYPAGE_DASHBOARD_FUTURE_POSTS',
-                    'icon'  => 'file-text',
-                ],
             ],
         ];
     }
