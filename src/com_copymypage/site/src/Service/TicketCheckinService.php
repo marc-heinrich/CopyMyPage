@@ -190,7 +190,7 @@ final class TicketCheckinService
     {
         $this->require($this->db->getServerType() === 'mysql'
             && Factory::getContainer()->get(DatabaseInterface::class) === $this->db);
-        $isolation = $this->db->setQuery('SELECT @@transaction_isolation')->loadResult();
+        $isolation = $this->sessionIsolation();
         $this->require(\in_array($isolation, ['REPEATABLE-READ', 'SERIALIZABLE'], true));
         $tables = ['dpcalendar_tickets', 'dpcalendar_bookings', 'dpcalendar_events',
             'copymypage_ticket_carts', 'copymypage_event_seating', 'copymypage_event_seats',
@@ -203,6 +203,24 @@ final class TicketCheckinService
             ->loadColumn();
         $this->require(\count($engines) === \count($tables)
             && array_filter($engines, static fn($engine): bool => $engine !== 'InnoDB') === []);
+    }
+
+    /** Read the effective session setting without changing isolation or retrying SQL errors. */
+    private function sessionIsolation(): mixed
+    {
+        // Both Joomla MySQL drivers expose this metadata (including MariaDB prefix removal).
+        $this->require(is_callable([$this->db, 'isMariaDb']));
+        $variable = 'transaction_isolation';
+        if ($this->db->isMariaDb()) {
+            $version = $this->db->getVersion();
+            $this->require(\is_string($version)
+                && preg_match('/\A(\d+\.\d+\.\d+)(?:-|\z)/', $version, $matches) === 1);
+            if (version_compare($matches[1], '11.1.1', '<')) {
+                $variable = 'tx_isolation';
+            }
+        }
+
+        return $this->db->setQuery('SELECT @@SESSION.' . $variable)->loadResult();
     }
 
     private function ticketsByUid(string $uid, bool $lock): array
