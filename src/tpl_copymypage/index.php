@@ -85,9 +85,10 @@ $itemId = (int) $input->getInt('Itemid', 0);
 // Authentication views use the shared template shell with a focused body state.
 $isAuthPage = $option === 'com_users'
     && \in_array($view, ['captive', 'login', 'registration', 'remind', 'reset'], true);
+$isTicketCheckin = $option === 'com_copymypage' && $view === 'ticketcheckin';
 
 // Authenticated personal pages must not be indexed or served from shared caches.
-$isPersonalPage = ($option === 'com_copymypage' && $view === 'dashboard')
+$isPersonalPage = $isTicketCheckin || ($option === 'com_copymypage' && $view === 'dashboard')
     || ($option === 'com_users' && \in_array($view, ['captive', 'profile'], true));
 
 $this->setMetaData('robots', $isPersonalPage ? 'noindex, nofollow' : 'index, follow');
@@ -152,6 +153,7 @@ if (!$isAuthPage && ((\defined('JDEBUG') && JDEBUG) || (int) $input->getInt('cmp
 $bodyClasses = [
     'cmp-site',
     $isAuthPage ? 'is-authpage' : '',
+    $isTicketCheckin ? 'is-ticketcheckin' : '',
     $preloaderEnabled ? 'is-preloader-active' : '',
     $option ?: 'no-option',
     'view-' . ($view ?: 'no-view'),

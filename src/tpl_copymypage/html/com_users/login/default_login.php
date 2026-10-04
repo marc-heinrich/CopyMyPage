@@ -15,6 +15,7 @@ use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\CMS\Router\Route;
+use Joomla\Component\CopyMyPage\Site\Helper\TicketCheckinReturn;
 
 /** @var \Joomla\Component\Users\Site\View\Login\HtmlView $this */
 
@@ -44,10 +45,14 @@ $hasDescription = (
     && trim((string) $this->params->get('login_description', '')) !== ''
 ) || (string) $this->params->get('login_image', '') !== '';
 
-// Always return a successful login to the dedicated CopyMyPage dashboard route.
+// Staff scans carry only an explicitly allowlisted internal read-only context.
+$encodedReturn = $app->getInput()->get('return', null, 'raw');
+// Joomla retains the form return after a failed authentication attempt.
+$staffReturn = TicketCheckinReturn::fromEncoded($encodedReturn ??
+    base64_encode((string) $this->form->getValue('return', '', '')));
 $this->form->addControlField(
     'return',
-    base64_encode('index.php?option=com_copymypage&view=dashboard&layout=default')
+    base64_encode($staffReturn ?? 'index.php?option=com_copymypage&view=dashboard&layout=default')
 );
 ?>
 <div class="cmp-auth cmp-auth--login com-users-login login">

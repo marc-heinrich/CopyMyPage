@@ -39,6 +39,8 @@ final class BuildRelease
     {
         $this->assertSemver($this->version);
         $this->assertZipAvailable();
+        // Validate declared package languages before creating any build artifacts.
+        $this->getPackageLanguages();
 
         $distDir        = $this->root . '/dist';
         $subpackagesDir = $this->root . '/pkg_copymypage/subpackages';
@@ -126,6 +128,7 @@ final class BuildRelease
     private function zipPackage(string $zipFile): void
     {
         $pkgRoot = $this->root . '/pkg_copymypage';
+        $languages = $this->getPackageLanguages();
 
         $zip = new ZipArchive();
 
@@ -133,7 +136,7 @@ final class BuildRelease
             throw new \RuntimeException("Cannot create package zip: {$zipFile}");
         }
 
-        // Include: pkg_copymypage.xml, script.php, subpackages/*.zip, changelogs/changelog.xml, README.md
+        // Include package metadata, declared languages, subpackages and optional changelog.
         $include = [
             'pkg_copymypage.xml',
             'script.php',
@@ -145,6 +148,12 @@ final class BuildRelease
 
             if (is_file($path)) {
                 $zip->addFile($path, $file);
+            }
+        }
+
+        foreach ($languages as $file => $path) {
+            if (!$zip->addFile($path, $file)) {
+                throw new \RuntimeException("Cannot add package language: {$file}");
             }
         }
 
@@ -174,7 +183,51 @@ final class BuildRelease
             }
         }
 
-        $zip->close();
+        if (!$zip->close()) {
+            throw new \RuntimeException("Cannot finish package zip: {$zipFile}");
+        }
+
+        // Verify the archive, not only the source layout.
+        $verification = new ZipArchive();
+        if ($verification->open($zipFile, ZipArchive::RDONLY) !== true) {
+            throw new \RuntimeException("Cannot verify package zip: {$zipFile}");
+        }
+
+        try {
+            foreach ($languages as $file => $path) {
+                $contents = $verification->getFromName($file);
+                if ($contents === false || $contents !== file_get_contents($path)) {
+                    throw new \RuntimeException("Missing or incomplete package language: {$file}");
+                }
+            }
+        } finally {
+            $verification->close();
+        }
+    }
+
+    /** @return array<string, string> Archive paths mapped to declared source files. */
+    private function getPackageLanguages(): array
+    {
+        $pkgRoot = $this->root . '/pkg_copymypage';
+        $manifest = simplexml_load_file($pkgRoot . '/pkg_copymypage.xml', \SimpleXMLElement::class, LIBXML_NONET);
+        if ($manifest === false) {
+            throw new \RuntimeException('Cannot read package language declarations.');
+        }
+
+        $languages = [];
+        foreach ($manifest->languages as $group) {
+            $folder = trim((string) $group['folder'], '/');
+            foreach ($group->language as $language) {
+                $file = ($folder !== '' ? $folder . '/' : '') . trim((string) $language);
+                $path = $pkgRoot . '/' . $file;
+                if (!is_file($path)) {
+                    throw new \RuntimeException("Missing declared package language: {$file}");
+                }
+                $languages[$file] = $path;
+            }
+        }
+
+        return $languages;
     }
 
     private function ensureDir(string $dir): void

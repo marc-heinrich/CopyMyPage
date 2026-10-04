@@ -10,5 +10,6 @@
     <action name="core.edit.state" title="JACTION_EDITSTATE" />
     <action name="core.edit.own"   title="JACTION_EDITOWN" />
     <action name="copymypage.seating.configure" title="COM_COPYMYPAGE_ACTION_SEATING_CONFIGURE" description="COM_COPYMYPAGE_ACTION_SEATING_CONFIGURE_DESC" />
+    <action name="copymypage.ticket.checkin" title="COM_COPYMYPAGE_ACTION_TICKET_CHECKIN" description="COM_COPYMYPAGE_ACTION_TICKET_CHECKIN_DESC" />
   </section>
 </access>

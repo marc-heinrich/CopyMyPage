@@ -52,6 +52,7 @@ use Joomla\Component\CopyMyPage\Site\Service\SeatLayoutService;
 use Joomla\Component\CopyMyPage\Site\Service\SeatSelectionService;
 use Joomla\Component\CopyMyPage\Site\Service\TicketCartContextService;
 use Joomla\Component\CopyMyPage\Site\Service\TicketCatalogService;
+use Joomla\Component\CopyMyPage\Site\Service\TicketCheckinService;
 use Joomla\Component\CopyMyPage\Site\Service\TicketReservationService;
 use Joomla\Component\CopyMyPage\Site\Service\TicketSeatProjectionService;
 use Joomla\Component\CopyMyPage\Site\Service\UserFormProjectionService;
@@ -149,10 +150,49 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
      */
     public function guardDPCalendarRoutes(AfterRouteEvent $event): void
     {
+        $this->guardDPCalendarTicketCheckin($event);
         $this->guardDPCalendarBookingForm($event);
         $this->guardDPCalendarCustomerDetails($event);
         $this->guardDPCalendarCustomerBookingMutation($event);
         $this->guardDPCalendarPaymentCallback($event);
+    }
+
+    /**
+     * Replace native frontend GET mutation with the protected read-only context.
+     * Runs after SEF/language routing and before any component controller.
+     * Unknown, malformed and unmanaged UIDs also go through the fail-closed service.
+     */
+    private function guardDPCalendarTicketCheckin(AfterRouteEvent $event): void
+    {
+        $app = $this->getApplication();
+        if (!$app instanceof CMSWebApplicationInterface || !$app->isClient('site')) {
+            return;
+        }
+
+        $input = $app->getInput();
+        if (strtolower($input->getCmd('option', '')) !== 'com_dpcalendar') {
+            return;
+        }
+
+        // Match ComponentDispatcher::dispatch, MVCFactory::createController and
+        // BaseController::execute, including the first two parts of dotted tasks.
+        $command = $input->getCmd('task', 'display');
+        if (str_contains($command, '.')) {
+            [$controller, $task] = explode('.', $command);
+        } else {
+            $controller = $input->get('controller', 'display');
+            $task = $command;
+        }
+        $controller = strtolower(preg_replace('/[^A-Z0-9_]/i', '', $controller));
+        if ($controller !== 'ticket' || strtolower($task) !== 'checkin') {
+            return;
+        }
+
+        $uid = TicketCheckinService::normaliseUid($input->get('uid', null, 'raw'));
+        $url = Route::_('index.php?option=com_copymypage&task=ticketcheckin.context'
+            . ($uid !== null ? '&uid=' . rawurlencode($uid) : ''), false);
+        $app->redirect($url, 303);
+        $app->close();
     }
 
     /**
@@ -326,7 +366,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     /**
      * Redirect managed native booking and ticket details to CopyMyPage.
      *
-     * Payment, PDF and QR/check-in tasks remain untouched because this guard
+     * Payment and PDF tasks remain untouched because this guard
      * only handles taskless default detail views.
      *
      * @param   AfterRouteEvent  $event  The after-route event.
@@ -1345,6 +1385,18 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                         $container->get(DatabaseInterface::class),
                         $container->get(TicketCatalogService::class),
                         $container->get(TicketCartContextService::class)
+                    ),
+                    true
+                );
+            }
+
+            if (!$container->has(TicketCheckinService::class)) {
+                $container->share(
+                    TicketCheckinService::class,
+                    static fn(Container $container): TicketCheckinService => new TicketCheckinService(
+                        $app,
+                        $container->get(DatabaseInterface::class),
+                        $container->get(SeatLayoutService::class)
                     ),
                     true
                 );

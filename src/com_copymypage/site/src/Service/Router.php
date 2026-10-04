@@ -43,6 +43,7 @@ class Router extends RouterView
         $this->registerView(new RouterViewConfiguration('seatselection'));
         $this->registerView(new RouterViewConfiguration('customerdata'));
         $this->registerView(new RouterViewConfiguration('orderreview'));
+        $this->registerView(new RouterViewConfiguration('ticketcheckin'));
 
         $gallery = new RouterViewConfiguration('gallery');
         $gallery->setKey('id');

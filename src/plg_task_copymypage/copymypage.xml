@@ -5,7 +5,7 @@
   <creationDate>2026-09-01</creationDate>
   <copyright>(C) 2026 Open Source Matters, Inc.</copyright>
   <license>GNU General Public License version 3 or later</license>
-  <version>0.0.21</version>
+  <version>0.0.22</version>
   <description>PLG_TASK_COPYMYPAGE_XML_DESCRIPTION</description>
   <namespace path="src">Joomla\Plugin\Task\CopyMyPage</namespace>
   <files>

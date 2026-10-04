@@ -13,6 +13,7 @@ namespace Joomla\Component\CopyMyPage\Site\Service;
 
 use Joomla\CMS\Language\Text;
 use Joomla\Database\DatabaseInterface;
+use Joomla\Database\DatabaseQuery;
 use Joomla\Database\ParameterType;
 
 /**
@@ -44,7 +45,47 @@ final class TicketSeatProjectionService
             return $this->bookingCache[$bookingId];
         }
 
-        $query = $this->db->getQuery(true)
+        $query = $this->getAssignmentQuery()
+            ->where($this->db->quoteName('dt.booking_id') . ' = :bookingId')
+            ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
+        $assignments = $this->loadAssignments($query);
+
+        $this->bookingCache[$bookingId] = $assignments;
+
+        return $assignments;
+    }
+
+    /**
+     * Load seats for one bounded page of already visible tickets.
+     *
+     * @param list<int> $ticketIds
+     * @return array<int, array<string, mixed>> Assignments indexed by ticket ID.
+     */
+    public function getForTickets(array $ticketIds): array
+    {
+        $ids = [];
+
+        foreach ($ticketIds as $ticketId) {
+            $ticketId = (int) $ticketId;
+
+            if ($ticketId > 0) {
+                $ids[$ticketId] = $ticketId;
+            }
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        $query = $this->getAssignmentQuery()
+            ->where($this->db->quoteName('dt.id') . ' IN (' . implode(',', $ids) . ')');
+
+        return $this->loadAssignments($query);
+    }
+
+    private function getAssignmentQuery(): DatabaseQuery
+    {
+        return $this->db->getQuery(true)
             ->select([
                 $this->db->quoteName('es.ticket_id', 'ticket_id'),
                 $this->db->quoteName('es.event_id', 'event_id'),
@@ -70,15 +111,18 @@ final class TicketSeatProjectionService
                     . ' ON ' . $this->db->quoteName('lt.id')
                     . ' = ' . $this->db->quoteName('s.layout_table_id')
             )
-            ->where($this->db->quoteName('dt.booking_id') . ' = :bookingId')
             ->where($this->db->quoteName('es.ticket_id') . ' IS NOT NULL')
             ->order([
                 $this->db->quoteName('es.event_id') . ' ASC',
                 $this->db->quoteName('lt.sort_order') . ' ASC',
                 $this->db->quoteName('s.sort_order') . ' ASC',
                 $this->db->quoteName('es.id') . ' ASC',
-            ])
-            ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
+            ]);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function loadAssignments(DatabaseQuery $query): array
+    {
         $assignments = [];
 
         foreach ((array) $this->db->setQuery($query)->loadObjectList() as $row) {
@@ -104,8 +148,6 @@ final class TicketSeatProjectionService
                 'ticketId'       => $ticketId,
             ];
         }
-
-        $this->bookingCache[$bookingId] = $assignments;
 
         return $assignments;
     }

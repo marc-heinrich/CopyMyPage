@@ -101,6 +101,10 @@ return new class () implements ServiceProviderInterface
 
                     // Ensure the component-owned account navigation and avatar field.
                     if (\in_array($type, ['install', 'update', 'discover_install'], true)) {
+                        if (!$this->removeLegacyGlobalSystemLanguage()) {
+                            return false;
+                        }
+
                         try {
                             $this->ensureAccountMenu($adapter);
                         } catch (\Throwable $exception) {
@@ -570,6 +574,26 @@ return new class () implements ServiceProviderInterface
                             );
                         }
                     }
+                }
+
+                /**
+                 * Remove the obsolete global German file which shadows component-local ACL strings.
+                 */
+                private function removeLegacyGlobalSystemLanguage(): bool
+                {
+                    $path = Path::clean(JPATH_ADMINISTRATOR . '/language/de-DE/com_copymypage.sys.ini');
+
+                    if (!is_file($path) || File::delete($path) || !file_exists($path)) {
+                        return true;
+                    }
+
+                    Log::add(
+                        Text::sprintf('JLIB_INSTALLER_ERROR_DELETE_FILE', $path),
+                        Log::WARNING,
+                        'jerror'
+                    );
+
+                    return false;
                 }
 
                 /**
