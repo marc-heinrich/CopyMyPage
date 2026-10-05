@@ -245,6 +245,17 @@ class HtmlView extends BaseHtmlView
 
         $this->document->getWebAssetManager()->useScript('copymypage.dashboard.navigation');
 
+        if ($layout === 'tickets') {
+            foreach ([
+                'AUTH_REQUIRED', 'CANCELLED', 'ERROR', 'INVALID_PDF', 'LOADING',
+                'NETWORK_ERROR', 'READY', 'UNSUPPORTED',
+            ] as $message) {
+                Text::script('COM_COPYMYPAGE_DASHBOARD_TICKETS_SHARE_' . $message);
+            }
+
+            $this->document->getWebAssetManager()->useScript('copymypage.ticket-share');
+        }
+
         parent::display($tpl);
     }
 }

@@ -53,6 +53,17 @@ $collectDestinationUrls((array) ($navigation['items'] ?? []));
 
 $overviewGroups = [
     [
+        'id'    => 'cmp-dashboard-booking-actions',
+        'title' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_BOOKINGS_TITLE',
+        'items' => [
+            [
+                'key'   => 'tickets',
+                'label' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_TICKETS',
+                'icon'  => 'tag',
+            ],
+        ],
+    ],
+    [
         'id'    => 'cmp-dashboard-account-actions',
         'title' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_ACCOUNT_TITLE',
         'items' => [
@@ -65,17 +76,6 @@ $overviewGroups = [
                 'key'   => 'security',
                 'label' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_SECURITY_SETTINGS',
                 'icon'  => 'lock',
-            ],
-        ],
-    ],
-    [
-        'id'    => 'cmp-dashboard-booking-actions',
-        'title' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_BOOKINGS_TITLE',
-        'items' => [
-            [
-                'key'   => 'tickets',
-                'label' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_TICKETS',
-                'icon'  => 'tag',
             ],
         ],
     ],

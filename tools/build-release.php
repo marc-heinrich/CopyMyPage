@@ -97,7 +97,7 @@ final class BuildRelease
             throw new \RuntimeException("Cannot create zip: {$zipFile}");
         }
 
-        $dir = rtrim($dir, DIRECTORY_SEPARATOR);
+        $dir = rtrim(str_replace('\\', '/', realpath($dir) ?: $dir), '/');
 
         $it = new \RecursiveIteratorIterator(
             new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS),
@@ -112,7 +112,13 @@ final class BuildRelease
                 continue;
             }
 
-            $localName = ltrim(str_replace($dir, '', $path), DIRECTORY_SEPARATOR);
+            $normalizedPath = str_replace('\\', '/', $path);
+
+            if (!str_starts_with($normalizedPath, $dir . '/')) {
+                throw new \RuntimeException("Source path is outside the extension directory: {$path}");
+            }
+
+            $localName = substr($normalizedPath, strlen($dir) + 1);
 
             if ($file->isDir()) {
                 $zip->addEmptyDir($localName);

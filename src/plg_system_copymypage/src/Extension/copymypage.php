@@ -150,11 +150,129 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
      */
     public function guardDPCalendarRoutes(AfterRouteEvent $event): void
     {
+        $this->guardDPCalendarTicketPdf();
         $this->guardDPCalendarTicketCheckin($event);
         $this->guardDPCalendarBookingForm($event);
         $this->guardDPCalendarCustomerDetails($event);
         $this->guardDPCalendarCustomerBookingMutation($event);
         $this->guardDPCalendarPaymentCallback($event);
+    }
+
+    /**
+     * Bind native ticket PDF authorization to the ticket's actual booking.
+     * Managed customer downloads require ownership; native administrative access
+     * remains subject to DPCalendar's final model checks.
+     */
+    private function guardDPCalendarTicketPdf(): void
+    {
+        $app = $this->getApplication();
+
+        if (!$app instanceof CMSWebApplicationInterface || !$app->isClient('site')) {
+            return;
+        }
+
+        $input = $app->getInput();
+
+        if (strtolower($input->getCmd('option', '')) !== 'com_dpcalendar') {
+            return;
+        }
+
+        // Resolve exactly the controller/task pair used by Joomla's dispatcher.
+        $command = $input->getCmd('task', 'display');
+
+        if (str_contains($command, '.')) {
+            [$controller, $task] = explode('.', $command);
+        } else {
+            $controller = $input->get('controller', 'display');
+            $task = $command;
+        }
+
+        $controller = strtolower(preg_replace('/[^A-Z0-9_]/i', '', $controller));
+
+        if ($controller !== 'ticket' || strtolower($task) !== 'pdfdownload') {
+            return;
+        }
+
+        $app->allowCache(false);
+        $app->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private, max-age=0', true);
+        $app->setHeader('Pragma', 'no-cache', true);
+
+        $allowed = false;
+
+        try {
+            $uid = $input->get('uid', null, 'raw');
+
+            if (!\is_string($uid) || !preg_match('/^[A-Za-z0-9_.-]{1,255}$/D', $uid)) {
+                throw new \UnexpectedValueException('Invalid ticket UID.');
+            }
+
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $query = $db->getQuery(true)
+                ->select([
+                    $db->quoteName('b.id', 'booking_id'),
+                    $db->quoteName('b.user_id', 'user_id'),
+                    $db->quoteName('b.token', 'booking_token'),
+                    'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__copymypage_ticket_carts', 'c')
+                        . ' WHERE ' . $db->quoteName('c.booking_id') . ' = ' . $db->quoteName('b.id') . ') AS managed',
+                ])
+                ->from($db->quoteName('#__dpcalendar_tickets', 't'))
+                ->innerJoin(
+                    $db->quoteName('#__dpcalendar_bookings', 'b')
+                        . ' ON ' . $db->quoteName('b.id') . ' = ' . $db->quoteName('t.booking_id')
+                )
+                ->where($db->quoteName('t.uid') . ' = :uid')
+                ->bind(':uid', $uid);
+            $booking = $db->setQuery($query, 0, 1)->loadObject();
+
+            if (!$booking || (int) $booking->booking_id < 1) {
+                throw new \UnexpectedValueException('Ticket booking not found.');
+            }
+
+            $user = $app->getIdentity();
+            $userId = max(0, (int) ($user->id ?? 0));
+            $authenticated = $userId > 0 && !$user->guest;
+            $owner = $authenticated && (int) $booking->user_id === $userId;
+            $administrative = $authenticated && $user->authorise('dpcalendar.admin.book', 'com_dpcalendar');
+
+            if ($authenticated && !$owner && !$administrative) {
+                // DPCalendar also grants a booking's event authors native access.
+                $authorQuery = $db->getQuery(true)
+                    ->select('COUNT(*)')
+                    ->from($db->quoteName('#__dpcalendar_tickets', 't'))
+                    ->innerJoin(
+                        $db->quoteName('#__dpcalendar_events', 'e')
+                            . ' ON ' . $db->quoteName('e.id') . ' = ' . $db->quoteName('t.event_id')
+                    )
+                    ->where($db->quoteName('t.booking_id') . ' = :bookingId')
+                    ->where($db->quoteName('e.created_by') . ' = :userId')
+                    ->bind(':bookingId', $booking->booking_id, ParameterType::INTEGER)
+                    ->bind(':userId', $userId, ParameterType::INTEGER);
+                $administrative = (int) $db->setQuery($authorQuery)->loadResult() > 0;
+            }
+
+            if ((int) $booking->managed === 1) {
+                $allowed = $owner || $administrative;
+            } else {
+                // Preserve unmanaged native guest/session/token access, but never
+                // let a token for another booking replace this ticket's booking.
+                $token = $input->get('token', null, 'raw');
+                $allowed = $token === null || $token === ''
+                    || (\is_string($token) && (string) $booking->booking_token !== ''
+                        && hash_equals((string) $booking->booking_token, $token));
+            }
+        } catch (\Throwable $exception) {
+            // No UID, token or recipient data in logs; lookup failures deny access.
+            if (!$exception instanceof \UnexpectedValueException) {
+                Log::add('CopyMyPage ticket PDF guard failed (' . $exception::class . ').', Log::ERROR, 'com_copymypage');
+            }
+        }
+
+        if (!$allowed) {
+            throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+        }
+
+        // The native PDF stream closes the application before its normal response.
+        $app->sendHeaders();
     }
 
     /**

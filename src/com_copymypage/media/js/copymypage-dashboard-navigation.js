@@ -127,13 +127,15 @@
                 }
             }
 
-            const fallback = Number.parseFloat(
-                window.getComputedStyle(document.documentElement).getPropertyValue('--cmp-sticky-offset')
-            ) || 0;
-            const bottom = header?.getClientRects().length
-                ? header.getBoundingClientRect().bottom
+            const rootStyles = window.getComputedStyle(document.documentElement);
+            const fallback = Number.parseFloat(rootStyles.getPropertyValue('--cmp-sticky-offset')) || 0;
+            const alertOffset = Number.parseFloat(rootStyles.getPropertyValue('--cmp-alert-offset')) || 0;
+            // UIkit's sticky handover and overscroll can move the viewport position.
+            // Use the header's layout height and its established alert inset instead.
+            const height = header?.getClientRects().length
+                ? header.getBoundingClientRect().height
                 : 0;
-            const offset = bottom > 0 ? bottom : fallback;
+            const offset = height > 0 ? height + alertOffset : fallback;
 
             this.nav.style.setProperty('--cmp-dashboard-header-bottom', `${Math.ceil(offset)}px`);
         }

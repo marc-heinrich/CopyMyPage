@@ -9,6 +9,7 @@
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Layout\LayoutHelper;
@@ -33,6 +34,9 @@ foreach ($this->tickets as $booking) {
 }
 
 $bookingGroups = [$activeBookings, $pastBookings];
+$moneyFormatter = class_exists(\NumberFormatter::class)
+    ? new \NumberFormatter(Factory::getApplication()->getLanguage()->getTag(), \NumberFormatter::CURRENCY)
+    : null;
 ?>
 <div class="cmp-dashboard cmp-dashboard--tickets">
     <header class="cmp-dashboard__page-header">
@@ -90,10 +94,17 @@ $bookingGroups = [$activeBookings, $pastBookings];
                                         <?php
                                         $events      = array_values((array) ($booking['events'] ?? []));
                                         $eventCount  = count($events);
-                                        $bookedAt    = (string) ($booking['bookedAt'] ?? '');
                                         $total       = (string) ($booking['total'] ?? '');
                                         $currency    = (string) ($booking['currency'] ?? '');
                                         $hasTotal    = $total !== '' && $currency !== '';
+                                        $totalLabel  = $hasTotal
+                                            ? ($moneyFormatter?->formatCurrency((float) $total, $currency) ?: $total . ' ' . $currency)
+                                            : '';
+                                        $ticketCount = max(0, (int) ($booking['ticketCount'] ?? 0));
+                                        $checkedInCount = min($ticketCount, max(0, (int) ($booking['checkedInCount'] ?? 0)));
+                                        $progressClass = $ticketCount === 0
+                                            ? ''
+                                            : ($checkedInCount === $ticketCount ? ' is-complete' : ' is-incomplete');
                                         $summaryDate = '';
 
                                         if ($eventCount === 1) {
@@ -120,24 +131,27 @@ $bookingGroups = [$activeBookings, $pastBookings];
                                         ?>
                                         <li class="cmp-dashboard-booking">
                                             <a class="uk-accordion-title cmp-dashboard-booking__toggle" href="#">
+                                                <span class="cmp-dashboard-booking__icon" aria-hidden="true"></span>
                                                 <div class="cmp-dashboard-booking__summary">
                                                     <h2 class="cmp-dashboard-booking__title">
                                                         <?php echo $escape($summary); ?>
                                                     </h2>
-                                                    <?php if ($summaryDate !== '' || $hasTotal) : ?>
+                                                    <?php if ($summaryDate !== '' || $hasTotal || $eventCount === 1) : ?>
                                                         <span class="cmp-dashboard-booking__meta">
                                                             <?php if ($summaryDate !== '') : ?>
                                                                 <time datetime="<?php echo $escape($summaryDate); ?>">
                                                                     <?php echo $escape(HTMLHelper::_(
                                                                         'date',
                                                                         $summaryDate,
-                                                                        Text::_('DATE_FORMAT_LC1'),
+                                                                        Text::_('DATE_FORMAT_LC4'),
                                                                         null
                                                                     )); ?>
                                                                 </time>
+                                                            <?php elseif ($eventCount === 1) : ?>
+                                                                <span><?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_DATE_UNAVAILABLE')); ?></span>
                                                             <?php endif; ?>
                                                             <?php if ($hasTotal) : ?>
-                                                                <span><?php echo $escape($total . ' ' . $currency); ?></span>
+                                                                <span><?php echo $escape($totalLabel); ?></span>
                                                             <?php endif; ?>
                                                         </span>
                                                     <?php endif; ?>
@@ -147,36 +161,17 @@ $bookingGroups = [$activeBookings, $pastBookings];
                                                     uk-icon="icon: chevron-down"
                                                     aria-hidden="true"
                                                 ></span>
+                                                <span class="cmp-dashboard-booking__progress<?php echo $progressClass; ?>">
+                                                    <?php echo $escape(Text::sprintf(
+                                                        'COM_COPYMYPAGE_DASHBOARD_TICKETS_CHECKIN_PROGRESS',
+                                                        $checkedInCount,
+                                                        $ticketCount
+                                                    )); ?>
+                                                </span>
                                             </a>
 
                                             <div class="uk-accordion-content cmp-dashboard-booking__content">
                                                 <div class="cmp-dashboard-booking__body">
-                                                    <?php if ($bookedAt !== '' || $hasTotal) : ?>
-                                                        <dl class="cmp-dashboard-booking__details">
-                                                            <?php if ($bookedAt !== '') : ?>
-                                                                <div>
-                                                                    <dt><?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_BOOKED_ON')); ?></dt>
-                                                                    <dd>
-                                                                        <time datetime="<?php echo $escape($bookedAt); ?>">
-                                                                            <?php echo $escape(HTMLHelper::_(
-                                                                                'date',
-                                                                                $bookedAt,
-                                                                                Text::_('DATE_FORMAT_LC1'),
-                                                                                null
-                                                                            )); ?>
-                                                                        </time>
-                                                                    </dd>
-                                                                </div>
-                                                            <?php endif; ?>
-                                                            <?php if ($hasTotal) : ?>
-                                                                <div>
-                                                                    <dt><?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_TOTAL')); ?></dt>
-                                                                    <dd><?php echo $escape($total . ' ' . $currency); ?></dd>
-                                                                </div>
-                                                            <?php endif; ?>
-                                                        </dl>
-                                                    <?php endif; ?>
-
                                                     <?php if ($events === []) : ?>
                                                         <p class="cmp-dashboard-booking__unavailable">
                                                             <?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_EVENT_UNAVAILABLE')); ?>
@@ -194,6 +189,7 @@ $bookingGroups = [$activeBookings, $pastBookings];
                                                                 : Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_EVENT_UNAVAILABLE');
                                                             ?>
                                                             <section class="cmp-dashboard-booking__event">
+                                                                <?php if ($eventCount > 1) : ?>
                                                                 <h3><?php echo $escape($eventTitle); ?></h3>
                                                                 <?php if ($dateKnown) : ?>
                                                                     <p class="cmp-dashboard-booking__event-date">
@@ -211,12 +207,22 @@ $bookingGroups = [$activeBookings, $pastBookings];
                                                                         <?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_DATE_UNAVAILABLE')); ?>
                                                                     </p>
                                                                 <?php endif; ?>
+                                                                <?php endif; ?>
 
                                                                 <ul class="cmp-dashboard-booking__tickets">
                                                                     <?php foreach ((array) ($event['tickets'] ?? []) as $ticketIndex => $ticket) : ?>
-                                                                        <li class="cmp-dashboard-booking__ticket">
+                                                                        <?php
+                                                                        $ticketId = max(0, (int) ($ticket['id'] ?? 0));
+                                                                        $typeLabel = trim((string) ($ticket['typeLabel'] ?? ''));
+                                                                        $ticketLabel = Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_TICKET_LABEL');
+                                                                        $statusId = 'cmp-ticket-status-' . (int) $booking['id'] . '-' . $ticketId;
+                                                                        ?>
+                                                                        <li class="cmp-dashboard-booking__ticket" data-cmp-ticket data-ticket-id="<?php echo $ticketId; ?>">
                                                                             <span class="cmp-dashboard-booking__ticket-copy">
-                                                                                <strong><?php echo $escape($ticket['typeLabel'] ?? ''); ?></strong>
+                                                                                <strong><?php echo $escape($ticketLabel); ?></strong>
+                                                                                <?php if ($typeLabel !== '' && $typeLabel !== $ticketLabel) : ?>
+                                                                                    <span><?php echo $escape($typeLabel); ?></span>
+                                                                                <?php endif; ?>
                                                                                 <?php if (trim((string) ($ticket['seatLabel'] ?? '')) !== '') : ?>
                                                                                     <span>
                                                                                         <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_SEAT_LABEL')); ?>:
@@ -225,8 +231,11 @@ $bookingGroups = [$activeBookings, $pastBookings];
                                                                                 <?php endif; ?>
                                                                             </span>
                                                                             <?php if ((string) ($ticket['downloadUrl'] ?? '') !== '') : ?>
+                                                                                <span class="cmp-dashboard-booking__ticket-actions">
                                                                                 <a
-                                                                                    class="uk-button uk-button-default cmp-button cmp-button--secondary"
+                                                                                    class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--icon cmp-dashboard-booking__ticket-action"
+                                                                                    data-cmp-ticket-download
+                                                                                    data-pdf-filename="ticket-<?php echo $ticketId; ?>.pdf"
                                                                                     href="<?php echo $escape($ticket['downloadUrl']); ?>"
                                                                                     aria-label="<?php echo $escape(Text::sprintf(
                                                                                         'COM_COPYMYPAGE_DASHBOARD_TICKETS_DOWNLOAD_ARIA',
@@ -235,9 +244,26 @@ $bookingGroups = [$activeBookings, $pastBookings];
                                                                                     )); ?>"
                                                                                 >
                                                                                     <span uk-icon="icon: download" aria-hidden="true"></span>
-                                                                                    <?php echo $escape(Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_ACTION_DOWNLOAD')); ?>
                                                                                 </a>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    class="uk-button uk-button-default cmp-button cmp-button--secondary cmp-button--icon cmp-dashboard-booking__ticket-action"
+                                                                                    data-cmp-ticket-share
+                                                                                    aria-label="<?php echo $escape(Text::sprintf(
+                                                                                        'COM_COPYMYPAGE_DASHBOARD_TICKETS_SHARE_ARIA',
+                                                                                        (int) $ticketIndex + 1,
+                                                                                        $eventTitle
+                                                                                    )); ?>"
+                                                                                    aria-describedby="<?php echo $escape($statusId); ?>"
+                                                                                    hidden
+                                                                                >
+                                                                                    <span uk-icon="icon: forward" aria-hidden="true"></span>
+                                                                                </button>
+                                                                                </span>
                                                                             <?php endif; ?>
+                                                                            <div class="cmp-dashboard-booking__ticket-feedback" data-cmp-ticket-feedback>
+                                                                                <p id="<?php echo $escape($statusId); ?>" class="cmp-dashboard-booking__ticket-status" data-cmp-ticket-status role="status" aria-live="polite" aria-atomic="true"></p>
+                                                                            </div>
                                                                         </li>
                                                                     <?php endforeach; ?>
                                                                 </ul>

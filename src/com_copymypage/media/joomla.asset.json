@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_copymypage",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "Asset definitions for CopyMyPage template and related components.",
   "license": "GPL-3.0-or-later",
   "namespace": "Joomla\\Component\\CopyMyPage\\Site\\WebAsset\\AssetItem",
@@ -28,7 +28,7 @@
       "name": "template",
       "type": "style",
       "uri": "com_copymypage/template.min.css",
-      "version": "0.0.22",
+      "version": "0.0.23",
       "dependencies": [
         "uikit",
         "template.fonts"
@@ -109,8 +109,21 @@
       "name": "copymypage.dashboard.navigation",
       "type": "script",
       "uri": "com_copymypage/copymypage-dashboard-navigation.min.js",
-      "version": "0.0.22",
+      "version": "0.0.23",
       "dependencies": [
+        "uikit.icons"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "copymypage.ticket-share",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-ticket-share.min.js",
+      "version": "0.0.23",
+      "dependencies": [
+        "core",
         "uikit.icons"
       ],
       "attributes": {

@@ -188,6 +188,28 @@ final class AccountMenuProvider
         $visited = [];
         $items   = $this->buildItemTree($nodes, $childrenByParent, 1, $visited);
 
+        // Keep shared customer destinations in Dashboard order, retaining other
+        // menu entries and structural nodes in their existing positions.
+        $order = ['overview' => 0, 'tickets' => 1, 'profile' => 2, 'security' => 3];
+        $positions = [];
+        $destinations = [];
+
+        foreach ($items as $position => $item) {
+            if (($item['type'] ?? '') === 'link' && isset($order[$item['key']])) {
+                $positions[] = $position;
+                $destinations[] = $item;
+            }
+        }
+
+        usort(
+            $destinations,
+            static fn(array $left, array $right): int => $order[$left['key']] <=> $order[$right['key']]
+        );
+
+        foreach ($positions as $index => $position) {
+            $items[$position] = $destinations[$index];
+        }
+
         $this->itemsCache[$cacheKey] = $items;
 
         return $items;
