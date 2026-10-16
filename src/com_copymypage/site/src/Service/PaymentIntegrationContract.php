@@ -13,8 +13,8 @@ final class PaymentIntegrationContract
         'administrator/components/com_dpcalendar/src/Booking/Stages/SendNewBookingMail.php' => 'e0687b9ff412157dca3ad96c15669c0601768a4a64e6200d3843b779812b60ae',
         'administrator/components/com_dpcalendar/src/Booking/Stages/SendPaidBookingMail.php' => 'bc9155795fe06a8c5b95070c5a2ca1073c358af24dcab7bf305d5343ab48fe63',
         'administrator/components/com_dpcalendar/src/Booking/Stages/SendNotificationMail.php' => '67f7db0085bb57345045cd26e97ec1e34403948d63f2305f8fae05a50c52146d',
-        'libraries/src/Mail/MailTemplate.php' => '4e3d93ae05f179845b57e4d8744983b89debb9079e0349a8f4963fb14442c85f',
-        'libraries/src/Mail/Mail.php' => 'eb885f70ab22dce8915e2ddd4fdb5dc1050dfd4992f2de0f92a7819b79decb92',
+        'libraries/src/Mail/MailTemplate.php' => '18c3c48c4536987f814637de373a683d0332a7c1307b6f7d88bbd6153fb94e2b',
+        'libraries/src/Mail/Mail.php' => '089b380754fd1909501772ff8a3619502137ea87babe4bc7b117cdc787a5c7e9',
         'libraries/vendor/phpmailer/phpmailer/src/PHPMailer.php' => '451486c23f7f82e822ddb0667237714d2ce265920c9ed9cf1128b4c5fc46b657',
     ];
 
