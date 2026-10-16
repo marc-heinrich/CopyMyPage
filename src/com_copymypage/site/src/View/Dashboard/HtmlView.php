@@ -75,6 +75,11 @@ class HtmlView extends BaseHtmlView
     protected string $securityEditUrl = '';
 
     /**
+     * Routed MFA configuration destination within Profile.
+     */
+    protected string $securityMfaUrl = '';
+
+    /**
      * Current com_users profile data.
      *
      * @var User|null
@@ -168,8 +173,9 @@ class HtmlView extends BaseHtmlView
         $this->profileUrl        = $accountMenuProvider->getDashboardUrl($app, 'profile');
         $this->profileEditUrl    = $accountMenuProvider->getDashboardUrl($app, 'profile.edit');
         $this->profileAddressUrl = $accountMenuProvider->getDashboardUrl($app, 'profile.address');
-        $this->securityUrl       = $accountMenuProvider->getDashboardUrl($app, 'security');
+        $this->securityUrl       = $this->profileUrl . '#cmp-profile-security';
         $this->securityEditUrl   = $accountMenuProvider->getDashboardUrl($app, 'security.edit');
+        $this->securityMfaUrl    = $accountMenuProvider->getDashboardUrl($app, 'security.mfa');
 
         if ($layout === 'tickets') {
             $this->tickets = \is_array($dashboard['tickets'] ?? null)
@@ -192,7 +198,7 @@ class HtmlView extends BaseHtmlView
                 ? (string) $dashboard['mfaConfigurationUI']
                 : null;
 
-            $requiresForm        = \in_array($layout, ['profile.edit', 'security', 'security.edit'], true);
+            $requiresForm        = \in_array($layout, ['profile.edit', 'security.edit'], true);
             $requiresAvatarForm  = $layout === 'profile.edit';
             $requiresAddressForm = $layout === 'profile.address';
 
@@ -218,7 +224,7 @@ class HtmlView extends BaseHtmlView
         }
 
         if (
-            \in_array($layout, ['profile.address', 'profile.edit', 'security', 'security.edit'], true)
+            \in_array($layout, ['profile.address', 'profile.edit', 'security.edit', 'security.mfa'], true)
             && isset($app->getIdentity()->cookieLogin)
             && !empty($app->getIdentity()->cookieLogin)
         ) {
@@ -232,8 +238,8 @@ class HtmlView extends BaseHtmlView
             'profile'         => Text::_('COM_COPYMYPAGE_PROFILE_TITLE'),
             'profile.address' => Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_EDIT_TITLE'),
             'profile.edit'    => Text::_('COM_COPYMYPAGE_PROFILE_EDIT_TITLE'),
-            'security'        => Text::_('COM_COPYMYPAGE_SECURITY_TITLE'),
             'security.edit'   => Text::_('COM_COPYMYPAGE_SECURITY_EDIT_TITLE'),
+            'security.mfa'    => Text::_('COM_COPYMYPAGE_SECURITY_MFA_TITLE'),
             'tickets'         => Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_TITLE'),
             default           => Text::_('COM_COPYMYPAGE_VIEW_DASHBOARD_TITLE'),
         };

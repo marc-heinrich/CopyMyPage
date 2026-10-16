@@ -223,6 +223,9 @@ $regionsUrl = Route::_(
                 data-region-error="<?php echo $escape(
                     Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_REGION_ERROR')
                 ); ?>"
+                data-region-loading="<?php echo $escape(
+                    Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_REGION_LOADING')
+                ); ?>"
             >
                 <fieldset class="uk-fieldset cmp-customer-data__section">
                     <legend><?php echo $escape(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_PERSONAL_TITLE')); ?></legend>
@@ -351,6 +354,7 @@ $regionsUrl = Route::_(
 
                 <input type="hidden" name="option" value="com_copymypage">
                 <input type="hidden" name="task" value="customerdata.save">
+                <input type="hidden" name="profileAddressVersion" value="<?php echo $escape($this->profileAddressVersion); ?>">
                 <input
                     type="hidden"
                     name="<?php echo $escape($revisionField); ?>"

@@ -36,15 +36,10 @@ final class SecurityController extends AbstractUserFormController
      */
     public function save(): ?bool
     {
-        $submittedLayout = strtolower(trim($this->input->post->getCmd('layout', 'security.edit')));
-        $failureLayout   = \in_array($submittedLayout, ['security', 'security.edit'], true)
-            ? $submittedLayout
-            : 'security.edit';
-
         return $this->saveProjectedForm(
             UserFormProjectionService::CONTEXT_SECURITY_EDIT,
-            $failureLayout,
-            'security',
+            'security.edit',
+            'profile',
             'COM_COPYMYPAGE_SECURITY_SAVE_SUCCESS',
             'COM_COPYMYPAGE_SECURITY_SAVE_FAILED'
         );
@@ -57,7 +52,7 @@ final class SecurityController extends AbstractUserFormController
     {
         $this->cancelProjectedForm(
             UserFormProjectionService::CONTEXT_SECURITY_EDIT,
-            'default'
+            'profile'
         );
     }
 }

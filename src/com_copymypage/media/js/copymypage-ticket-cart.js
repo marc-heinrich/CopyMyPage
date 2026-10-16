@@ -14,6 +14,24 @@
         ? runtime.instances
         : new WeakSet();
     const cartEmptyExpiredClass = 'cmp-ticket-cart__empty--expired';
+    const cartTimings = runtime.cartTimings instanceof WeakMap ? runtime.cartTimings : new WeakMap();
+
+    // Relative server time is display-only. Never compare expiresAt with the device clock.
+    const rememberCartTiming = (cart, elapsedMs = 0) => {
+        if (!isObject(cart) || cartTimings.has(cart)) {
+            return;
+        }
+
+        const seconds = Number(cart.secondsLeft);
+
+        if (Number.isFinite(seconds) && seconds >= 0) {
+            cartTimings.set(cart, window.performance.now() + Math.max(0, seconds * 1000 - elapsedMs));
+        }
+    };
+
+    const getRemainingMilliseconds = () => Number.isFinite(runtime.cartDeadline)
+        ? Math.max(0, runtime.cartDeadline - window.performance.now())
+        : null;
 
     const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -201,49 +219,20 @@
         });
     };
 
-    const getBasketExpiryTimestamp = (config = getConfig()) => {
-        if (!isObject(config.selectors) || !isObject(config.attributes)) {
-            return null;
-        }
-
-        const selector = config.selectors.basketIndicator;
-        const stateAttribute = config.attributes.basketIndicator;
-        const expiryAttribute = config.attributes.basketIndicatorExpiry;
-
-        if (
-            !isValidSelector(selector)
-            || !isValidDataAttribute(stateAttribute)
-            || !isValidDataAttribute(expiryAttribute)
-        ) {
-            return null;
-        }
-
-        const timestamps = Array.from(document.querySelectorAll(selector)).map((indicator) => {
-            if (indicator.getAttribute(stateAttribute) !== 'active') {
-                return Number.NaN;
-            }
-
-            return Date.parse(indicator.getAttribute(expiryAttribute) || '');
-        }).filter((timestamp) => Number.isFinite(timestamp));
-
-        return timestamps.length > 0 ? Math.min(...timestamps) : null;
-    };
-
     const scheduleBasketExpiryCheck = (config = getConfig()) => {
         if (runtime.basketExpiryTimer) {
             window.clearTimeout(runtime.basketExpiryTimer);
             runtime.basketExpiryTimer = null;
         }
 
-        const timestamp = getBasketExpiryTimestamp(config);
+        const remaining = getRemainingMilliseconds();
 
-        if (timestamp === null) {
+        if (remaining === null) {
             return;
         }
 
-        const remaining = timestamp - Date.now();
-
         if (remaining <= 0) {
+            updateCountdowns();
             updateBasketIndicators(false, config, document, '');
 
             return;
@@ -255,10 +244,24 @@
         }, Math.min(remaining + 50, 2147483647));
     };
 
-    const setBasketState = (active, expiresAt = null, config = getConfig(), continuable = null) => {
+    const setBasketState = (
+        active, expiresAt = null, config = getConfig(), continuable = null, cartState = null, elapsedMs = 0
+    ) => {
         const normalizedActive = active === true;
         const normalizedExpiry = normalizedActive ? expiresAt : '';
 
+        if (isObject(cartState)) {
+            rememberCartTiming(cartState, elapsedMs);
+            runtime.cartDeadline = cartTimings.get(cartState) ?? null;
+        } else if (!normalizedActive) {
+            runtime.cartDeadline = null;
+        }
+        runtime.stateVersion = (runtime.stateVersion || 0) + 1;
+        runtime.cartActive = normalizedActive;
+        runtime.cartExpiresAt = normalizedExpiry;
+        if (isObject(cartState) && Number.isInteger(cartState.cartRevision)) {
+            runtime.cartRevision = cartState.cartRevision;
+        }
         updateBasketIndicators(normalizedActive, config, document, normalizedExpiry);
         if (!normalizedActive || typeof continuable === 'boolean') {
             const canContinue = normalizedActive && continuable === true;
@@ -269,7 +272,7 @@
                 );
             }
         }
-        scheduleBasketExpiryCheck(config);
+        // The caller updates all roots before checking for expiry.
     };
 
     const notifyBasketState = (active, config, state = null) => {
@@ -281,7 +284,14 @@
             ? cartState.continuable
             : null;
 
-        setBasketState(Boolean(active), expiresAt, config, continuable);
+        setBasketState(Boolean(active), expiresAt, config, continuable, cartState);
+
+        // Each document owns its performance.now() reference. Transfer the current
+        // relative remainder, never the sender's performance timestamp or original duration.
+        const remaining = getRemainingMilliseconds();
+        const parentState = cartState && remaining !== null
+            ? {...state, cart: {...cartState, secondsLeft: remaining / 1000}}
+            : state;
 
         if (
             window.parent === window
@@ -297,8 +307,10 @@
             // has not completed initialization yet.
             const parentRuntime = window.parent.CopyMyPageTicketCart;
 
-            if (parentRuntime && typeof parentRuntime.setBasketState === 'function') {
-                parentRuntime.setBasketState(Boolean(active), expiresAt, undefined, continuable);
+            if (parentRuntime && typeof parentRuntime.receiveState === 'function') {
+                parentRuntime.receiveState(Boolean(active), parentState);
+
+                return;
             } else {
                 updateBasketIndicators(active, config, window.parent.document, expiresAt);
             }
@@ -309,7 +321,8 @@
         window.parent.postMessage({
             type: config.basketMessageType,
             active: Boolean(active),
-            state: isObject(state) ? state : null,
+            state: isObject(parentState) ? parentState : null,
+            sentAt: window.performance.timeOrigin + window.performance.now(),
         }, window.location.origin);
     };
 
@@ -324,6 +337,7 @@
             body.append(token, '1');
         }
 
+        const requestStarted = window.performance.now();
         const response = await window.fetch(url, {
             method: 'POST',
             body,
@@ -338,6 +352,12 @@
         if ((!response.ok && response.status !== 409) || !isObject(payload)) {
             throw new Error(config.strings.requestFailed || 'Request failed.');
         }
+
+        const state = getJsonData(payload);
+
+        // Charging the complete round trip is conservative: latency cannot add
+        // display time beyond the server's sampled remainder.
+        rememberCartTiming(state && state.cart, window.performance.now() - requestStarted);
 
         return payload;
     };
@@ -754,10 +774,13 @@
 
     const updateCountdowns = () => {
         const config = getConfig();
+        const remaining = getRemainingMilliseconds();
 
-        if (!isValidSelector(config.rootSelector) || !isObject(config.selectors)) {
+        if (remaining === null || !isValidSelector(config.rootSelector) || !isObject(config.selectors)) {
             return;
         }
+
+        const seconds = Math.ceil(remaining / 1000);
 
         document.querySelectorAll(config.rootSelector).forEach((root) => {
             const expiry = select(root, config.selectors.cartExpiry);
@@ -766,13 +789,6 @@
                 return;
             }
 
-            const timestamp = Date.parse(expiry.dateTime);
-
-            if (!Number.isFinite(timestamp)) {
-                return;
-            }
-
-            const seconds = Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
             expiry.textContent = formatCountdown(seconds, config);
 
             if (seconds === 0 && expiry.dataset.cmpTicketExpiryHandled !== '1') {
@@ -791,6 +807,92 @@
             (eventState) => updateEvent(root, eventState, config)
         );
         updateCart(root, isObject(state.cart) ? state.cart : {}, config, state);
+    };
+
+    const receiveState = (active, state = null) => {
+        const config = getConfig();
+        const cart = isObject(state) && isObject(state.cart) ? state.cart : null;
+
+        setBasketState(active, cart ? cart.expiresAt : null, config, cart ? cart.continuable : null, cart);
+
+        if (cart && Array.isArray(cart.items) && isValidSelector(config.rootSelector)) {
+            collectRoots(document, config.rootSelector).forEach((root) => updateState(root, state, config));
+        } else if (!active && isValidSelector(config.rootSelector)) {
+            collectRoots(document, config.rootSelector).forEach((root) => {
+                const expiry = select(root, config.selectors.cartExpiry);
+
+                if (expiry instanceof HTMLTimeElement && expiry.dateTime !== ''
+                    && expiry.dataset.cmpTicketExpiryHandled !== '1') {
+                    expiry.dataset.cmpTicketExpiryHandled = '1';
+                    expiry.textContent = formatCountdown(0, config);
+                    expireClientCart(root, config);
+                }
+            });
+        }
+        updateCountdowns();
+        scheduleBasketExpiryCheck(config);
+    };
+
+    const refreshState = async () => {
+        const config = getConfig();
+        const endpoint = isObject(config.endpoints) ? config.endpoints.state : '';
+
+        if (document.hidden || runtime.stateRequestPending || runtime.mutationRequests
+            || typeof endpoint !== 'string' || endpoint.trim() === '') {
+            return;
+        }
+
+        runtime.stateRequestPending = true;
+        const version = runtime.stateVersion || 0;
+        const requestStarted = window.performance.now();
+
+        try {
+            const response = await window.fetch(endpoint, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+            });
+            const payload = await response.json();
+            const state = getJsonData(payload);
+            const cart = state && isObject(state.cart) ? state.cart : null;
+
+            // A read started before a mutation/drawer update must not undo it.
+            if (!response.ok || !payload.success || !cart
+                || runtime.mutationRequests || version !== (runtime.stateVersion || 0)) {
+                return;
+            }
+
+            rememberCartTiming(cart, window.performance.now() - requestStarted);
+            const wasActive = runtime.cartActive;
+            const changed = cart.active !== wasActive || cart.expiresAt !== runtime.cartExpiresAt
+                || cart.cartRevision !== runtime.cartRevision;
+
+            if (!cart.active && wasActive && isValidSelector(config.rootSelector)) {
+                collectRoots(document, config.rootSelector).forEach((root) => {
+                    const expiry = select(root, config.selectors.cartExpiry);
+
+                    if (expiry instanceof HTMLTimeElement && expiry.dateTime !== ''
+                        && expiry.dataset.cmpTicketExpiryHandled !== '1') {
+                        expiry.dataset.cmpTicketExpiryHandled = '1';
+                        expiry.textContent = formatCountdown(0, config);
+                        expireClientCart(root, config);
+                    }
+                });
+            }
+
+            if (cart.active && changed) {
+                receiveState(true, state);
+            } else {
+                setBasketState(cart.active, cart.expiresAt, config, cart.continuable, cart);
+                updateCountdowns();
+                scheduleBasketExpiryCheck(config);
+            }
+        } catch (error) {
+            // A failed read never renews the local deadline; the server still
+            // checks expires_at on every reservation/checkout operation.
+        } finally {
+            runtime.stateRequestPending = false;
+        }
     };
 
     const handleSubmit = async (event, root, config) => {
@@ -823,6 +925,7 @@
         const body = new FormData(form);
         setBusy(form, true);
         let busy = true;
+        runtime.mutationRequests = (runtime.mutationRequests || 0) + 1;
 
         try {
             const payload = await request(endpoint, body, config);
@@ -830,7 +933,11 @@
 
             setBusy(form, false);
             busy = false;
-            updateState(root, state, config);
+            collectRoots(document, config.rootSelector).forEach(
+                (cartRoot) => updateState(cartRoot, state, config)
+            );
+            updateCountdowns();
+            scheduleBasketExpiryCheck(config);
             renderMessage(payload.message || '', !payload.success);
         } catch (error) {
             const message = error instanceof Error && error.message !== ''
@@ -838,6 +945,7 @@
                 : config.strings.requestFailed || '';
             renderMessage(message, true);
         } finally {
+            runtime.mutationRequests -= 1;
             if (busy) {
                 setBusy(form, false);
             }
@@ -922,36 +1030,54 @@
                     return;
                 }
 
-                const cartState = isObject(event.data.state) && isObject(event.data.state.cart)
-                    ? event.data.state.cart
-                    : null;
-                const expiresAt = cartState && typeof cartState.expiresAt === 'string'
-                    ? cartState.expiresAt
-                    : null;
+                const cart = isObject(event.data.state) ? event.data.state.cart : null;
+                const elapsed = Number.isFinite(event.data.sentAt)
+                    ? Math.max(0, window.performance.timeOrigin + window.performance.now() - event.data.sentAt)
+                    : 0;
 
-                setBasketState(event.data.active, expiresAt, currentConfig);
-
-                if (isObject(event.data.state) && isValidSelector(currentConfig.rootSelector)) {
-                    collectRoots(document, currentConfig.rootSelector).forEach(
-                        (root) => updateState(root, event.data.state, currentConfig)
-                    );
-                }
+                rememberCartTiming(cart, elapsed);
+                receiveState(event.data.active, event.data.state);
             });
             runtime.basketMessageListener = true;
         }
 
         if (!runtime.basketExpiryListenersRegistered) {
-            window.addEventListener('focus', () => scheduleBasketExpiryCheck(getConfig()));
-            window.addEventListener('pageshow', () => scheduleBasketExpiryCheck(getConfig()));
+            const resume = () => {
+                updateCountdowns();
+                scheduleBasketExpiryCheck(getConfig());
+                refreshState();
+            };
+
+            window.addEventListener('focus', resume);
+            window.addEventListener('pageshow', resume);
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) {
-                    scheduleBasketExpiryCheck(getConfig());
+                    resume();
                 }
             });
             runtime.basketExpiryListenersRegistered = true;
         }
 
+        if (!runtime.initialStateApplied) {
+            runtime.initialStateApplied = true;
+            const cart = isObject(config.initialCart) ? config.initialCart : null;
+            const navigation = window.performance.getEntriesByType('navigation')[0];
+
+            // Deduct delivery/initialization time from the HTML's server sample.
+            rememberCartTiming(cart, Math.max(0, window.performance.now() - (navigation?.responseStart || 0)));
+            setBasketState(Boolean(cart && cart.active), cart ? cart.expiresAt : null, config, null, cart);
+            refreshState();
+        }
+
+        updateCountdowns();
         scheduleBasketExpiryCheck(config);
+        if (!runtime.stateRefreshTimer) {
+            runtime.stateRefreshTimer = window.setInterval(() => {
+                if (runtime.cartActive) {
+                    refreshState();
+                }
+            }, Math.max(10000, Number(config.refreshIntervalMs) || 30000));
+        }
 
         const cartSelector = isObject(config.selectors) ? config.selectors.cart : '';
         const hasCartRoot = isValidSelector(cartSelector) && roots.some(
@@ -965,6 +1091,12 @@
     };
 
     runtime.instances = instances;
-    runtime.setBasketState = setBasketState;
+    runtime.cartTimings = cartTimings;
+    runtime.receiveState = receiveState;
+    runtime.setBasketState = (...args) => {
+        setBasketState(...args);
+        updateCountdowns();
+        scheduleBasketExpiryCheck(getConfig());
+    };
     window.CopyMyPageTicketCart = runtime;
 })(window, document, window.Joomla);

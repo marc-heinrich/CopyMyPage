@@ -105,7 +105,8 @@ if (
     !empty($state['managed'])
     && !empty($state['integrityOk'])
     && (int) ($state['state'] ?? -1) === 3
-    && empty($state['transactionStarted'])
+    && ((!empty($state['canResumePayment']))
+        || (empty($state['transactionStarted']) && empty($state['paymentUncertain'])))
 ) {
     try {
         $displayData['paymentHandoff'] = Factory::getContainer()

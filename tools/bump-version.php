@@ -80,25 +80,16 @@ final class BumpVersion
 
     private function isLikelyJoomlaManifest(string $file): bool
     {
-        $basename = basename($file);
+        $xml = file_get_contents($file);
 
-        if (preg_match('/^com_.*\.xml$/', $basename) === 1) {
-            return true;
+        if ($xml === false) {
+            return false;
         }
 
-        if ($basename === 'copymypage.xml') {
-            return true;
-        }
-
-        if (preg_match('/^mod_.*\.xml$/', $basename) === 1) {
-            return true;
-        }
-
-        if ($basename === 'templateDetails.xml') {
-            return true;
-        }
-
-        return false;
+        return preg_match(
+            '/<extension\b[^>]*\btype\s*=\s*["\'](?:component|module|plugin|template)["\']/i',
+            $xml
+        ) === 1;
     }
 
     private function updateManifestVersion(string $file, string $version): void

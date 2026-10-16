@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="dpcalendarpay" method="upgrade">
+    <name>PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL</name>
+    <author>CopyMyPage</author>
+    <license>GNU General Public License version 3 or later</license>
+    <version>0.0.24</version>
+    <description>PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_DESCRIPTION</description>
+    <namespace path="src">Joomla\Plugin\DPCalendarPay\CopyMyPagePayPal</namespace>
+    <files><folder>language</folder><folder plugin="copymypagepaypal">services</folder><folder>src</folder></files>
+    <scriptfile>script.php</scriptfile>
+    <config><fields name="params"><fieldset name="basic">
+        <field name="providers" type="subform" multiple="true" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_PROVIDERS">
+            <form>
+                <field name="id" type="number" filter="integer" min="0" required="true" label="JGLOBAL_FIELD_ID_LABEL"/>
+                <field name="title" type="text" required="true" label="JGLOBAL_TITLE" default="CopyMyPage PayPal Sandbox"/>
+                <field name="description" type="textarea" label="JGLOBAL_DESCRIPTION"/>
+                <field name="icon" type="text" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_ICON" default="media/plg_dpcalendarpay_paypal/images/paypal.svg"/>
+                <field name="state" type="radio" default="0" label="JSTATUS"><option value="1">JPUBLISHED</option><option value="0">JUNPUBLISHED</option></field>
+                <field name="sandbox" type="hidden" default="1" filter="integer"/>
+                <field name="rest_client_id" type="text" required="true" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_CLIENT_ID"/>
+                <field name="rest_secret" type="password" required="true" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_SECRET"/>
+                <field name="merchant_id" type="text" required="true" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_MERCHANT"/>
+                <field name="return_base_uri" type="url" required="true" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_RETURN_BASE" description="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_RETURN_BASE_DESC"/>
+                <field name="webhook_id" type="text" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_WEBHOOK"/>
+                <field name="fee_amount" type="number" step="0.01" min="0" default="0" filter="float" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_FEE"/>
+                <field name="fee_type" type="list" default="value" label="PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_FEE_TYPE"><option value="value">PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_FEE_FIXED</option><option value="percentage">PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_FEE_PERCENTAGE</option></field>
+            </form>
+        </field>
+    </fieldset></fields></config>
+</extension>

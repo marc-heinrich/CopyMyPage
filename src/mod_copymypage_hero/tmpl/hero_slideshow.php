@@ -71,6 +71,20 @@ if ($hasHeadline && isset($app) && $app instanceof \Joomla\CMS\Application\CMSAp
     );
 }
 
+// Load slideshow styles independently of headline content, once per document.
+if ($slides !== [] && isset($app) && $app instanceof \Joomla\CMS\Application\CMSApplicationInterface) {
+    $webAssetManager = $app->getDocument()->getWebAssetManager();
+
+    if (!$webAssetManager->assetExists('style', 'mod_copymypage_hero.fcv-liquid-glass')) {
+        $webAssetManager->registerStyle(
+            'mod_copymypage_hero.fcv-liquid-glass',
+            'mod_copymypage_hero/fcv-hero-liquid-glass.css'
+        );
+    }
+
+    $webAssetManager->useStyle('mod_copymypage_hero.fcv-liquid-glass');
+}
+
 // Resolve the layout-specific option bucket for the active hero template.
 $layoutConfig = HeroHelper::getLayoutConfig($cfg, $layout);
 

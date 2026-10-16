@@ -60,7 +60,23 @@ final class ProfileAddressService
     public function prepareForm(User $user): Form
     {
         $this->assertCurrentUser($user);
+        $form = $this->createForm();
 
+        $address = $this->getAddress($user);
+        unset($address['exists']);
+        $form->bind($address);
+
+        $pendingData = $this->app->getUserState($this->getStateKey($user), []);
+
+        if (\is_array($pendingData) && $pendingData !== []) {
+            $form->bind($this->projectSubmittedData($pendingData));
+        }
+
+        return $form;
+    }
+
+    private function createForm(): Form
+    {
         $this->app->getLanguage()->load('com_contact', JPATH_SITE, null, true);
         Form::addFormPath(JPATH_SITE . '/components/com_copymypage/forms');
 
@@ -71,16 +87,6 @@ final class ProfileAddressService
 
         if (!$form->loadFile('profile_address')) {
             throw new \RuntimeException(Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_ERROR_FORM'), 500);
-        }
-
-        $address = $this->getAddress($user);
-        unset($address['exists']);
-        $form->bind($address);
-
-        $pendingData = $this->app->getUserState($this->getStateKey($user), []);
-
-        if (\is_array($pendingData) && $pendingData !== []) {
-            $form->bind($this->projectSubmittedData($pendingData));
         }
 
         return $form;
@@ -249,7 +255,87 @@ final class ProfileAddressService
     public function save(User $user, array $data): int
     {
         $this->assertCurrentUser($user);
-        $address = $this->projectSubmittedData($data);
+
+        return $this->persistAddress((int) $user->id, $data);
+    }
+
+    /**
+     * Bind an authenticated checkout form to the profile version it displayed.
+     */
+    public function getCheckoutVersion(User $user, int $cartId): string
+    {
+        $this->assertCurrentUser($user);
+
+        return $this->checkoutVersion((int) $user->id, $cartId, $this->getAddressData($user));
+    }
+
+    /**
+     * Save an intentional checkout submission under its existing cart transaction.
+     */
+    public function saveCheckoutAddress(User $user, array $data, int $cartId, string $expectedVersion): int
+    {
+        $this->assertCurrentUser($user);
+
+        return $this->persistAddress((int) $user->id, $data, false, $cartId, $expectedVersion);
+    }
+
+    /**
+     * Initialise only the account produced by this successful server-side registration.
+     * The callback is supplied by CustomerDataService, never by request data.
+     * Pending activation does not grant login rights or access to existing profiles.
+     *
+     * @param callable(): int $registerAccount The guarded Joomla registration operation.
+     */
+    public function saveRegisteredCheckoutAddress(callable $registerAccount, array $data): int
+    {
+        $identity = $this->app->getIdentity();
+
+        if (!$identity instanceof User || !(bool) $identity->guest || (int) $identity->id !== 0) {
+            throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+        }
+
+        // Validate before registration too, so invalid addresses cannot create an account here.
+        $this->validateAddress($data);
+        $this->db->transactionStart(true);
+
+        try {
+            $userId = $registerAccount();
+            $this->persistAddress($userId, $data, true);
+            $this->db->transactionCommit(true);
+
+            return $userId;
+        } catch (\Throwable $exception) {
+            $this->db->transactionRollback(true);
+
+            throw $exception;
+        }
+    }
+
+    private function validateAddress(array $data): array
+    {
+        $validation = $this->validate($this->createForm(), $data);
+
+        if ($validation['errors'] !== []) {
+            $error = $validation['errors'][0];
+
+            throw new \DomainException($error instanceof \Throwable ? $error->getMessage() : (string) $error);
+        }
+
+        return $validation['data'];
+    }
+
+    /**
+     * Both authorised writers use the same validation, locking and persistence.
+     * Savepoints preserve the surrounding customer-draft transaction.
+     */
+    private function persistAddress(
+        int $userId,
+        array $data,
+        bool $initialOnly = false,
+        int $cartId = 0,
+        ?string $expectedVersion = null
+    ): int {
+        $address = $this->validateAddress($data);
         $country = $this->catalogue->resolveCountry($address['country_code']);
 
         if ($country === null) {
@@ -264,11 +350,21 @@ final class ProfileAddressService
             throw new \RuntimeException(Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_ERROR_REGION'));
         }
 
-        $this->db->transactionStart();
+        $this->db->transactionStart(true);
 
         try {
-            $this->lockCurrentUser($user);
-            $existing   = $this->repository->findForUser((int) $user->id);
+            $this->lockUser($userId);
+            // A locking read sees a concurrent profile edit even under REPEATABLE READ.
+            $existing = $this->repository->findForUser($userId, true);
+
+            if ($initialOnly && $existing !== null) {
+                throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+            }
+
+            if ($expectedVersion !== null && !hash_equals($this->checkoutVersion($userId, $cartId, $existing), $expectedVersion)) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ERROR_PROFILE_CHANGED'));
+            }
+
             $dataObject = new AddressData(
                 $address['street'],
                 $existing?->addressLine2 ?? '',
@@ -285,13 +381,18 @@ final class ProfileAddressService
                 $existing?->company ?? '',
                 $existing?->telephone ?? ''
             );
-            $addressId  = $this->repository->saveForUser((int) $user->id, $dataObject);
+            $addressId  = $this->repository->saveForUser($userId, $dataObject);
 
-            $this->db->transactionCommit();
+            $this->db->transactionCommit(true);
 
             return $addressId;
         } catch (\Throwable $exception) {
-            $this->db->transactionRollback();
+            $this->db->transactionRollback(true);
+
+            if ($exception instanceof \DomainException) {
+                throw $exception;
+            }
+
             Log::add($exception->getMessage(), Log::WARNING, 'com_copymypage.profile_address');
 
             throw new \RuntimeException(
@@ -300,6 +401,15 @@ final class ProfileAddressService
                 $exception
             );
         }
+    }
+
+    private function checkoutVersion(int $userId, int $cartId, ?AddressData $address): string
+    {
+        return hash_hmac(
+            'sha256',
+            json_encode([$userId, $cartId, $address?->toStorageData()], JSON_THROW_ON_ERROR),
+            (string) $this->app->get('secret')
+        );
     }
 
     /**
@@ -325,9 +435,12 @@ final class ProfileAddressService
     /**
      * Serialize creation for one user so repeated submissions cannot duplicate it.
      */
-    private function lockCurrentUser(User $user): void
+    private function lockUser(int $userId): void
     {
-        $userId = (int) $user->id;
+        if ($userId < 1) {
+            throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+        }
+
         $query  = $this->db->getQuery(true)
             ->select($this->db->quoteName('id'))
             ->from($this->db->quoteName('#__users'))

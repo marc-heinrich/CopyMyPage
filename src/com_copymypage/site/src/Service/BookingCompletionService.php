@@ -25,7 +25,9 @@ final class BookingCompletionService
 {
     public function __construct(
         private readonly DatabaseInterface $db,
-        private readonly TicketSeatProjectionService $ticketSeats
+        private readonly TicketSeatProjectionService $ticketSeats,
+        private readonly BookingIntegrityService $bookingIntegrity,
+        private readonly ?PaymentAttemptRepository $paymentAttempts = null
     ) {
     }
 
@@ -72,6 +74,25 @@ final class BookingCompletionService
 
         $tickets     = [];
         $eventGroups = [];
+
+        if (\in_array($bookingStatus, [1, 3, 4, 10], true)) {
+            // Native booking ACL has already authorised the view. Read exactly
+            // this managed booking, independently of its actor-filtered tickets.
+            $integrity = $this->bookingIntegrity->inspect($bookingId);
+            $state['integrityOk'] = $state['integrityOk'] && $integrity['valid']
+                && (int) ($integrity['booking']->user_id ?? -1) === (int) ($booking->user_id ?? -2)
+                && (int) ($integrity['booking']->state ?? -1) === $bookingStatus;
+            $booking = clone $booking;
+            $booking->tickets = $integrity['tickets'];
+            $booking->token = $integrity['booking']->token ?? null;
+            $state['transactionStarted'] = trim((string) ($integrity['booking']->transaction_id ?? '')) !== '';
+            $state = array_replace($state, $this->getPresentation(
+                $bookingStatus,
+                $state['paymentRequired'],
+                $state['transactionStarted'],
+                $state['hasAccount']
+            ));
+        }
 
         foreach ((array) ($booking->tickets ?? []) as $ticket) {
             if (
@@ -134,6 +155,51 @@ final class BookingCompletionService
                 && $missingSeats === 0;
         }
 
+        if (!$state['integrityOk']) {
+            $state['completed'] = false;
+            $state['icon'] = 'warning';
+            $state['tone'] = 'danger';
+            $state['titleKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_DATA_ERROR_TITLE';
+            $state['introKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_DATA_ERROR';
+        } elseif ($bookingStatus === 3 && !empty($booking->token) && empty($state['transactionStarted'])) {
+            // A native token is created before the external request. Absence of
+            // a stored provider ID does not prove that no order was accepted.
+            $state['paymentUncertain'] = true;
+            $state['introKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_PAYMENT_UNCERTAIN_INTRO';
+        }
+
+        if (PaymentProviderConfig::isOwned((string) ($booking->payment_provider ?? ''))) {
+            $attempt = $this->paymentAttempts?->getForBooking($bookingId);
+            if ($bookingStatus === 1 && $this->paymentAttempts?->isFinalized($bookingId)) {
+                // SMTP acceptance/delivery is independent of financial completion.
+                $state['introKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_COMPLETE_PAID_INTRO';
+            }
+            if ($bookingStatus === 1 && !$this->paymentAttempts?->isFinalized($bookingId)) {
+                $state['completed'] = false;
+                $state['integrityOk'] = false;
+                $state['tone'] = 'danger';
+                $state['titleKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_DATA_ERROR_TITLE';
+                $state['introKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_DATA_ERROR';
+            } elseif ($bookingStatus === 3 && $state['integrityOk'] && $attempt !== null) {
+                // Read-only projection: refresh never contacts PayPal or mutates financial state.
+                $this->paymentAttempts->assertBinding($attempt, $integrity, PaymentProviderConfig::load($attempt->provider_id));
+                $state['canResumePayment'] = empty($attempt->lease_id)
+                    && (in_array($attempt->state, ['prepared','order_created','order_observed'], true)
+                        || ($attempt->state === 'create_unknown' && $attempt->create_safe_until > PaymentAttemptRepository::now())
+                        || ($attempt->state === 'capture_unknown' && !empty($attempt->capture_started)
+                            && $attempt->capture_started >= (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->modify('-55 minutes')->format('Y-m-d H:i:s.u')));
+                $state['paymentUncertain'] = !$state['canResumePayment'];
+                if (PaymentProof::hasDurableCapture($attempt)) {
+                    $state['canResumePayment'] = false;
+                    $state['introKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_CAPTURED_RECOVERY_INTRO';
+                } elseif ($state['canResumePayment']) {
+                    $state['introKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_PAYMENT_RESUME_INTRO';
+                } else {
+                    $state['introKey'] = 'COM_COPYMYPAGE_BOOKING_COMPLETION_STATUS_PAYMENT_UNCERTAIN_INTRO';
+                }
+            }
+        }
+
         return $state;
     }
 
@@ -168,11 +234,13 @@ final class BookingCompletionService
                 'bookingId'         => max(0, (int) ($booking->id ?? 0)),
                 'bookingUid'        => trim((string) ($booking->uid ?? '')),
                 'completed'         => $bookingStatus === 1,
+                'canResumePayment'  => false,
                 'events'            => [],
                 'hasAccount'        => $hasAccount,
                 'integrityOk'       => true,
                 'managed'           => false,
                 'paymentRequired'   => $paymentRequired,
+                'paymentUncertain'  => false,
                 'scope'             => 'unmanaged',
                 'state'             => $bookingStatus,
                 'ticketCount'       => 0,

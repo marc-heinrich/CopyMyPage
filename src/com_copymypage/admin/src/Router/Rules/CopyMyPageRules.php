@@ -22,7 +22,7 @@ use Joomla\Component\CopyMyPage\Site\Service\Router;
 final class CopyMyPageRules extends MenuRules
 {
     /**
-     * Keep dashboard edit layouts in their matching account-menu context.
+     * Keep dashboard Profile subpages in their account-menu context.
      *
      * Core MenuRules cannot find dedicated dashboard edit menu items and
      * otherwise falls back to the first generic dashboard destination.
@@ -38,9 +38,8 @@ final class CopyMyPageRules extends MenuRules
         }
 
         $overviewLayout = match (strtolower(trim((string) ($query['layout'] ?? 'default')))) {
-            'profile.edit'  => 'profile',
-            'security.edit' => 'security',
-            default         => '',
+            'profile.address', 'profile.edit', 'security.edit', 'security.mfa' => 'profile',
+            default => '',
         };
 
         if ($overviewLayout === '') {

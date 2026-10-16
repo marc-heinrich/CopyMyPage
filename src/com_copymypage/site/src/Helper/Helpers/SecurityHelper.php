@@ -35,6 +35,14 @@ final class SecurityHelper
             return [];
         }
 
+        if (strtolower(trim($layoutName)) === 'security.mfa') {
+            return [
+                'userData'           => $user,
+                'mfaConfigurationUI' => Mfa::getConfigurationInterface($user),
+                'mfaActive'          => $this->hasActiveMfaMethod($user),
+            ];
+        }
+
         $prepared = $this->forms->prepareForm(
             UserFormProjectionService::CONTEXT_SECURITY_EDIT
         );

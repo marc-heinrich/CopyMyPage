@@ -42,7 +42,11 @@ final class CustomerdataController extends BaseController
             : -1;
 
         try {
-            $result = $service->save(\is_array($data) ? $data : [], $expectedRevision);
+            $result = $service->save(
+                \is_array($data) ? $data : [],
+                $expectedRevision,
+                $this->input->post->getString('profileAddressVersion', '')
+            );
 
             if ($result['errors'] !== []) {
                 $service->rememberValidationData(\is_array($data) ? $data : []);

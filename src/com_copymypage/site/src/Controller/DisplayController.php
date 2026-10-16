@@ -15,6 +15,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\MVC\Controller\Exception;
+use Joomla\Component\CopyMyPage\Site\Service\AccountMenuProvider;
 
 /**
  * Controller for displaying views in com_copymypage.
@@ -50,6 +51,7 @@ class DisplayController extends BaseController
         'profile.edit',
         'security',
         'security.edit',
+        'security.mfa',
         'tickets',
     ];
 
@@ -95,6 +97,15 @@ class DisplayController extends BaseController
         $vName    = $this->input->getCmd('view', $this->default_view);
         $lName    = $this->input->getCmd('layout', $this->default_layout);
         $vFormat  = $document->getType();
+
+        if ($vName === 'dashboard' && $lName === 'security') {
+            $this->app->redirect(
+                Factory::getContainer()->get(AccountMenuProvider::class)
+                    ->getDashboardUrl($this->app, 'profile') . '#cmp-profile-security'
+            );
+
+            return $this;
+        }
 
         if ($vName === 'dashboard' && !\in_array($lName, self::DASHBOARD_LAYOUTS, true)) {
             throw new Exception\ResourceNotFound(

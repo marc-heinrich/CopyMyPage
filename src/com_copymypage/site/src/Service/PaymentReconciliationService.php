@@ -37,15 +37,20 @@ final class PaymentReconciliationService
     }
 
     /**
-     * Claim a pending booking before invoking its external payment provider.
+     * Claim the native booking token before invoking its payment provider.
      *
      * The cart timestamp is the payment-attempt heartbeat used by reconciliation.
      * Terms acceptance remains immutable and the cart revision is not a UI revision.
+     * The booking lock and persisted token exclude another managed payment start.
+     * The token without a provider reference preserves an unresolved start for
+     * manual review. This does not supply provider or callback idempotency.
      *
      * @since   0.0.19
      */
-    public function beginPaymentAttempt(int $bookingId): bool
+    public function beginPaymentAttempt(int $bookingId, ?string &$bookingToken = null): bool
     {
+        $bookingToken = null;
+
         if ($bookingId < 1) {
             return false;
         }
@@ -70,6 +75,7 @@ final class PaymentReconciliationService
                 $booking === null
                 || (int) ($booking->state ?? -1) !== self::BOOKING_STATE_PENDING
                 || trim((string) ($booking->transaction_id ?? '')) !== ''
+                || trim((string) ($booking->token ?? '')) !== ''
                 || (float) ($booking->price ?? 0.0) <= 0
                 || !$this->providersMatch($carts[0], $booking)
             ) {
@@ -80,6 +86,22 @@ final class PaymentReconciliationService
 
             $modified = $this->now();
             $cartId   = (int) $carts[0]->id;
+            $token    = bin2hex(random_bytes(32));
+            $query = $this->db->getQuery(true)
+                ->update($this->db->quoteName('#__dpcalendar_bookings'))
+                ->set($this->db->quoteName('token') . ' = :token')
+                ->where($this->db->quoteName('id') . ' = :bookingId')
+                ->where($this->db->quoteName('state') . ' = ' . self::BOOKING_STATE_PENDING)
+                ->where('(' . $this->db->quoteName('token') . ' IS NULL OR '
+                    . $this->db->quoteName('token') . " = '')")
+                ->bind(':token', $token, ParameterType::STRING)
+                ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
+            $this->db->setQuery($query)->execute();
+
+            if ($this->db->getAffectedRows() !== 1) {
+                throw new \RuntimeException('The CopyMyPage payment start could not be claimed.');
+            }
+
             $query    = $this->db->getQuery(true)
                 ->update($this->db->quoteName('#__copymypage_ticket_carts'))
                 ->set($this->db->quoteName('modified') . ' = :modified')
@@ -98,6 +120,7 @@ final class PaymentReconciliationService
             }
 
             $this->db->transactionCommit();
+            $bookingToken = $token;
 
             return true;
         } catch (\Throwable $exception) {
@@ -238,6 +261,27 @@ final class PaymentReconciliationService
             'state'        => -1,
         ];
 
+        // Native pay/abort can fall back to a token for a different booking.
+        // A managed capability must not bypass this guard through another ID.
+        $requestToken = trim($requestToken);
+        if ($requestToken !== '') {
+            $query = $this->db->getQuery(true)
+                ->select($this->db->quoteName(['b.id', 'b.token']))
+                ->from($this->db->quoteName('#__dpcalendar_bookings', 'b'))
+                ->innerJoin(
+                    $this->db->quoteName('#__copymypage_ticket_carts', 'c')
+                        . ' ON ' . $this->db->quoteName('c.booking_id') . ' = ' . $this->db->quoteName('b.id')
+                )
+                ->where($this->db->quoteName('b.token') . ' = :requestToken')
+                ->bind(':requestToken', $requestToken, ParameterType::STRING);
+            $tokenBooking = $this->db->setQuery($query, 0, 1)->loadObject();
+
+            if ($tokenBooking && ((int) $tokenBooking->id !== $bookingId
+                || !hash_equals((string) $tokenBooking->token, $requestToken))) {
+                throw new \DomainException('Invalid managed payment callback booking binding.', 403);
+            }
+        }
+
         if ($bookingId < 1) {
             return $decision;
         }
@@ -306,6 +350,13 @@ final class PaymentReconciliationService
             true
         );
         $transactionStarted = trim((string) ($booking->transaction_id ?? '')) !== '';
+        if (PaymentProviderConfig::isOwned((string) $booking->payment_provider) && $bookingToken !== '') {
+            $query = $this->db->getQuery(true)->select('order_id')->from('#__copymypage_payment_attempts')
+                ->where('booking_id = :booking')->where('provider_id = :provider')
+                ->bind(':booking', $bookingId, ParameterType::INTEGER)->bind(':provider', $booking->payment_provider);
+            // A committed owned order remains reconcilable if saving its native reference was interrupted.
+            $transactionStarted = $transactionStarted || (string) $this->db->setQuery($query)->loadResult() !== '';
+        }
         $decision['block'] = !$cartIntegrity || !$callbackState || !$transactionStarted;
 
         return $decision;
@@ -359,6 +410,13 @@ final class PaymentReconciliationService
             $state         = (int) ($booking->state ?? -1);
             $transactionId = trim((string) ($booking->transaction_id ?? ''));
 
+            if (PaymentProviderConfig::isOwned((string) $booking->payment_provider)
+                && (int) $this->db->setQuery('SELECT COUNT(*) FROM #__copymypage_payment_attempts WHERE booking_id = ' . $bookingId)->loadResult() > 0) {
+                // The financial ledger, including unconfirmed captures, takes precedence over the old TTL cleanup.
+                $this->db->transactionCommit();
+                return ['type' => 'manual'];
+            }
+
             if ($state === self::BOOKING_STATE_COMPLETED) {
                 $this->db->transactionCommit();
 
@@ -370,7 +428,7 @@ final class PaymentReconciliationService
 
             if (
                 (!$isAbandoned && !$isRepair)
-                || ($isAbandoned && $transactionId !== '')
+                || ($isAbandoned && ($transactionId !== '' || trim((string) ($booking->token ?? '')) !== ''))
                 || ($isAbandoned && ((float) ($booking->price ?? 0.0) <= 0 || !$this->providersMatch($cart, $booking)))
             ) {
                 $this->db->transactionCommit();
@@ -429,6 +487,7 @@ final class PaymentReconciliationService
                 $this->db->quoteName('id'),
                 $this->db->quoteName('state'),
                 $this->db->quoteName('transaction_id'),
+                $this->db->quoteName('token'),
                 $this->db->quoteName('payment_provider'),
                 $this->db->quoteName('price'),
             ])

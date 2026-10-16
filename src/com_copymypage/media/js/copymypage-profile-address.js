@@ -12,6 +12,7 @@
     const formSelector = '.cmp-profile-address-form[data-regions-url]';
     const initialisedForms = new WeakSet();
     const pendingRequests = new WeakMap();
+    const regionStates = new WeakMap();
 
     const replaceWithMessage = (select, message) => {
         const option = document.createElement('option');
@@ -22,7 +23,7 @@
         select.disabled = true;
     };
 
-    const populateRegions = (select, regions, placeholder) => {
+    const populateRegions = (select, regions, placeholder, selectedValue) => {
         const fragment = document.createDocumentFragment();
         const prompt = document.createElement('option');
 
@@ -48,19 +49,32 @@
         });
 
         select.replaceChildren(fragment);
+        if (Array.from(select.options).some((option) => option.value === selectedValue)) {
+            select.value = selectedValue;
+        }
         select.disabled = select.options.length === 1;
     };
 
     const loadRegions = async (form, country, region) => {
         const countryCode = country.value.trim().toUpperCase();
         const previousRequest = pendingRequests.get(form);
+        const state = regionStates.get(form);
+
+        if (!previousRequest) {
+            state.values.set(state.countryCode, region.value);
+        }
 
         if (previousRequest) {
             previousRequest.abort();
         }
 
+        state.status.textContent = '';
+
         if (countryCode === '') {
+            pendingRequests.delete(form);
+            region.removeAttribute('aria-busy');
             replaceWithMessage(region, form.dataset.regionPlaceholder || '');
+            state.countryCode = '';
             return;
         }
 
@@ -69,7 +83,8 @@
 
         pendingRequests.set(form, controller);
         endpoint.searchParams.set('country', countryCode);
-        region.disabled = true;
+        region.setAttribute('aria-busy', 'true');
+        state.status.textContent = form.dataset.regionLoading || '';
 
         try {
             const response = await window.fetch(endpoint.toString(), {
@@ -96,23 +111,30 @@
 
             if (payload.data.length === 0) {
                 replaceWithMessage(region, form.dataset.regionEmpty || '');
+                state.countryCode = countryCode;
+                state.status.textContent = form.dataset.regionEmpty || '';
                 return;
             }
 
             populateRegions(
                 region,
                 payload.data,
-                form.dataset.regionPlaceholder || ''
+                form.dataset.regionPlaceholder || '',
+                state.values.get(countryCode) || ''
             );
+            state.countryCode = countryCode;
+            state.status.textContent = '';
         } catch (error) {
-            if (error && error.name === 'AbortError') {
+            if ((error && error.name === 'AbortError') || pendingRequests.get(form) !== controller) {
                 return;
             }
 
-            replaceWithMessage(region, form.dataset.regionError || '');
+            // Retain the previous selection on failure; the server validates its country.
+            state.status.textContent = form.dataset.regionError || '';
         } finally {
             if (pendingRequests.get(form) === controller) {
                 pendingRequests.delete(form);
+                region.removeAttribute('aria-busy');
             }
         }
     };
@@ -130,11 +152,29 @@
         }
 
         initialisedForms.add(form);
+        const status = document.createElement('div');
+
+        status.id = `${form.id || 'cmp-address'}-region-status`;
+        status.className = 'form-text';
+        status.setAttribute('role', 'status');
+        region.after(status);
+        region.setAttribute('aria-describedby', [region.getAttribute('aria-describedby'), status.id].filter(Boolean).join(' '));
+        regionStates.set(form, {
+            countryCode: country.value.trim().toUpperCase(),
+            values: new Map(),
+            status
+        });
+        form.addEventListener('submit', (event) => {
+            if (pendingRequests.has(form) && !event.submitter?.formNoValidate) {
+                event.preventDefault();
+                status.textContent = form.dataset.regionLoading || '';
+            }
+        });
         country.addEventListener('change', () => loadRegions(form, country, region));
 
-        if (country.value === '') {
+        if (country.value === '' && region.value === '') {
             region.disabled = true;
-        } else if (region.options.length <= 1) {
+        } else if (country.value !== '' && region.options.length <= 1) {
             loadRegions(form, country, region);
         }
     };

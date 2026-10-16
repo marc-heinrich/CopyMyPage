@@ -101,6 +101,20 @@ return new class () implements ServiceProviderInterface
 
                     // Ensure the component-owned account navigation and avatar field.
                     if (\in_array($type, ['install', 'update', 'discover_install'], true)) {
+                        try {
+                            require_once JPATH_ADMINISTRATOR . '/components/com_copymypage/src/Service/PaymentSchema.php';
+                            (new \Joomla\Component\CopyMyPage\Administrator\Service\PaymentSchema(
+                                Factory::getContainer()->get(DatabaseInterface::class)
+                            ))->ensure();
+                        } catch (\Throwable $exception) {
+                            Factory::getApplication()->enqueueMessage(
+                                'CopyMyPage payment schema setup failed. Existing payment records were retained.',
+                                'error'
+                            );
+
+                            return false;
+                        }
+
                         if (!$this->removeLegacyGlobalSystemLanguage()) {
                             return false;
                         }

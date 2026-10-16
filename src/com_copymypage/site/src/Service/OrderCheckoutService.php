@@ -13,6 +13,7 @@ namespace Joomla\Component\CopyMyPage\Site\Service;
 
 use DigitalPeak\Component\DPCalendar\Administrator\Booking\Stages\CollectEventsAndTickets;
 use DigitalPeak\Component\DPCalendar\Administrator\Booking\Stages\SetupForNew;
+use DigitalPeak\Component\DPCalendar\Administrator\Helper\Booking;
 use DigitalPeak\Component\DPCalendar\Administrator\Pipeline\Pipeline;
 use DigitalPeak\Component\DPCalendar\Site\Helper\RouteHelper as DPCalendarRouteHelper;
 use Joomla\CMS\Application\CMSWebApplicationInterface;
@@ -39,7 +40,9 @@ final class OrderCheckoutService
         private readonly OrderReviewService $orderReview,
         private readonly TicketCartContextService $cartContext,
         private readonly TicketCatalogService $ticketCatalog,
-        private readonly TicketSeatProjectionService $ticketSeats
+        private readonly TicketSeatProjectionService $ticketSeats,
+        private readonly BookingIntegrityService $bookingIntegrity,
+        private readonly ?PaymentOutboxService $paymentOutbox = null
     ) {
     }
 
@@ -64,11 +67,16 @@ final class OrderCheckoutService
             unset(
                 $prepared['_bookingInput'],
                 $prepared['_cartId'],
+                $prepared['_expectedTickets'],
                 $prepared['_rawProviders'],
                 $prepared['_termsSnapshot']
             );
 
             return array_replace($state, $prepared);
+        } catch (\DomainException $exception) {
+            $state['checkoutIssues'][] = $exception->getMessage();
+
+            return $state;
         } catch (\Throwable $exception) {
             Log::add(
                 'CopyMyPage order checkout could not be prepared (' . $exception::class . ').',
@@ -158,8 +166,22 @@ final class OrderCheckoutService
                     'totalFormatted' => (string) ($prepared['baseTotalFormatted'] ?? ''),
                 ];
 
-            $bookingId = $this->createDPCalendarBooking((array) $prepared['_bookingInput']);
-            $this->linkSeatsToTickets($bookingId, (int) $cart->id, $reviewState, $heldSeats);
+            $ownerId   = (int) $prepared['_bookingInput']['user_id'];
+            $deferMail = !$paymentRequired || PaymentProviderConfig::isOwned($paymentProvider);
+            if ($deferMail) {
+                if ($this->paymentOutbox === null) {
+                    throw new \RuntimeException('Deferred booking mail service is unavailable.');
+                }
+                $creation = PaymentMailScope::run(0, $ownerId, false, fn (): int => $this->createDPCalendarBooking((array) $prepared['_bookingInput']));
+                $bookingId = (int) $creation['result'];
+                if ($creation['bookingId'] !== 0 && $creation['bookingId'] !== $bookingId) {
+                    throw new \DomainException('Native creation mail booking binding changed.');
+                }
+            } else {
+                $bookingId = $this->createDPCalendarBooking((array) $prepared['_bookingInput']);
+            }
+            $this->assertBookingOwner($bookingId, $ownerId);
+            $seatBindings = $this->linkSeatsToTickets($bookingId, (int) $cart->id, $reviewState, $heldSeats);
             $this->ticketSeats->clearBooking($bookingId);
 
             $acceptedAt = $this->cartContext->now();
@@ -169,7 +191,10 @@ final class OrderCheckoutService
                 (array) $prepared['_termsSnapshot'],
                 $selectedProvider,
                 $eventIds,
-                $checkoutSignature
+                $checkoutSignature,
+                $ownerId,
+                (array) $prepared['_expectedTickets'],
+                $seatBindings
             );
             $this->cartContext->convertCart(
                 (int) $cart->id,
@@ -179,14 +204,39 @@ final class OrderCheckoutService
                 $snapshot
             );
 
-            $booking = $this->confirmDPCalendarBooking($bookingId, $paymentProvider);
+            $confirmation = $deferMail
+                ? PaymentMailScope::run($bookingId, $ownerId, !$paymentRequired, fn (): \stdClass => $this->confirmDPCalendarBooking($bookingId, $paymentProvider))
+                : ['result' => $this->confirmDPCalendarBooking($bookingId, $paymentProvider), 'messages' => []];
+            $booking = $confirmation['result'];
             $this->assertConfirmedBooking($booking, $selectedProvider, $paymentRequired);
+            $this->assertBookingOwner($bookingId, $ownerId);
+
+            $integrity = $this->bookingIntegrity->inspect($bookingId, true);
+
+            if (
+                !$integrity['valid']
+                || (int) ($integrity['booking']->id ?? 0) !== $bookingId
+                || (int) ($integrity['cart']->id ?? 0) !== (int) $cart->id
+                || !hash_equals($snapshot, (string) ($integrity['cart']->terms_snapshot ?? ''))
+            ) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_SAVE'));
+            }
 
             $bookingRoute = DPCalendarRouteHelper::getBookingRoute($booking);
             $route        = $bookingRoute
                 . '&layout=' . ($paymentRequired ? 'pay' : 'order');
 
+            if (!$paymentRequired) {
+                $this->paymentOutbox->enqueue($integrity, $confirmation['messages'], null);
+            }
             $this->cartContext->commitTransaction();
+            if (!$paymentRequired) {
+                try {
+                    $this->paymentOutbox->dispatchBooking($bookingId);
+                } catch (\Throwable) {
+                    // Native booking remains committed; the durable job can be dispatched again.
+                }
+            }
 
             return [
                 'bookingId'       => $bookingId,
@@ -321,7 +371,8 @@ final class OrderCheckoutService
         $eventIds      = $this->extractEventIds($reviewState);
         $eventSettings = $this->loadEventSettings($eventIds);
         $termsState    = $this->loadTerms($eventSettings);
-        $bookingInput  = $this->buildBookingInput($reviewState);
+        $ownerId       = $this->orderReview->getBookingOwnerId((int) $cart->id, $lockedCart !== null);
+        $bookingInput  = $this->buildBookingInput($reviewState, $ownerId);
         $bookingData   = $this->calculateBookingData($bookingInput);
         $baseTotal     = round(max(0.0, (float) ($bookingData['price'] ?? 0.0)), 2);
         $currency      = trim((string) ($bookingData['currency'] ?? ''));
@@ -349,13 +400,15 @@ final class OrderCheckoutService
                 $termsState['terms'],
                 $providerState['public'],
                 $baseTotal,
-                $currency
+                $currency,
+                $ownerId
             )
             : '';
 
         return [
             '_bookingInput'      => $bookingInput,
             '_cartId'            => (int) $cart->id,
+            '_expectedTickets'   => (array) $bookingData['_ticketGroups'],
             '_rawProviders'      => $providerState['raw'],
             '_termsSnapshot'     => $termsState['snapshots'],
             'baseTotal'          => $baseTotal,
@@ -683,7 +736,7 @@ final class OrderCheckoutService
      *
      * @return array<string, mixed>
      */
-    private function buildBookingInput(array $reviewState): array
+    private function buildBookingInput(array $reviewState, int $ownerId): array
     {
         $eventSelection = [];
 
@@ -728,7 +781,7 @@ final class OrderCheckoutService
             'state'      => 2,
             'street'     => (string) ($customer['street'] ?? ''),
             'telephone'  => (string) ($customer['telephone'] ?? ''),
-            'user_id'    => max(0, (int) ($this->app->getIdentity()->id ?? 0)),
+            'user_id'    => $ownerId,
             'zip'        => (string) ($customer['postcode'] ?? ''),
         ];
     }
@@ -759,7 +812,8 @@ final class OrderCheckoutService
             $factory->createModel('Coupon', 'Administrator', ['ignore_request' => true]),
             $factory->createModel('Currency', 'Administrator', ['ignore_request' => true]),
             ComponentHelper::getParams('com_dpcalendar'),
-            true
+            // Preserve the verified owner while prices and ACL keep the actual actor.
+            false
         ));
         $pipeline->process($payload);
 
@@ -798,7 +852,29 @@ final class OrderCheckoutService
             throw new \DomainException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_AVAILABILITY'));
         }
 
-        return (array) $payload->data;
+        $ticketGroups = [];
+
+        foreach ((array) $payload->events as $event) {
+            $prices = \is_string($event->prices) ? json_decode($event->prices) : $event->prices;
+            $prices = (array) ($prices ?: [(object) ['value' => 0]]);
+
+            foreach ($prices as $key => $price) {
+                $type = (int) preg_replace('/\D/', '', (string) $key);
+                $quantity = (int) ($event->amount_tickets[$type] ?? 0);
+
+                if ((int) $quantity > 0) {
+                    $ticketGroups[(int) $event->id][(int) $type] = [
+                        'quantity' => (int) $quantity,
+                        'unitPrice' => round(Booking::getPriceWithDiscount(
+                            $price->value,
+                            (object) $event->getData()
+                        ), 2),
+                    ];
+                }
+            }
+        }
+
+        return (array) $payload->data + ['_ticketGroups' => $ticketGroups];
     }
 
     /**
@@ -833,6 +909,7 @@ final class OrderCheckoutService
                 $this->db->quoteName('id'),
                 $this->db->quoteName('event_id'),
                 $this->db->quoteName('price_index'),
+                $this->db->quoteName('seat_id'),
                 $this->db->quoteName('assignment_order'),
                 $this->db->quoteName('ticket_id'),
             ])
@@ -936,6 +1013,36 @@ final class OrderCheckoutService
     }
 
     /**
+     * Reject model/plugin ownership changes before the cart transaction can commit.
+     */
+    private function assertBookingOwner(int $bookingId, int $ownerId): void
+    {
+        $query = $this->db->getQuery(true)
+            ->select($this->db->quoteName('user_id'))
+            ->from($this->db->quoteName('#__dpcalendar_bookings'))
+            ->where($this->db->quoteName('id') . ' = ' . $bookingId);
+        $storedOwner = $this->db->setQuery($query)->loadResult();
+
+        $query = $this->db->getQuery(true)
+            ->select([
+                'COUNT(*) AS ticket_count',
+                'SUM(CASE WHEN user_id IS NULL OR user_id <> ' . $ownerId . ' THEN 1 ELSE 0 END) AS conflicts',
+            ])
+            ->from($this->db->quoteName('#__dpcalendar_tickets'))
+            ->where($this->db->quoteName('booking_id') . ' = ' . $bookingId);
+        $tickets = $this->db->setQuery($query)->loadObject();
+
+        if (
+            $storedOwner === null
+            || (int) $storedOwner !== $ownerId
+            || (int) ($tickets->ticket_count ?? 0) < 1
+            || (int) ($tickets->conflicts ?? 0) !== 0
+        ) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_CONFLICT'));
+        }
+    }
+
+    /**
      * @param   array<string, mixed>  $reviewState
      * @param   list<object>          $heldSeats
      */
@@ -944,7 +1051,7 @@ final class OrderCheckoutService
         int $cartId,
         array $reviewState,
         array $heldSeats
-    ): void {
+    ): array {
         $query = $this->db->getQuery(true)
             ->select([
                 $this->db->quoteName('id'),
@@ -968,7 +1075,7 @@ final class OrderCheckoutService
         $seatGroups = [];
 
         foreach ($heldSeats as $seat) {
-            $seatGroups[(int) $seat->event_id][(int) $seat->price_index][] = (int) $seat->id;
+            $seatGroups[(int) $seat->event_id][(int) $seat->price_index][] = $seat;
         }
 
         if ($this->groupCounts($groups) !== $this->expectedTicketGroups($reviewState)) {
@@ -977,6 +1084,7 @@ final class OrderCheckoutService
 
         $modified = $this->cartContext->now();
         $userId   = max(0, (int) ($this->app->getIdentity()->id ?? 0));
+        $bindings = [];
 
         foreach ($groups as $eventId => $priceGroups) {
             foreach ($priceGroups as $priceIndex => $ticketIds) {
@@ -987,7 +1095,15 @@ final class OrderCheckoutService
                 }
 
                 foreach ($ticketIds as $index => $ticketId) {
-                    $seatId = (int) $seatIds[$index];
+                    $seat = $seatIds[$index];
+                    $seatId = (int) $seat->id;
+                    $bindings[$ticketId] = [
+                        'eventId' => (int) $eventId,
+                        'id' => $seatId,
+                        'order' => (int) $seat->assignment_order,
+                        'seatId' => (int) $seat->seat_id,
+                        'type' => (int) $priceIndex,
+                    ];
                     $query  = $this->db->getQuery(true)
                         ->update($this->db->quoteName('#__copymypage_event_seats'))
                         ->set($this->db->quoteName('status') . ' = ' . EventSeatInventoryService::SEAT_STATUS_BOOKED)
@@ -1010,6 +1126,8 @@ final class OrderCheckoutService
                 }
             }
         }
+
+        return $bindings;
     }
 
     /**
@@ -1040,21 +1158,59 @@ final class OrderCheckoutService
     private function confirmDPCalendarBooking(int $bookingId, string $paymentProvider): \stdClass
     {
         $input = $this->app->getInput();
-        $input->set('b_id', $bookingId);
-        $input->set('payment_provider', $paymentProvider);
-        $factory    = $this->app->bootComponent('dpcalendar')->getMVCFactory();
-        $controller = $factory->createController('Booking', 'Site', [], $this->app, $input);
+        $originalInput = [];
+        foreach (['b_id', 'payment_provider', 'token'] as $key) {
+            $originalInput[$key] = $input->get($key, null, 'raw');
+        }
+        $factory = $this->app->bootComponent('dpcalendar')->getMVCFactory();
+        $table = $factory->createTable('Booking', 'Administrator');
 
-        if (!method_exists($controller, 'confirm') || !$controller->confirm()) {
+        if (!$table->load($bookingId) || (int) $table->state !== 2 || !empty($table->token)) {
             throw new \RuntimeException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_SAVE'));
         }
 
-        $table = $factory->createTable('Booking', 'Administrator');
+        $token = bin2hex(random_bytes(32));
+
+        try {
+            // Authorise through the unchanged native owner/session ACL first.
+            $input->set('token', null);
+            $model = $factory->createModel('Booking', 'Administrator', ['ignore_request' => true]);
+            if (!$model->getItem($bookingId)) {
+                throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+            }
+
+            // A genuine booking-bound capability supplies this booking's full
+            // native ticket pipeline; it never changes the Joomla actor.
+            $table->token = $token;
+            if (!$table->store()) {
+                throw new \RuntimeException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_SAVE'));
+            }
+            $input->set('b_id', $bookingId);
+            $input->set('payment_provider', $paymentProvider);
+            $input->set('token', $token);
+            $controller = $factory->createController('Booking', 'Site', [], $this->app, $input);
+
+            if (!method_exists($controller, 'confirm') || !$controller->confirm()) {
+                throw new \RuntimeException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_SAVE'));
+            }
+        } finally {
+            foreach ($originalInput as $key => $value) {
+                $input->set($key, $value);
+            }
+
+            // Do not leave a checkout capability available to another request.
+            $query = $this->db->getQuery(true)
+                ->update($this->db->quoteName('#__dpcalendar_bookings'))
+                ->set($this->db->quoteName('token') . ' = NULL')
+                ->where($this->db->quoteName('id') . ' = ' . $bookingId)
+                ->where($this->db->quoteName('token') . ' = :token')
+                ->bind(':token', $token);
+            $this->db->setQuery($query)->execute();
+        }
 
         if (!$table->load($bookingId)) {
             throw new \RuntimeException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_SAVE'));
         }
-
         return (object) $table->getData();
     }
 
@@ -1072,6 +1228,8 @@ final class OrderCheckoutService
 
         if (
             (int) ($booking->state ?? 0) !== $expectedState
+            || (string) ($booking->currency ?? '') !== (string) ($selectedProvider['currency'] ?? '')
+            || abs((float) ($booking->payment_provider_fee ?? -1) - (float) ($selectedProvider['fee'] ?? 0)) > 0.005
             || abs($actualPrice - $expectedPrice) > 0.01
             || ($paymentRequired
                 && (string) ($booking->payment_provider ?? '') !== (string) ($selectedProvider['id'] ?? ''))
@@ -1107,7 +1265,10 @@ final class OrderCheckoutService
         array $terms,
         array $provider,
         array $eventIds,
-        string $signature
+        string $signature,
+        int $ownerId,
+        array $ticketGroups,
+        array $seatBindings
     ): string {
         $snapshotTerms = [];
 
@@ -1126,11 +1287,22 @@ final class OrderCheckoutService
             ];
         }
 
+        $ownerSource = $ownerId === 0 ? 'guest' : 'authenticated';
+
+        if ($ownerId > 0 && (bool) ($this->app->getIdentity()->guest ?? true)) {
+            $ownerSource = 'checkout-registration';
+        }
+
         return json_encode(
             [
                 'acceptedAt'  => $acceptedAt,
                 'cartRevision' => $cartRevision,
                 'eventIds'    => $eventIds,
+                'bookingOwner' => [
+                    'actorId' => max(0, (int) ($this->app->getIdentity()->id ?? 0)),
+                    'userId'  => $ownerId,
+                    'source'  => $ownerSource,
+                ],
                 'provider'    => [
                     'currency' => (string) ($provider['currency'] ?? ''),
                     'fee'      => round((float) ($provider['fee'] ?? 0.0), 2),
@@ -1139,6 +1311,8 @@ final class OrderCheckoutService
                     'total'    => round((float) ($provider['total'] ?? 0.0), 2),
                 ],
                 'signature'    => $signature,
+                'seats'        => $seatBindings,
+                'tickets'      => $ticketGroups,
                 'terms'        => $snapshotTerms,
                 'version'      => 2,
             ],
@@ -1156,7 +1330,8 @@ final class OrderCheckoutService
         array $terms,
         array $providers,
         float $baseTotal,
-        string $currency
+        string $currency,
+        int $ownerId
     ): string {
         $canonicalTerms = [];
 
@@ -1180,6 +1355,8 @@ final class OrderCheckoutService
         $payload = json_encode(
             [
                 'baseTotal' => round($baseTotal, 2),
+                'actorId'   => max(0, (int) ($this->app->getIdentity()->id ?? 0)),
+                'ownerId'   => $ownerId,
                 'cartId'    => $cartId,
                 'currency'  => $currency,
                 'providers' => $canonicalProviders,

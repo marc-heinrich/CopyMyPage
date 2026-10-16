@@ -203,6 +203,20 @@ Navigation muss gegenüber Inhalt eindeutig erkennbar sein, ohne ihn zu dominier
 
 Kontextuelle Zurücknavigation folgt dem projektweiten `cmp-button--back`-Vertrag aus `docs/UI_STYLE_GUIDE.md`. Position und Ziel bleiben ansichtsspezifisch; Darstellung nicht lokal neu erfinden.
 
+### Grouped Chevron Navigation
+
+Verbindliche visuelle Referenz ist `view=dashboard`, `layout=profile`: etwa die zusammenhängenden Zeilen „Persönliche Angaben“ und „Adresse“. Diesen Standard für verwandte Navigations- und Einstellungsaktionen wiederverwenden, statt einzelne lokale Kartenvarianten anzulegen.
+
+- Eine Gruppe verwendet `ul.cmp-dashboard-link-group__list` und direkte `li.cmp-dashboard-link-group__item`. Die Liste besitzt eine gemeinsame Fläche mit `--cmp-color-surface`, keine Zwischenabstände und ausschließlich äußere Rundungen über `--cmp-border-radius-lg`. Zwischen Geschwisterzeilen liegt der bestehende Divider: `var(--cmp-border-width) solid rgba(var(--cmp-color-logo-dark-rgb), 0.12)`.
+- Die Hauptaktion verwendet `cmp-dashboard-link-group__link`: Grid, mindestens 4 rem Zeilenhöhe, Padding und Gap aus `--cmp-spacing-sm` / `--cmp-spacing-md`, Schrift aus `--cmp-font-family-body-alt` und Text aus `--cmp-color-logo-dark`. `cmp-dashboard-link-group__copy` bündelt den kräftigen Titel (`__label`) und optionalen Sekundärtext (`__description`). Beschreibung und Metadaten verwenden `--cmp-font-size-sm`, `--cmp-color-text-muted`, normale Schriftstärke und Zeilenhöhe 1,5.
+- Ein linkes `cmp-dashboard-link-group__icon` ist optional. Es verwendet die vorhandene 2,5-rem-Fläche, `--cmp-color-strong` und `--cmp-color-background-default`. Ohne Icon verwendet die Zeile `cmp-dashboard-link-group__link--text`. Die MFA-Methodenliste verwendet bewusst keine Methodenicons; andere Dashboardgruppen behalten ihre vorhandenen Icons.
+- Rechts steht `cmp-dashboard-link-group__chevron` mit dem dekorativen UIkit-`chevron-right`; seine Farbe ist `--cmp-color-text-muted`. Das Chevron bleibt bei mehrzeiligem Text stabil ausgerichtet. `minmax(0, 1fr)`, `min-inline-size: 0` und `overflow-wrap: anywhere` sichern kontrolliertes Wrapping.
+- Hover und Active behalten Textfarbe und ruhige Fläche der bestehenden Profilimplementierung. Tastaturfokus erhält den nach innen gerichteten Rahmen aus `--cmp-border-width-lg` und `--cmp-color-strong`. Die vorhandenen kurzen Farb-/Flächenübergänge berücksichtigen Reduced Motion.
+- Die gesamte Zeile bildet grundsätzlich eine zugängliche Navigationsfläche. Native Links, aussagekräftige Namen und zugehörige Beschreibungen erhalten; dekorative Icons vor Screenreadern verbergen. Auf kleinen Displays reduzieren die vorhandenen `body.is-small`-Regeln Padding und Gap, ohne Text abzuschneiden oder Touchziele zu verkleinern. Mobile-first auch bei 320 px prüfen.
+- Optionale Statuskennzeichnungen stehen beim Titel und verwenden tatsächliche Fachzustände, sichtbaren Text und vorhandene Signalfarben. In der MFA-Liste erscheint „Aktiv“ in der Success-Farbe, „Standard“ neutraler. Metadaten bleiben unterhalb der Beschreibung erhalten. Keine Statuswerte allein über Farbe kommunizieren.
+- Bei zusätzlichen unabhängigen Aktionen verwendet ein gemeinsamer Zeilencontainer `cmp-dashboard-link-group__link--split`. Der native Hauptlink `cmp-dashboard-link-group__primary` erweitert seine Fläche per Pseudoelement über die Zeile und erhält dort seinen sichtbaren Fokusrahmen. Eine separate Aktion `cmp-dashboard-link-group__action` liegt als eigenständiger Link oder Button außerhalb des Hauptlinks und über dessen erweiterter Fläche. Ihr Zielbereich beträgt mindestens 2,75 rem in beiden Richtungen. Im MFA-Beispiel ist „Löschen“ ein kompakter roter Textlink beim Status mit eigenem Fokus und der unveränderten Joomla-Bestätigung.
+- Status und Löschaktion dürfen die Semantik des Navigationslinks nicht verletzen: keine verschachtelten interaktiven Elemente, kein gemeinsamer Klickhandler für Bearbeiten und Löschen, keine versehentliche Löschaktion beim Öffnen der Zeile. Lange Titel, Status und separate Aktionen müssen kontrolliert umbrechen. Nicht bearbeitbare Datensätze bleiben Information und erhalten kein irreführendes Navigationschevron.
+
 ---
 
 ## 11. Formulare und Aktionen
@@ -296,6 +310,67 @@ Auf kleinen Displays insbesondere prüfen:
 Breite, komplexe Inhalte dürfen einen lokal begrenzten eigenen Scroll-/Pan-Bereich erhalten, wenn die Gesamtseite dadurch nicht horizontal überläuft.
 
 Der gemeinsame Zielbereich für reguläre Controls soll mindestens etwa 44 px beziehungsweise 2,75 rem entsprechen, sofern kein bestehender spezialisierter Vertrag etwas anderes vorsieht.
+
+### Verbindlicher Viewport-/Breakpoint-Standard
+
+Für neue und ausdrücklich beauftragte responsive Anpassungen gilt der vorhandene CopyMyPage-Viewport-Vertrag. Bestehende Sonderfälle werden dadurch nicht pauschal zu Fehlern und nicht automatisch umgestellt.
+
+#### Zentrale Definitionen
+
+Technische Quelle der Wahrheit ist `CopyMyPage.constants.VIEWPORT_QUERY_DEFINITIONS` in der Live-Datei `media/com_copymypage/js/copymypage-base.js`. `ViewportFeature` in `media/com_copymypage/js/copymypage-behavior.js` wertet diese Definitionen mit `window.matchMedia()` aus und setzt die Klasse auf dem jeweiligen `<body>`.
+
+| Body-Klasse | Definierte Bedingung / vorgesehener Bereich in CSS-Pixeln |
+| --- | --- |
+| `is-small` | `max-width: 639.98px` |
+| `is-narrow` | `min-width: 640px` und `max-width: 767.98px` |
+| `is-mobile` | `min-width: 768px` und `max-width: 959.98px` |
+| `is-tablet` | `min-width: 960px` und `max-width: 1199.98px` |
+| `is-desktop` | vorgesehen ab 1200 px; aktuell der Restfall, wenn keine der vier anderen Bedingungen zutrifft |
+
+`is-mobile` bezeichnet ausschließlich den Bereich 768–959,98 px. Es ist keine Sammelklasse für Smartphones, Touchgeräte oder alle kleinen Viewports. Der zusätzliche JavaScript-Zustand `uiDesktop` verwendet `min-width: 960px`; er umfasst regulär Tablet und Desktop und erzeugt keine sechste Body-Klasse.
+
+Die aktuelle Implementierung enthält keine eigene Desktop-Media-Query. Zwischen den jeweiligen Maximalwerten mit `.98` und der folgenden ganzzahligen Minimalgrenze liegen rechnerisch offene Intervalle: `(639.98, 640)`, `(767.98, 768)`, `(959.98, 960)` und `(1199.98, 1200)`. Falls die Media-Query-Auswertung dort keine der vier Bereichsbedingungen erfüllt, wird ebenfalls `is-desktop` gesetzt. Rundung durch den Browser berücksichtigen; Klassenkombinationen deshalb nicht ungeprüft als exakt gleichwertig zu einer durchgehenden nativen Breitenabfrage behandeln. Eine Änderung dieser Grenzen benötigt einen eigenen Auftrag.
+
+#### Initialisierung, Aktualisierung und Dokumentkontext
+
+- Die normale Seitenschale `templates/copymypage/index.php` lädt das Preset `copymypage.site`. Dessen JavaScript-Abhängigkeiten werden mit `defer` geladen. `CopyMyPageAssetItem.php` startet die Runtime bei `DOMContentLoaded`, wenn das Dokument noch lädt, andernfalls unmittelbar. Die Runtime in `copymypage.js` initialisiert `ViewportFeature`.
+- Bei Initialisierung und jedem `MediaQueryList`-`change` entfernt das Feature alle fünf bekannten Viewport-Klassen und fügt genau eine aktuelle Klasse hinzu. Es verwendet `addEventListener('change', ...)`, ersatzweise `onchange`. Innerhalb eines unveränderten Bereichs ist kein Klassenwechsel erforderlich. Ein `resize`- oder `visualViewport`-Listener ist dafür nicht implementiert.
+- Genau eine Klasse gilt nach erfolgreicher Initialisierung und Aktualisierung bei vorhandenem Body. Im serverseitigen Markup, vor der Initialisierung sowie bei deaktiviertem, blockiertem oder fehlerhaftem JavaScript ist keine Viewport-Klasse garantiert. Die Klassen sind insbesondere kein garantierter First-Paint-Vertrag; ein Preloader ersetzt diese Garantie nicht.
+- `joomla:updated` startet die globale Viewport-Runtime nicht neu. Neue Inhalte im selben Body nutzen dessen bestehende Klasse. Nach Body-Austausch oder Runtime-Teardown muss die zuständige Integration die Initialisierung wiederherstellen; native Media Queries benötigen diesen Lebenszyklus nicht. Aktuell entfernt `pagehide` die Runtime-Listener, ohne dass der Initializer eine `pageshow`-Wiederaufnahme definiert. Rückkehr aus dem Back/Forward Cache muss bei klassenabhängigen Änderungen gesondert geprüft werden.
+- Login und weitere Authentifizierungsansichten innerhalb von `index.php` nutzen dieselbe Runtime. `error.php`, `component.php` und `offline.php` stellen selbst keinen Viewport-Klassenvertrag bereit. Komponenten können weitere Assets anfordern; darauf nicht ohne Prüfung vertrauen.
+- Ein Fragment-Drawer liegt im Body der Hauptseite und nutzt dessen Klasse. Ein Dokument-Drawer verwendet ein eigenes iframe-Dokument mit eigener Viewport-Breite. Es erbt weder Body-Klassen noch Runtime der Hauptseite; `component.php` initialisiert diese Runtime selbst nicht. Der responsive Vertrag des äußeren Drawers darf nicht auf das innere Dokument übertragen werden.
+
+#### Verwendungsrichtlinien
+
+- Bei allgemeinen viewportabhängigen Layoutanpassungen vorhandene Klassen bevorzugen, sofern Bereich, Dokumentkontext, Initialisierung und JavaScript-Abhängigkeit zur Aufgabe passen. Mehrere vorhandene Klassen kombinieren, statt eine zweite konkurrierende Standard-Breakpoint-Systematik anzulegen.
+- Mobile-first und fluides CSS bevorzugen, wenn eine brauchbare Grunddarstellung, Flex-Wrapping, Grid mit passenden Mindestbreiten oder `clamp()` die Komponente vereinfachen. Ein diskreter Struktur- oder Inhaltswechsel lässt sich nicht allein durch `clamp()` ersetzen.
+- Komponentenbezogene Sonder-Breakpoints sind zulässig, wenn Platzbedarf, Textlängen, Controls oder Einbettung sie begründen. Bei containerabhängigem Platzbedarf eine Container Query prüfen; dafür ist ein geeigneter Container-Vertrag erforderlich. Die Einführung eines Containers ist keine reine Selektoränderung.
+- Native `@media (min-width/max-width)`-Regeln beibehalten, wenn das Layout bereits beim First Paint, ohne JavaScript oder in Dokumenten ohne Viewport-Runtime funktionieren muss. Auch eine passende Standardgrenze rechtfertigt dort keinen automatischen Austausch.
+- Accessibility- und Feature Queries wie `prefers-reduced-motion`, `orientation`, `hover`, `pointer` sowie `@supports` erhalten ihren jeweiligen Zweck. Sie werden nicht durch Breitenklassen ersetzt.
+- CSS-Spezifität und Cascade vor jeder Umstellung prüfen. `@media` erhöht die Selektorspezifität nicht; ein zusätzliches `body.is-small` beziehungsweise `body:is(...)` tut dies. Bestehende Komponenten-, Zustands-, Framework- und nachfolgende Sonderregeln müssen weiterhin wie vorgesehen gewinnen. Quellreihenfolge allein gleicht höhere Spezifität nicht aus.
+- Keine pauschalen Pixelverbote. Entscheidend sind der nachgewiesene Layoutzweck und die technische Zuverlässigkeit. `rem`-Grenzen in Media Queries beziehen sich auf die initiale Browser-Schriftgröße, nicht auf die per CSS oder `--cmp-font-size` gesetzte Root-Schriftgröße; sie sind deshalb nicht universell mit festen Pixelgrenzen gleichzusetzen.
+
+#### Selektorbeispiele und Ausnahmen
+
+Die folgenden Formen entsprechen den vorhandenen Projektkonventionen; sie setzen einen Body mit korrekt initialisierter Viewport-Klasse voraus:
+
+```css
+body.is-small .cmp-example {
+    padding-inline: var(--cmp-spacing-md);
+}
+
+body:is(.is-small, .is-narrow) .cmp-example {
+    grid-template-columns: minmax(0, 1fr);
+}
+```
+
+Für die regulären Bereiche bis 959,98 px `is-small`, `is-narrow` und `is-mobile` kombinieren; für die regulären Bereiche ab 960 px `is-tablet` und `is-desktop`. Die oben beschriebenen Restfallintervalle und die Verfügbarkeit der Klassen bleiben zu beachten. `body:not(.is-small)` ist kein verlässlicher Ersatz für `min-width: 640px`: Der Selektor trifft auch vor der Initialisierung und ohne JavaScript zu.
+
+Bei einem ausdrücklich beauftragten Austausch kann `:where(body.is-small) .cmp-example` die ursprüngliche Spezifität von `.cmp-example` erhalten. Der gesamte zusätzliche Body-Filter muss dafür in `:where()` stehen; `body:where(.is-small)` behält die zusätzliche Typ-Spezifität von `body`. Dies löst weder Initialisierungs- noch Fallback-Probleme und ist kein pauschaler Ersatz für die bestehenden Selektoren.
+
+Zusätzliche native Breitenabfragen sind insbesondere für sehr schmale Displays, Komponenten mit eigenem Platzbedarf, Schriftgrößen-bezogene Layoutgrenzen und JavaScript-unabhängige Login-, Fehler- oder Dokumentdarstellungen erlaubt. Vor ihrer Einführung Zweck und Abweichung vom Klassenbereich nachvollziehbar begründen. Bestehende Ausnahmen erst nach gezielten Responsive-Tests konsolidieren.
+
+Bei späteren Umstellungen beide Seiten der relevanten Grenzen, verzögertes und deaktiviertes JavaScript, Browser-Zoom, dynamische Viewport-Wechsel sowie die betroffenen Dokumentkontexte prüfen. Mobile Safari zusätzlich mit Rotation, Pinch-Zoom, Browserleisten beziehungsweise Tastatur und Rückkehr aus dem Back/Forward Cache prüfen; Änderungen des sichtbaren Viewports erzwingen nicht automatisch einen Wechsel der Layout-Viewport-Klasse.
 
 ---
 

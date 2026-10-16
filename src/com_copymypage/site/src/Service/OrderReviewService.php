@@ -23,6 +23,11 @@ final class OrderReviewService
     ) {
     }
 
+    public function getBookingOwnerId(int $cartId, bool $forUpdate = false): int
+    {
+        return $this->customerData->getBookingOwnerId($cartId, $forUpdate);
+    }
+
     /**
      * @return array<string, mixed>
      */

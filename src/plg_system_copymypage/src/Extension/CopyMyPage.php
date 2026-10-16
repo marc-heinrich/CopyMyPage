@@ -37,7 +37,9 @@ use Joomla\Component\CopyMyPage\Site\Service\AccountMenuProvider;
 use Joomla\Component\CopyMyPage\Site\Service\AccountTicketsService;
 use Joomla\Component\CopyMyPage\Site\Service\AddressCatalogService;
 use Joomla\Component\CopyMyPage\Site\Service\AvatarService;
+use Joomla\Component\CopyMyPage\Site\Service\BookingCallbackContextService;
 use Joomla\Component\CopyMyPage\Site\Service\BookingCompletionService;
+use Joomla\Component\CopyMyPage\Site\Service\BookingIntegrityService;
 use Joomla\Component\CopyMyPage\Site\Service\ContactClaimService;
 use Joomla\Component\CopyMyPage\Site\Service\CountryCodeResolver;
 use Joomla\Component\CopyMyPage\Site\Service\CustomerDataService;
@@ -47,6 +49,11 @@ use Joomla\Component\CopyMyPage\Site\Service\OrderReviewService;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentHandoffService;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationService;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationServiceProvider;
+use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentServiceProvider;
+use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentService;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentAttemptRepository;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentOutboxService;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentProviderConfig;
 use Joomla\Component\CopyMyPage\Site\Service\ProfileAddressService;
 use Joomla\Component\CopyMyPage\Site\Service\SeatLayoutService;
 use Joomla\Component\CopyMyPage\Site\Service\SeatSelectionService;
@@ -212,6 +219,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                     $db->quoteName('b.id', 'booking_id'),
                     $db->quoteName('b.user_id', 'user_id'),
                     $db->quoteName('b.token', 'booking_token'),
+                    $db->quoteName('t.id', 'ticket_id'),
                     'EXISTS (SELECT 1 FROM ' . $db->quoteName('#__copymypage_ticket_carts', 'c')
                         . ' WHERE ' . $db->quoteName('c.booking_id') . ' = ' . $db->quoteName('b.id') . ') AS managed',
                 ])
@@ -234,7 +242,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             $owner = $authenticated && (int) $booking->user_id === $userId;
             $administrative = $authenticated && $user->authorise('dpcalendar.admin.book', 'com_dpcalendar');
 
-            if ($authenticated && !$owner && !$administrative) {
+            if ($authenticated && !$administrative) {
                 // DPCalendar also grants a booking's event authors native access.
                 $authorQuery = $db->getQuery(true)
                     ->select('COUNT(*)')
@@ -251,7 +259,39 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             }
 
             if ((int) $booking->managed === 1) {
-                $allowed = $owner || $administrative;
+                $allowed = $administrative;
+
+                if ($owner && !$administrative) {
+                    $integrity = Factory::getContainer()->get(BookingIntegrityService::class)
+                        ->inspect((int) $booking->booking_id);
+                    $managedTicket = null;
+
+                    foreach ($integrity['tickets'] as $ticket) {
+                        if ((int) $ticket->id === (int) $booking->ticket_id && (string) $ticket->uid === $uid) {
+                            $managedTicket = $ticket;
+                            break;
+                        }
+                    }
+
+                    $allowed = $integrity['valid']
+                        && (int) ($integrity['booking']->state ?? -1) === 1
+                        && (int) ($integrity['booking']->user_id ?? -1) === $userId
+                        && $managedTicket !== null
+                        && \in_array((int) $managedTicket->state, [1, 9], true)
+                        && (int) $managedTicket->user_id === $userId;
+                    if ($allowed && PaymentProviderConfig::isOwned((string) $integrity['booking']->payment_provider)) {
+                        $allowed = Factory::getContainer()->get(PaymentAttemptRepository::class)
+                            ->isFinalized((int) $booking->booking_id);
+                    }
+                }
+
+                // Native token fallback must never substitute another booking.
+                $token = $input->get('token', null, 'raw');
+                if ($token !== null && $token !== '') {
+                    $allowed = $allowed && \is_string($token)
+                        && (string) $booking->booking_token !== ''
+                        && hash_equals((string) $booking->booking_token, $token);
+                }
             } else {
                 // Preserve unmanaged native guest/session/token access, but never
                 // let a token for another booking replace this ticket's booking.
@@ -758,21 +798,29 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         }
 
         $input = $app->getInput();
-        $task  = $input->getCmd('task', '');
 
-        if (
-            $input->getCmd('option', '') !== 'com_dpcalendar'
-            || !\in_array($task, ['booking.pay', 'booking.paycancel'], true)
-        ) {
+        if (strtolower($input->getCmd('option', '')) !== 'com_dpcalendar') {
             return;
         }
 
+        $command = $input->getCmd('task', '');
+
+        if (str_contains($command, '.')) {
+            [$controller, $nativeTask] = explode('.', $command);
+        } else {
+            $controller = $input->get('controller', 'display');
+            $nativeTask = $command;
+        }
+
+        $controller = strtolower(preg_replace('/[^A-Z0-9_]/i', '', $controller));
+        $nativeTask = strtolower($nativeTask);
+
+        if ($controller !== 'booking' || !\in_array($nativeTask, ['pay', 'paycancel'], true)) {
+            return;
+        }
+
+        $task = 'booking.' . $nativeTask;
         $bookingId = max(0, $input->getInt('b_id', 0));
-
-        if ($bookingId < 1) {
-            return;
-        }
-
         $requestToken = trim($input->getString('dptoken', $input->getString('token', '')));
         $identity     = $app->getIdentity();
 
@@ -786,6 +834,8 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                     max(0, (int) ($identity->id ?? 0)),
                     $identity->authorise('dpcalendar.admin.book', 'com_dpcalendar')
                 );
+        } catch (\DomainException $exception) {
+            throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 403, $exception);
         } catch (\Throwable $exception) {
             Log::add(
                 'CopyMyPage payment callback guard failed for booking ID '
@@ -793,6 +843,12 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                 Log::ERROR,
                 'com_copymypage'
             );
+
+            throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 503, $exception);
+        }
+
+        if (!empty($decision['managed']) && !empty($decision['authorized']) && empty($decision['block'])) {
+            Factory::getContainer()->get(BookingCallbackContextService::class)->execute($bookingId, $task);
 
             return;
         }
@@ -1198,7 +1254,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             return null;
         }
 
-        return 'security';
+        return 'security.mfa';
     }
 
     /**
@@ -1537,7 +1593,8 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                     static fn(Container $container): AccountTicketsService
                         => new AccountTicketsService(
                             $container->get(DatabaseInterface::class),
-                            $container->get(TicketSeatProjectionService::class)
+                            $container->get(TicketSeatProjectionService::class),
+                            $container->get(PaymentAttemptRepository::class)
                         ),
                     true
                 );
@@ -1553,6 +1610,16 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             }
 
             $container->registerServiceProvider(new PaymentReconciliationServiceProvider());
+            $container->registerServiceProvider(new PayPalPaymentServiceProvider());
+
+            if (!$container->has(BookingIntegrityService::class)) {
+                $container->share(
+                    BookingIntegrityService::class,
+                    static fn(Container $container): BookingIntegrityService
+                        => new BookingIntegrityService($container->get(DatabaseInterface::class)),
+                    true
+                );
+            }
 
             if (!$container->has(BookingCompletionService::class)) {
                 $container->share(
@@ -1560,8 +1627,23 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                     static fn(Container $container): BookingCompletionService
                         => new BookingCompletionService(
                             $container->get(DatabaseInterface::class),
-                            $container->get(TicketSeatProjectionService::class)
+                            $container->get(TicketSeatProjectionService::class),
+                            $container->get(BookingIntegrityService::class),
+                            $container->get(PaymentAttemptRepository::class)
                         ),
+                    true
+                );
+            }
+
+            if (!$container->has(BookingCallbackContextService::class)) {
+                $container->share(
+                    BookingCallbackContextService::class,
+                    static fn(Container $container): BookingCallbackContextService => new BookingCallbackContextService(
+                        $app,
+                        $container->get(PaymentReconciliationService::class),
+                        $container->get(BookingIntegrityService::class),
+                        $container->get(PayPalPaymentService::class)
+                    ),
                     true
                 );
             }
@@ -1573,7 +1655,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                         $app,
                         $container->get(DatabaseInterface::class),
                         $container->get(FormFactoryInterface::class),
-                        $container->get(ProfileAddressRepository::class),
+                        $container->get(ProfileAddressService::class),
                         $container->get(AddressCatalogService::class),
                         $container->get(TicketCartContextService::class),
                         $container->get(SeatSelectionService::class)
@@ -1603,7 +1685,9 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                         $container->get(OrderReviewService::class),
                         $container->get(TicketCartContextService::class),
                         $container->get(TicketCatalogService::class),
-                        $container->get(TicketSeatProjectionService::class)
+                        $container->get(TicketSeatProjectionService::class),
+                        $container->get(BookingIntegrityService::class),
+                        $container->get(PaymentOutboxService::class)
                     ),
                     true
                 );
@@ -1662,6 +1746,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             $container->alias('copymypage.helper.profile.edit', ProfileHelper::class);
             $container->alias('copymypage.helper.security', SecurityHelper::class);
             $container->alias('copymypage.helper.security.edit', SecurityHelper::class);
+            $container->alias('copymypage.helper.security.mfa', SecurityHelper::class);
         }
 
         $container->alias('copymypage.navigation.account', AccountMenuProvider::class);

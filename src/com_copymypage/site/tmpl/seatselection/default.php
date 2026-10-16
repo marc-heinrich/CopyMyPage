@@ -321,12 +321,6 @@ $continueUrl = !empty($this->allComplete) ? trim((string) ($this->continueUrl ??
                                     </span>
                                 </span>
                                 <span
-                                    class="uk-icon-button uk-icon cmp-seat-selection-event__complete-icon"
-                                    uk-icon="icon: check"
-                                    aria-hidden="true"
-                                    <?php echo $isComplete ? '' : ' hidden'; ?>
-                                ></span>
-                                <span
                                     class="cmp-ticket-selection-event__icon"
                                     uk-icon="icon: chevron-down"
                                     aria-hidden="true"

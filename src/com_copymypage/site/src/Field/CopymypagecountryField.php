@@ -23,6 +23,15 @@ final class CopymypagecountryField extends ListField
 {
     protected $type = 'Copymypagecountry';
 
+    protected function getLayoutData(): array
+    {
+        $data = parent::getLayoutData();
+        // Joomla's list layout omits autocomplete; retain its standard renderer.
+        $data['dataAttribute'] .= ' autocomplete="' . htmlspecialchars($this->autocomplete, ENT_QUOTES, 'UTF-8') . '"';
+
+        return $data;
+    }
+
     /**
      * @return array<int, object>
      */
@@ -31,8 +40,17 @@ final class CopymypagecountryField extends ListField
         $options   = parent::getOptions();
         $catalogue = Factory::getContainer()->get(AddressCatalogService::class);
 
-        foreach ($catalogue->getCountries() as $code => $name) {
+        $countries = $catalogue->getCountries();
+
+        foreach ($countries as $code => $name) {
             $options[] = HTMLHelper::_('select.option', $code, $name);
+        }
+
+        // Keep rejected input visible for correction; services still validate it.
+        $value = trim((string) $this->value);
+
+        if ($value !== '' && !isset($countries[$value])) {
+            $options[] = HTMLHelper::_('select.option', $value, $value);
         }
 
         return $options;

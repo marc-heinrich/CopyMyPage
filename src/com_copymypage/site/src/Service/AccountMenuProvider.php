@@ -98,13 +98,16 @@ final class AccountMenuProvider
                 'profile.edit',
                 'security',
                 'security.edit',
+                'security.mfa',
                 'tickets',
             ],
             true
         )
             ? $layout
             : 'default';
+        $layout = $layout === 'security' ? 'profile' : $layout;
         $key    = $layout === 'default' ? 'overview' : explode('.', $layout, 2)[0];
+        $key    = $key === 'security' ? 'profile' : $key;
         $itemId = 0;
         $user   = $app->getIdentity();
 
@@ -190,7 +193,7 @@ final class AccountMenuProvider
 
         // Keep shared customer destinations in Dashboard order, retaining other
         // menu entries and structural nodes in their existing positions.
-        $order = ['overview' => 0, 'tickets' => 1, 'profile' => 2, 'security' => 3];
+        $order = ['overview' => 0, 'tickets' => 1, 'profile' => 2];
         $positions = [];
         $destinations = [];
 
@@ -237,6 +240,12 @@ final class AccountMenuProvider
             (string) ($menuItem->alias ?? '')
         );
         $type  = $this->resolveNodeType((string) ($menuItem->type ?? ''));
+
+        // Security remains a technical route, but is now part of Profile.
+        if ($key === 'security') {
+            return null;
+        }
+
         $label = trim(Text::_((string) ($menuItem->title ?? '')));
         $url   = $type === 'link' ? $this->resolveItemUrl($menuItem) : '';
 
@@ -336,9 +345,10 @@ final class AccountMenuProvider
             $key    = $layout === 'default'
                 ? 'overview'
                 : $this->normalizeToken(explode('.', $layout, 2)[0]);
+            $key    = $key === 'security' ? 'profile' : $key;
             $item   = $this->findItemByKey($items, $key);
             $itemId = (int) ($item['id'] ?? 0);
-            $exact  = !str_contains($layout, '.');
+            $exact  = !str_contains($layout, '.') && $layout !== 'security';
 
             return [
                 'activeKey'  => $key,

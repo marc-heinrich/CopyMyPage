@@ -53,6 +53,8 @@ final class HtmlView extends BaseHtmlView
 
     protected bool $showAccountOption = false;
 
+    protected string $profileAddressVersion = '';
+
     public function display($tpl = null): void
     {
         $app = Factory::getApplication();
@@ -84,6 +86,7 @@ final class HtmlView extends BaseHtmlView
         $this->loginForm         = $state['loginForm'] instanceof Form ? $state['loginForm'] : null;
         $this->loginModeActive   = (bool) ($state['loginModeActive'] ?? false);
         $this->showAccountOption = (bool) ($state['showAccountOption'] ?? false);
+        $this->profileAddressVersion = (string) ($state['profileAddressVersion'] ?? '');
         $this->formFieldNames    = $service->getFormFieldNames();
         $this->markupAttributes  = $service->getMarkupAttributes();
 

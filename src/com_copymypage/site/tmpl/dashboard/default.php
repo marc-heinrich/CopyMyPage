@@ -21,7 +21,6 @@ $avatar         = \is_array($profile['avatar'] ?? null) ? $profile['avatar'] : [
 $navigation     = $this->accountMenu;
 $destinationKeys = [
     'profile'  => true,
-    'security' => true,
     'tickets'  => true,
 ];
 $destinationUrls = [];
@@ -51,15 +50,20 @@ $collectDestinationUrls = static function (array $items) use (
 
 $collectDestinationUrls((array) ($navigation['items'] ?? []));
 
+if (isset($destinationUrls['profile'])) {
+    $destinationUrls['security'] = $this->securityUrl;
+}
+
 $overviewGroups = [
     [
         'id'    => 'cmp-dashboard-booking-actions',
         'title' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_BOOKINGS_TITLE',
         'items' => [
             [
-                'key'   => 'tickets',
-                'label' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_TICKETS',
-                'icon'  => 'tag',
+                'key'         => 'tickets',
+                'label'       => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_TICKETS',
+                'description' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_TICKETS_DESCRIPTION',
+                'icon'        => 'tag',
             ],
         ],
     ],
@@ -68,14 +72,16 @@ $overviewGroups = [
         'title' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_ACCOUNT_TITLE',
         'items' => [
             [
-                'key'   => 'profile',
-                'label' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_PERSONAL_DETAILS',
-                'icon'  => 'user',
+                'key'         => 'profile',
+                'label'       => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_PERSONAL_DETAILS',
+                'description' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_PERSONAL_DETAILS_DESCRIPTION',
+                'icon'        => 'user',
             ],
             [
-                'key'   => 'security',
-                'label' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_SECURITY_SETTINGS',
-                'icon'  => 'lock',
+                'key'         => 'security',
+                'label'       => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_SECURITY_SETTINGS',
+                'description' => 'COM_COPYMYPAGE_DASHBOARD_OVERVIEW_SECURITY_SETTINGS_DESCRIPTION',
+                'icon'        => 'lock',
             ],
         ],
     ],
@@ -133,8 +139,13 @@ $overviewGroups = [
                                 <span class="cmp-dashboard-link-group__icon" aria-hidden="true">
                                     <span uk-icon="icon: <?php echo $escape($item['icon']); ?>"></span>
                                 </span>
-                                <span class="cmp-dashboard-link-group__label">
-                                    <?php echo $escape(Text::_($item['label'])); ?>
+                                <span class="cmp-dashboard-link-group__copy">
+                                    <span class="cmp-dashboard-link-group__label">
+                                        <?php echo $escape(Text::_($item['label'])); ?>
+                                    </span>
+                                    <span class="cmp-dashboard-link-group__description">
+                                        <?php echo $escape(Text::_($item['description'])); ?>
+                                    </span>
                                 </span>
                                 <span class="cmp-dashboard-link-group__chevron" aria-hidden="true">
                                     <span uk-icon="icon: chevron-right"></span>

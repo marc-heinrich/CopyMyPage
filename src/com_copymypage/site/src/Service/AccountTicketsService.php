@@ -30,7 +30,8 @@ final class AccountTicketsService
 
     public function __construct(
         private readonly DatabaseInterface $db,
-        private readonly TicketSeatProjectionService $ticketSeats
+        private readonly TicketSeatProjectionService $ticketSeats,
+        private readonly ?PaymentAttemptRepository $paymentAttempts = null
     ) {
     }
 
@@ -59,6 +60,10 @@ final class AccountTicketsService
                 $bookingId = (int) ($row->booking_id ?? 0);
 
                 if ($bookingId < 1) {
+                    continue;
+                }
+                if (PaymentProviderConfig::isOwned((string) $row->payment_provider)
+                    && ($this->paymentAttempts === null || !$this->paymentAttempts->isFinalized($bookingId))) {
                     continue;
                 }
 
@@ -122,6 +127,7 @@ final class AccountTicketsService
                 $this->db->quoteName('b.book_date', 'book_date'),
                 $this->db->quoteName('b.price', 'booking_price'),
                 $this->db->quoteName('b.currency', 'booking_currency'),
+                $this->db->quoteName('b.payment_provider'),
             ])
             ->from($this->db->quoteName('#__dpcalendar_bookings', 'b'))
             ->where($this->db->quoteName('b.user_id') . ' = :userId')

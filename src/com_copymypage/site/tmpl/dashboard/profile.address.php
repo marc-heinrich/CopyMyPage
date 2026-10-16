@@ -70,6 +70,7 @@ $regionsUrl  = Route::_(
             data-region-placeholder="<?php echo $escape(Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_SELECT_REGION')); ?>"
             data-region-empty="<?php echo $escape(Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_REGION_EMPTY')); ?>"
             data-region-error="<?php echo $escape(Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_REGION_ERROR')); ?>"
+            data-region-loading="<?php echo $escape(Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_REGION_LOADING')); ?>"
         >
             <fieldset class="uk-fieldset cmp-profile-form__section cmp-profile-form__panel">
                 <legend><?php echo Text::_('COM_COPYMYPAGE_PROFILE_ADDRESS_SECTION_TITLE'); ?></legend>
@@ -82,7 +83,7 @@ $regionsUrl  = Route::_(
                         <div class="uk-width-1-1 uk-width-expand@s">
                             <?php echo $street->renderField(); ?>
                         </div>
-                        <div class="uk-width-1-1 uk-width-1-4@s">
+                        <div class="uk-width-1-1 uk-width-1-3@s">
                             <?php echo $houseNumber->renderField(); ?>
                         </div>
                     </div>

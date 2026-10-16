@@ -23,6 +23,15 @@ final class CopymypageregionField extends ListField
 {
     protected $type = 'Copymypageregion';
 
+    protected function getLayoutData(): array
+    {
+        $data = parent::getLayoutData();
+        // Joomla's list layout omits autocomplete; retain its standard renderer.
+        $data['dataAttribute'] .= ' autocomplete="' . htmlspecialchars($this->autocomplete, ENT_QUOTES, 'UTF-8') . '"';
+
+        return $data;
+    }
+
     /**
      * @return array<int, object>
      */
@@ -33,14 +42,18 @@ final class CopymypageregionField extends ListField
             ? trim((string) $this->form->getValue('country_code'))
             : '';
 
-        if ($countryCode === '') {
-            return $options;
+        $catalogue = Factory::getContainer()->get(AddressCatalogService::class);
+        $regions   = $countryCode !== '' ? $catalogue->getRegions($countryCode) : [];
+
+        foreach ($regions as $code => $name) {
+            $options[] = HTMLHelper::_('select.option', $code, $name);
         }
 
-        $catalogue = Factory::getContainer()->get(AddressCatalogService::class);
+        // Keep rejected input visible for correction; services still validate it.
+        $value = trim((string) $this->value);
 
-        foreach ($catalogue->getRegions($countryCode) as $code => $name) {
-            $options[] = HTMLHelper::_('select.option', $code, $name);
+        if ($value !== '' && !isset($regions[$value])) {
+            $options[] = HTMLHelper::_('select.option', $value, $value);
         }
 
         return $options;

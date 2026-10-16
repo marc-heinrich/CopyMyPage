@@ -15,8 +15,6 @@ use Joomla\CMS\Layout\LayoutHelper;
 /** @var \Joomla\Component\CopyMyPage\Site\View\Dashboard\HtmlView $this */
 
 $escape  = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-$profile = (array) ($this->dashboard['profile'] ?? []);
-$avatar  = \is_array($profile['avatar'] ?? null) ? $profile['avatar'] : [];
 $heading = $this->params->get('show_page_heading')
     && trim((string) $this->params->get('page_heading', '')) !== ''
     ? (string) $this->params->get('page_heading')
@@ -40,32 +38,55 @@ $heading = $this->params->get('show_page_heading')
     ?>
 
     <div class="cmp-dashboard__content">
-        <section class="cmp-profile-summary" aria-labelledby="cmp-profile-summary-title">
-            <span class="cmp-dashboard__avatar cmp-profile-summary__avatar" aria-hidden="true">
-                <?php if (!empty($avatar['exists']) && trim((string) ($avatar['url'] ?? '')) !== '') : ?>
-                    <img
-                        src="<?php echo $escape($avatar['url']); ?>"
-                        alt=""
-                        loading="eager"
-                        decoding="async"
-                    >
-                <?php else : ?>
-                    <?php echo $escape($profile['initials'] ?? '?'); ?>
-                <?php endif; ?>
-            </span>
-            <div>
-                <h2 id="cmp-profile-summary-title">
-                    <?php echo $escape($this->data->name); ?>
-                </h2>
-                <p class="cmp-profile-summary__username">
-                    @<?php echo $escape($this->data->username); ?>
-                </p>
-            </div>
+        <section class="cmp-dashboard-section cmp-dashboard-link-group" aria-labelledby="cmp-profile-personal">
+            <h2 id="cmp-profile-personal" class="cmp-dashboard-section__title">
+                <?php echo Text::_('COM_COPYMYPAGE_PROFILE_PERSONAL_TITLE'); ?>
+            </h2>
+            <ul class="cmp-dashboard-link-group__list">
+                <?php echo $this->loadTemplate('core'); ?>
+                <?php echo $this->loadTemplate('address'); ?>
+            </ul>
         </section>
 
-        <div class="cmp-profile-sections">
-            <?php echo $this->loadTemplate('core'); ?>
-            <?php echo $this->loadTemplate('address'); ?>
-        </div>
+        <section id="cmp-profile-security" class="cmp-dashboard-section cmp-dashboard-link-group" aria-labelledby="cmp-profile-security-title">
+            <h2 id="cmp-profile-security-title" class="cmp-dashboard-section__title">
+                <?php echo Text::_('COM_COPYMYPAGE_SECURITY_TITLE'); ?>
+            </h2>
+            <ul class="cmp-dashboard-link-group__list">
+                <?php foreach ([
+                    [
+                        'url'         => $this->securityEditUrl,
+                        'title'       => 'COM_COPYMYPAGE_SECURITY_PASSWORD_TITLE',
+                        'description' => 'COM_COPYMYPAGE_SECURITY_PASSWORD_SUMMARY',
+                        'icon'        => 'lock',
+                    ],
+                    [
+                        'url'         => $this->securityMfaUrl,
+                        'title'       => 'COM_COPYMYPAGE_SECURITY_MFA_TITLE',
+                        'description' => 'COM_COPYMYPAGE_SECURITY_MFA_SUMMARY',
+                        'icon'        => 'ban',
+                    ],
+                ] as $action) : ?>
+                    <li class="cmp-dashboard-link-group__item">
+                        <a class="cmp-dashboard-link-group__link" href="<?php echo $escape($action['url']); ?>">
+                            <span class="cmp-dashboard-link-group__icon" aria-hidden="true">
+                                <span uk-icon="icon: <?php echo $escape($action['icon']); ?>"></span>
+                            </span>
+                            <span class="cmp-dashboard-link-group__copy">
+                                <span class="cmp-dashboard-link-group__label">
+                                    <?php echo Text::_($action['title']); ?>
+                                </span>
+                                <span class="cmp-dashboard-link-group__description">
+                                    <?php echo Text::_($action['description']); ?>
+                                </span>
+                            </span>
+                            <span class="cmp-dashboard-link-group__chevron" aria-hidden="true">
+                                <span uk-icon="icon: chevron-right"></span>
+                            </span>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
     </div>
 </div>

@@ -65,141 +65,128 @@ $getDrawerAttributes = static function (string $title) use ($escape, $returnUrl)
 
     return ' ' . implode(' ', $output);
 };
+
+$getActionUrl = function (string $task, string $query): string {
+    return Route::_(
+        'index.php?option=com_users&task=' . $task . '&' . $query
+        . ($this->returnURL ? '&returnurl=' . urlencode($this->returnURL) : '')
+        . '&user_id=' . (int) $this->user->id,
+        false
+    );
+};
+
+$renderAction = static function (
+    string $url,
+    string $title,
+    string $description,
+    string $hook
+) use ($escape, $getDrawerAttributes): void {
+    ?>
+    <a
+        class="cmp-dashboard-link-group__link cmp-dashboard-link-group__link--text <?php echo $escape($hook); ?>"
+        href="<?php echo $escape($url); ?>"
+        <?php echo $getDrawerAttributes($title); ?>
+    >
+        <span class="cmp-dashboard-link-group__copy">
+            <span class="cmp-dashboard-link-group__label">
+                <?php echo $escape($title); ?>
+            </span>
+            <span class="cmp-dashboard-link-group__description">
+                <?php echo $description; ?>
+            </span>
+        </span>
+        <span class="cmp-dashboard-link-group__chevron" aria-hidden="true">
+            <span uk-icon="icon: chevron-right"></span>
+        </span>
+    </a>
+    <?php
+};
 ?>
-<div id="com-users-methods-list-container">
-    <?php foreach ($this->methods as $methodName => $method) :
-        $methodClass = 'com-users-methods-list-method-name-' . htmlentities($method['name'])
-            . ($this->defaultMethod == $methodName ? ' com-users-methods-list-method-default' : '');
-        ?>
-        <div class="com-users-methods-list-method <?php echo $methodClass?> mx-1 my-3 card <?php echo count($method['active']) ? 'border-secondary' : '' ?>">
-            <div class="com-users-methods-list-method-header card-header <?php echo count($method['active']) ? 'border-secondary bg-secondary text-white' : '' ?> d-flex flex-wrap align-items-center gap-2">
-                <div class="com-users-methods-list-method-image pt-1 px-3 pb-2 bg-light rounded-2">
-                    <img src="<?php echo Uri::root() . $method['image'] ?>"
-                         alt="<?php echo $this->escape($method['display']) ?>"
-                         class="img-fluid"
-                    >
-                </div>
-                <div class="com-users-methods-list-method-title flex-grow-1 d-flex flex-column">
-                    <h2 class="h4 p-0 m-0 d-flex gap-3 align-items-center">
-                        <span class="me-1 flex-grow-1">
-                            <?php echo $method['display'] ?>
-                        </span>
-                        <?php if ($this->defaultMethod == $methodName) : ?>
-                            <span id="com-users-methods-list-method-default-tag" class="badge bg-info me-1 fs-6">
-                                <?php echo Text::_('COM_USERS_MFA_LIST_DEFAULTTAG') ?>
-                            </span>
-                        <?php endif; ?>
-                    </h2>
-                </div>
-            </div>
-
-            <div class="com-users-methods-list-method-records-container card-body">
-                <div class="com-users-methods-list-method-info my-1 pb-1 small text-muted">
-                    <?php echo $method['shortinfo'] ?>
-                </div>
-
-                <?php if (count($method['active'])) : ?>
-                    <div class="com-users-methods-list-method-records pt-2 my-2">
-                        <?php foreach ($method['active'] as $record) : ?>
-                            <div class="com-users-methods-list-method-record d-flex flex-row flex-wrap justify-content-start border-top py-2">
-                                <div class="com-users-methods-list-method-record-info flex-grow-1 d-flex flex-column align-items-start gap-1">
-                                    <?php if ($methodName === 'backupcodes' && $canAddEdit) : ?>
-                                        <div class="alert alert-info mt-1 w-100">
-                                            <?php
-                                            $backupPrompt = Text::sprintf(
-                                                'COM_USERS_MFA_BACKUPCODES_PRINT_PROMPT_HEAD',
-                                                Route::_(
-                                                    'index.php?option=com_users&task=method.edit&id='
-                                                    . (int) $record->id
-                                                    . ($this->returnURL
-                                                        ? '&returnurl=' . $this->escape(urlencode($this->returnURL))
-                                                        : '')
-                                                    . '&user_id=' . $this->user->id
-                                                ),
-                                                'com-users-methods-list-backupcodes-link'
-                                            );
-                                            $backupAttributes = $getDrawerAttributes(
-                                                Text::_('COM_USERS_USER_BACKUPCODES')
-                                            );
-
-                                            if ($backupAttributes !== '') {
-                                                $adaptedPrompt = preg_replace_callback(
-                                                    '/<a\b/i',
-                                                    static fn(array $matches): string => $matches[0] . $backupAttributes,
-                                                    $backupPrompt,
-                                                    1
-                                                );
-                                                $backupPrompt = $adaptedPrompt ?? $backupPrompt;
-                                            }
-
-                                            echo $backupPrompt;
-                                            ?>
-                                        </div>
-                                    <?php else : ?>
-                                        <h3 class="com-users-methods-list-method-record-title-container mb-1 fs-5">
-                                            <?php if ($record->default) : ?>
-                                                <span id="com-users-methods-list-method-default-badge-small"
-                                                      class="text-warning me-1 hasTooltip"
-                                                      title="<?php echo $this->escape(Text::_('COM_USERS_MFA_LIST_DEFAULTTAG')) ?>">
-                                                    <span class="icon icon-star" aria-hidden="true"></span>
-                                                    <span class="visually-hidden"><?php echo $this->escape(Text::_('COM_USERS_MFA_LIST_DEFAULTTAG')) ?></span>
-                                                </span>
-                                            <?php endif; ?>
-                                            <span class="com-users-methods-list-method-record-title fw-bold">
-                                                <?php echo $this->escape($record->title); ?>
+<div id="com-users-methods-list-container" class="cmp-mfa-settings__methods">
+    <ul class="cmp-dashboard-link-group__list">
+        <?php foreach ($this->methods as $methodName => $method) : ?>
+            <?php
+            $methodClass = 'com-users-methods-list-method-name-' . $method['name']
+                . ($this->defaultMethod === $methodName ? ' com-users-methods-list-method-default' : '');
+            ?>
+            <?php foreach ($method['active'] as $record) : ?>
+                <li class="cmp-dashboard-link-group__item <?php echo $escape($methodClass); ?>">
+                    <?php
+                    $recordTitle = $methodName === 'backupcodes'
+                        ? Text::_('COM_USERS_USER_BACKUPCODES')
+                        : (string) $record->title;
+                    $descriptionId = 'cmp-mfa-record-description-' . (int) $record->id;
+                    ?>
+                    <div class="cmp-dashboard-link-group__link cmp-dashboard-link-group__link--text cmp-dashboard-link-group__link--split">
+                        <div class="cmp-dashboard-link-group__copy">
+                            <div class="cmp-mfa-settings__record-header">
+                                <?php if ($canAddEdit) : ?>
+                                    <a
+                                        class="cmp-dashboard-link-group__label cmp-dashboard-link-group__primary com-users-methods-list-method-record-edit"
+                                        href="<?php echo $escape($getActionUrl('method.edit', 'id=' . (int) $record->id)); ?>"
+                                        aria-describedby="<?php echo $escape(
+                                            $descriptionId
+                                            . ($methodName !== 'backupcodes' ? ' cmp-mfa-record-active-' . (int) $record->id : '')
+                                            . ($record->default ? ' cmp-mfa-record-default-' . (int) $record->id : '')
+                                        ); ?>"
+                                        <?php echo $getDrawerAttributes($recordTitle); ?>
+                                    ><?php echo $escape($recordTitle); ?></a>
+                                <?php else : ?>
+                                    <span class="cmp-dashboard-link-group__label"><?php echo $escape($recordTitle); ?></span>
+                                <?php endif; ?>
+                                <?php if ($methodName !== 'backupcodes' || $record->default) : ?>
+                                    <div class="cmp-mfa-settings__record-status">
+                                        <?php if ($methodName !== 'backupcodes') : ?>
+                                            <span id="cmp-mfa-record-active-<?php echo (int) $record->id; ?>" class="cmp-mfa-settings__active">
+                                                <span aria-hidden="true">· </span><?php echo Text::_('COM_COPYMYPAGE_SECURITY_MFA_STATUS_ACTIVE'); ?>
                                             </span>
-                                        </h3>
-                                    <?php endif; ?>
-
-                                    <div class="com-users-methods-list-method-record-lastused my-1 d-flex flex-row flex-wrap justify-content-start gap-5 text-muted small w-100">
-                                        <span class="com-users-methods-list-method-record-createdon">
-                                            <?php echo Text::sprintf('COM_USERS_MFA_LBL_CREATEDON', $model->formatRelative($record->created_on)) ?>
-                                        </span>
-                                        <span class="com-users-methods-list-method-record-lastused-date">
-                                            <?php echo Text::sprintf('COM_USERS_MFA_LBL_LASTUSED', $model->formatRelative($record->last_used)) ?>
-                                        </span>
+                                        <?php endif; ?>
+                                        <?php if ($record->default) : ?>
+                                            <span id="cmp-mfa-record-default-<?php echo (int) $record->id; ?>" class="cmp-mfa-settings__default">
+                                                <span aria-hidden="true">· </span><?php echo Text::_('COM_USERS_MFA_LIST_DEFAULTTAG'); ?>
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ($methodName !== 'backupcodes' && $method['canDisable'] && $canDelete) : ?>
+                                            <span aria-hidden="true" class="cmp-mfa-settings__separator">·</span>
+                                            <a
+                                                class="com-users-methods-list-method-record-delete cmp-dashboard-link-group__action cmp-mfa-settings__delete"
+                                                href="<?php echo $escape($getActionUrl(
+                                                    'method.delete',
+                                                    'id=' . (int) $record->id . '&' . Factory::getApplication()->getFormToken() . '=1'
+                                                )); ?>"
+                                                aria-label="<?php echo $escape(Text::_('JACTION_DELETE') . ' ' . $record->title); ?>"
+                                            >
+                                                <?php echo Text::_('JACTION_DELETE'); ?>
+                                            </a>
+                                        <?php endif; ?>
                                     </div>
-
-                                </div>
-
-                                <?php if ($methodName !== 'backupcodes' && ($canAddEdit || $canDelete)) : ?>
-                                <div class="com-users-methods-list-method-record-actions my-2 d-flex flex-row flex-wrap justify-content-center align-content-center align-items-start">
-                                    <?php if ($canAddEdit) : ?>
-                                    <a class="com-users-methods-list-method-record-edit btn btn-secondary btn-sm cmp-button cmp-button--secondary mx-1"
-                                       href="<?php echo Route::_('index.php?option=com_users&task=method.edit&id=' . (int) $record->id . ($this->returnURL ? '&returnurl=' . $this->escape(urlencode($this->returnURL)) : '') . '&user_id=' . $this->user->id)?>"
-                                       <?php echo $getDrawerAttributes(Text::_('COM_USERS_MFA_EDIT_PAGE_HEAD')); ?>
-                                       aria-label="<?php echo $this->escape(Text::_('JACTION_EDIT') . ' ' . $record->title); ?>">
-                                        <?php echo Text::_('JACTION_EDIT'); ?>
-                                    </a>
-                                    <?php endif ?>
-
-                                    <?php if ($method['canDisable'] && $canDelete) : ?>
-                                    <a class="com-users-methods-list-method-record-delete btn btn-danger btn-sm cmp-button cmp-button--danger mx-1"
-                                       href="<?php echo Route::_('index.php?option=com_users&task=method.delete&id=' . (int) $record->id . ($this->returnURL ? '&returnurl=' . $this->escape(urlencode($this->returnURL)) : '') . '&user_id=' . $this->user->id . '&' . Factory::getApplication()->getFormToken() . '=1')?>"
-                                       aria-label="<?php echo $this->escape(Text::_('JACTION_DELETE') . ' ' . $record->title); ?>">
-                                        <?php echo Text::_('JACTION_DELETE'); ?>
-                                    </a>
-                                    <?php endif; ?>
-                                </div>
                                 <?php endif; ?>
                             </div>
-                        <?php endforeach; ?>
+                            <div id="<?php echo $escape($descriptionId); ?>" class="cmp-dashboard-link-group__description cmp-mfa-settings__record-meta">
+                                <span><?php echo $method['shortinfo']; ?></span>
+                                <span><?php echo Text::sprintf('COM_USERS_MFA_LBL_CREATEDON', $model->formatRelative($record->created_on)); ?></span>
+                                <span><?php echo Text::sprintf('COM_USERS_MFA_LBL_LASTUSED', $model->formatRelative($record->last_used)); ?></span>
+                            </div>
+                        </div>
+                        <?php if ($canAddEdit) : ?>
+                            <span class="cmp-dashboard-link-group__chevron" aria-hidden="true">
+                                <span uk-icon="icon: chevron-right"></span>
+                            </span>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
 
-                <?php if ($canAddEdit && (empty($method['active']) || $method['allowMultiple'])) : ?>
-                    <div class="com-users-methods-list-method-addnew-container border-top pt-2">
-                        <a href="<?php echo Route::_('index.php?option=com_users&task=method.add&method=' . $this->escape(urlencode($method['name'])) . ($this->returnURL ? '&returnurl=' . $this->escape(urlencode($this->returnURL)) : '') . '&user_id=' . $this->user->id)?>"
-                           class="com-users-methods-list-method-addnew btn btn-outline-primary btn-sm cmp-button cmp-button--primary-outline"
-                           <?php echo $getDrawerAttributes(
-                               Text::sprintf('COM_USERS_MFA_ADD_AUTHENTICATOR_OF_TYPE', $method['display'])
-                           ); ?>
-                        >
-                            <?php echo Text::sprintf('COM_USERS_MFA_ADD_AUTHENTICATOR_OF_TYPE', $method['display']) ?>
-                        </a>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    <?php endforeach; ?>
+            <?php if ($canAddEdit && (empty($method['active']) || $method['allowMultiple'])) : ?>
+                <li class="cmp-dashboard-link-group__item <?php echo $escape($methodClass); ?>">
+                    <?php $renderAction(
+                        $getActionUrl('method.add', 'method=' . urlencode($method['name'])),
+                        Text::sprintf('COM_USERS_MFA_ADD_AUTHENTICATOR_OF_TYPE', $method['display']),
+                        (string) $method['shortinfo'],
+                        'com-users-methods-list-method-addnew'
+                    ); ?>
+                </li>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    </ul>
 </div>

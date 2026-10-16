@@ -20,12 +20,143 @@ use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 use Joomla\Component\CopyMyPage\Site\Exception\TicketCartRevisionConflictException;
 use Joomla\Component\CopyMyPage\Site\Service\TicketReservationService;
+use Joomla\Database\DatabaseInterface;
+use Joomla\Database\ParameterType;
+use Joomla\Registry\Registry;
 
 /**
  * Public AJAX and POST-fallback controller for temporary ticket reservations.
  */
 final class TicketcartController extends BaseController
 {
+    /**
+     * Read the current reservation without advancing its expiry or revision.
+     */
+    public function state(): void
+    {
+        $this->prepareNoStoreResponse();
+
+        try {
+            $data = ['cart' => $this->getCurrentSessionCartState()];
+            $this->sendJsonHeaders();
+            echo new JsonResponse($data, null, false, true);
+        } catch (\Throwable $exception) {
+            $this->logException($exception);
+            $this->sendJsonHeaders();
+            echo new JsonResponse(
+                null,
+                Text::_('COM_COPYMYPAGE_TICKET_SELECTION_ERROR_REQUEST'),
+                true,
+                true
+            );
+        }
+
+        $this->app->close();
+    }
+
+    /**
+     * Refresh and persist this poll's database session while its row is locked.
+     * The native handler disconnects on close, so commit before aborting its
+     * automatic write instead of releasing the lock with a stale snapshot.
+     */
+    private function getCurrentSessionCartState(): array
+    {
+        if ($this->app->get('session_handler') !== 'database') {
+            return $this->getTicketService()->getCartState();
+        }
+
+        $session = $this->app->getSession();
+        $sessionId = $session->getId();
+        $db = Factory::getContainer()->get(DatabaseInterface::class);
+        $transactionStarted = false;
+
+        try {
+            $db->transactionStart();
+            $transactionStarted = true;
+            $query = $db->getQuery(true)
+                ->setQuery('SELECT ' . $db->quoteName('data')
+                    . ' FROM ' . $db->quoteName('#__session')
+                    . ' WHERE ' . $db->quoteName('session_id') . ' = :sessionId FOR UPDATE')
+                ->bind(':sessionId', $sessionId);
+            $stored = $db->setQuery($query)->loadAssoc();
+
+            if (!\is_array($stored)) {
+                throw new \RuntimeException('The cart state session no longer exists.');
+            }
+
+            // A newly created session has no stored snapshot to reload yet.
+            if ((string) ($stored['data'] ?? '') !== '') {
+                $_SESSION = [];
+
+                if (!session_decode($stored['data'])) {
+                    throw new \RuntimeException('The cart state session could not be decoded.');
+                }
+
+                $registry = unserialize(base64_decode($_SESSION['joomla'] ?? '', true));
+
+                if (!$registry instanceof Registry) {
+                    throw new \RuntimeException('The cart state session registry is invalid.');
+                }
+
+                foreach (array_keys($session->all()) as $key) {
+                    $session->remove($key);
+                }
+
+                foreach ($registry as $key => $value) {
+                    $session->set($key, $value);
+                }
+
+                // Retain this request's normal session counter and activity update.
+                $session->set('session.counter', (int) $session->get('session.counter', 0) + 1);
+                $session->set('session.timer.last', $session->get('session.timer.now', time()));
+                $session->set('session.timer.now', time());
+            }
+
+            try {
+                return $this->getTicketService()->getCartState();
+            } finally {
+                // Preserve legitimate cart/session cleanup, including error paths.
+                $registry = new Registry();
+
+                foreach (array_keys($session->all()) as $key) {
+                    $registry->set($key, $session->get($key));
+                }
+
+                $_SESSION['joomla'] = base64_encode(serialize($registry));
+                $data = session_encode();
+
+                if ($data === false) {
+                    throw new \RuntimeException('The cart state session could not be encoded.');
+                }
+
+                $time = time();
+                $query = $db->getQuery(true)
+                    ->update($db->quoteName('#__session'))
+                    ->set($db->quoteName('data') . ' = :data')
+                    ->set($db->quoteName('time') . ' = :time')
+                    ->where($db->quoteName('session_id') . ' = :sessionId')
+                    ->bind(':data', $data)
+                    ->bind(':time', $time, ParameterType::INTEGER)
+                    ->bind(':sessionId', $sessionId);
+                $db->setQuery($query)->execute();
+                $db->transactionCommit();
+                $transactionStarted = false;
+            }
+        } catch (\Throwable $exception) {
+            if ($transactionStarted) {
+                $db->transactionRollback();
+            }
+
+            throw $exception;
+        } finally {
+            if ($session->isActive()) {
+                $session->abort();
+            }
+
+            $session->close();
+        }
+    }
+
     public function availability(): void
     {
         $this->prepareNoStoreResponse();

@@ -215,11 +215,22 @@ $moneyFormatter = class_exists(\NumberFormatter::class)
                                                                         $ticketId = max(0, (int) ($ticket['id'] ?? 0));
                                                                         $typeLabel = trim((string) ($ticket['typeLabel'] ?? ''));
                                                                         $ticketLabel = Text::_('COM_COPYMYPAGE_DASHBOARD_TICKETS_TICKET_LABEL');
+                                                                        $checkedIn = $ticket['checkedIn'] === true;
                                                                         $statusId = 'cmp-ticket-status-' . (int) $booking['id'] . '-' . $ticketId;
                                                                         ?>
                                                                         <li class="cmp-dashboard-booking__ticket" data-cmp-ticket data-ticket-id="<?php echo $ticketId; ?>">
                                                                             <span class="cmp-dashboard-booking__ticket-copy">
-                                                                                <strong><?php echo $escape($ticketLabel); ?></strong>
+                                                                                <span class="cmp-dashboard-booking__ticket-heading">
+                                                                                    <strong><?php echo $escape($ticketLabel); ?></strong>
+                                                                                    <span class="cmp-dashboard-booking__ticket-checkin<?php echo $checkedIn ? ' is-checked-in' : ''; ?>">
+                                                                                        <span uk-icon="icon: <?php echo $checkedIn ? 'lock' : 'unlock'; ?>; ratio: 0.8" aria-hidden="true"></span>
+                                                                                        <span>
+                                                                                            <?php echo $escape(Text::_($checkedIn
+                                                                                                ? 'COM_COPYMYPAGE_TICKET_CHECKIN_CHECKED_IN'
+                                                                                                : 'COM_COPYMYPAGE_DASHBOARD_TICKETS_CHECKIN_OPEN')); ?>
+                                                                                        </span>
+                                                                                    </span>
+                                                                                </span>
                                                                                 <?php if ($typeLabel !== '' && $typeLabel !== $ticketLabel) : ?>
                                                                                     <span><?php echo $escape($typeLabel); ?></span>
                                                                                 <?php endif; ?>

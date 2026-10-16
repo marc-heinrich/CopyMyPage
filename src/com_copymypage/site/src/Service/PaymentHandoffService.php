@@ -59,13 +59,19 @@ final class PaymentHandoffService
         $handoffs = $this->getCurrentHandoffs($now);
         $handoff  = $handoffs[$bookingId] ?? null;
 
-        // Consume before the external provider is invoked so a refresh cannot reuse it.
+        if (
+            !\is_array($handoff)
+            || (int) ($handoff['expiresAt'] ?? 0) < $now
+            || !hash_equals((string) ($handoff['tokenHash'] ?? ''), hash('sha256', $token))
+        ) {
+            return false;
+        }
+
+        // Consume only the matching capability before invoking the provider.
         unset($handoffs[$bookingId]);
         $this->app->getSession()->set(self::SESSION_KEY, $handoffs);
 
-        return \is_array($handoff)
-            && (int) ($handoff['expiresAt'] ?? 0) >= $now
-            && hash_equals((string) ($handoff['tokenHash'] ?? ''), hash('sha256', $token));
+        return true;
     }
 
     /** @return array<int, array{expiresAt: int, tokenHash: string}> */

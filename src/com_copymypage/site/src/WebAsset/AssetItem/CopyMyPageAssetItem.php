@@ -92,7 +92,6 @@ final class CopyMyPageAssetItem extends WebAssetItem implements WebAssetAttachBe
 
                 // Bind lifecycle hooks once.
                 if (!window.__copyMyPageLifecycleBound) {
-                    window.addEventListener('beforeunload', destroyCopyMyPage);
                     window.addEventListener('pagehide', destroyCopyMyPage);
                     document.addEventListener('turbo:before-cache', destroyCopyMyPage);
                     document.addEventListener('pjax:beforeReplace', destroyCopyMyPage);

@@ -13,6 +13,7 @@ namespace Joomla\Component\CopyMyPage\Site\WebAsset\AssetItem;
 
 use Joomla\CMS\Document\Document;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\WebAsset\WebAssetAttachBehaviorInterface;
 use Joomla\CMS\WebAsset\WebAssetItem;
 use Joomla\Component\CopyMyPage\Site\Service\CustomerDataService;
@@ -24,6 +25,9 @@ final class CustomerDataAssetItem extends WebAssetItem implements WebAssetAttach
 {
     public function onAttachCallback(Document $doc): void
     {
+        Factory::getApplication()->getLanguage()->load('plg_system_privacyconsent', JPATH_ADMINISTRATOR);
+        Text::script('PLG_SYSTEM_PRIVACYCONSENT_FIELD_ERROR');
+
         $doc->addScriptOptions(
             'copymypage.params',
             ['com' => ['customerData' => $this->getParams()]],

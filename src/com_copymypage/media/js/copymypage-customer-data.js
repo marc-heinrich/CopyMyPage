@@ -86,12 +86,43 @@
             && loginMode.classList.contains('uk-active')
         );
 
+        const syncPrivacyConsentValidity = () => {
+            const controls = queryAll(root, selectors.privacyConsent);
+            const required = toggle instanceof HTMLInputElement && toggle.checked
+                && (config.privacyConsentRequired || controls.length > 0);
+            const valid = !required || controls.some((control) => (
+                control instanceof HTMLInputElement
+                && control.type === 'radio'
+                && !control.disabled
+                && control.checked
+                && control.value === '1'
+            ));
+
+            controls.forEach((control) => {
+                if (typeof control.setCustomValidity === 'function') {
+                    control.setCustomValidity('');
+                }
+            });
+
+            const validationControl = controls.find((control) => (
+                control instanceof HTMLInputElement && !control.disabled
+            ));
+
+            if (!valid && validationControl) {
+                validationControl.setCustomValidity(Joomla.Text._('PLG_SYSTEM_PRIVACYCONSENT_FIELD_ERROR'));
+            }
+
+            return valid;
+        };
+
         const syncContinueButton = () => {
+            const consentValid = syncPrivacyConsentValidity();
+
             if (!(continueButton instanceof HTMLButtonElement)) {
                 return;
             }
 
-            const disabled = isLoginModeActive() || !isCustomerFormValid();
+            const disabled = isLoginModeActive() || !consentValid || !isCustomerFormValid();
 
             continueButton.disabled = disabled;
             continueButton.setAttribute('aria-disabled', disabled ? 'true' : 'false');
@@ -100,6 +131,15 @@
         if (customerForm instanceof HTMLFormElement) {
             customerForm.addEventListener('input', syncContinueButton);
             customerForm.addEventListener('change', syncContinueButton);
+            customerForm.addEventListener('submit', (event) => {
+                const consentValid = syncPrivacyConsentValidity();
+
+                if (isLoginModeActive() || !consentValid || !isCustomerFormValid()) {
+                    event.preventDefault();
+                    syncContinueButton();
+                    customerForm.reportValidity();
+                }
+            });
         }
 
         if (loginMode instanceof HTMLElement && typeof MutationObserver === 'function') {
@@ -136,6 +176,7 @@
         }
 
         if (!(toggle instanceof HTMLInputElement) || !(fields instanceof HTMLElement)) {
+            window.addEventListener('pageshow', syncContinueButton);
             syncContinueButton();
 
             return;
@@ -177,7 +218,9 @@
             });
         }
 
+        toggle.addEventListener('input', syncAccountFields);
         toggle.addEventListener('change', syncAccountFields);
+        window.addEventListener('pageshow', syncAccountFields);
         syncAccountFields();
     };
 

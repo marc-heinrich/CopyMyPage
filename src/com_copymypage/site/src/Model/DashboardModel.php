@@ -64,7 +64,7 @@ class DashboardModel extends BaseDatabaseModel
         $address         = $extraData['profileAddress'] ?? [];
         $addressForm     = $extraData['profileAddressForm'] ?? null;
         $params          = $extraData['profileParams'] ?? null;
-        $requiresForm    = \in_array($layout, ['profile.edit', 'security', 'security.edit'], true);
+        $requiresForm    = \in_array($layout, ['profile.edit', 'security.edit'], true);
         $requiresAvatar  = $layout === 'profile.edit';
         $requiresAddress = $layout === 'profile.address';
 

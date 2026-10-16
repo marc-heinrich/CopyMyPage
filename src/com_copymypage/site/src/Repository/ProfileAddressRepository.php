@@ -31,7 +31,7 @@ final class ProfileAddressRepository
     /**
      * Return the current profile address for one Joomla user.
      */
-    public function findForUser(int $userId): ?AddressData
+    public function findForUser(int $userId, bool $forUpdate = false): ?AddressData
     {
         $addressKey = self::ADDRESS_KEY;
         $query = $this->db->getQuery(true)
@@ -40,8 +40,11 @@ final class ProfileAddressRepository
             ->where($this->db->quoteName('user_id') . ' = :userId')
             ->where($this->db->quoteName('address_key') . ' = :addressKey')
             ->bind(':userId', $userId, ParameterType::INTEGER)
-            ->bind(':addressKey', $addressKey, ParameterType::STRING)
-            ->setLimit(1);
+            ->bind(':addressKey', $addressKey, ParameterType::STRING);
+        if ($forUpdate) {
+            $query->setQuery((string) $query . ' FOR UPDATE');
+        }
+
         $row = $this->db->setQuery($query)->loadObject();
 
         return is_object($row) ? AddressData::fromStorage($row) : null;
@@ -54,14 +57,20 @@ final class ProfileAddressRepository
     {
         $addressKey = self::ADDRESS_KEY;
         $query = $this->db->getQuery(true)
-            ->select($this->db->quoteName('id'))
+            ->select('*')
             ->from($this->db->quoteName('#__copymypage_addresses'))
             ->where($this->db->quoteName('user_id') . ' = :userId')
             ->where($this->db->quoteName('address_key') . ' = :addressKey')
             ->bind(':userId', $userId, ParameterType::INTEGER)
-            ->bind(':addressKey', $addressKey, ParameterType::STRING)
-            ->setLimit(1);
-        $addressId = (int) $this->db->setQuery($query)->loadResult();
+            ->bind(':addressKey', $addressKey, ParameterType::STRING);
+        $query->setQuery((string) $query . ' FOR UPDATE');
+        $existing  = $this->db->setQuery($query)->loadObject();
+        $addressId = (int) ($existing->id ?? 0);
+
+        if ($existing !== null && AddressData::fromStorage($existing)->toStorageData() === $address->toStorageData()) {
+            return $addressId;
+        }
+
         $now       = Factory::getDate()->toSql();
         $record    = (object) array_merge(
             [

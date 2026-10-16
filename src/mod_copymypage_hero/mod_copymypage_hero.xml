@@ -7,7 +7,7 @@
   <license>http://www.gnu.org/copyleft/gpl.html GNU/GPL</license>
   <authorEmail>heinrich-marc@gmx.de</authorEmail>
   <authorUrl>https://copymypage.de</authorUrl>
-  <version>0.0.23</version>
+  <version>0.0.24</version>
   <description>MOD_COPYMYPAGE_HERO_XML_DESCRIPTION</description>
   <scriptfile>script.php</scriptfile>
   <namespace path="src">Joomla\Module\CopyMyPage\Hero</namespace>
@@ -18,6 +18,9 @@
     <folder>language</folder>
     <folder>images</folder>
   </files>
+  <media destination="mod_copymypage_hero" folder="media">
+    <folder>css</folder>
+  </media>
   <config>
     <fields name="params">
       <fieldset name="basic" label="JFIELD_BASIC_LABEL" description="JFIELD_BASIC_DESC">

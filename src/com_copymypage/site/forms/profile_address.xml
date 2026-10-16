@@ -9,11 +9,12 @@
 			name="street"
 			type="text"
 			label="COM_COPYMYPAGE_PROFILE_ADDRESS_FIELD_STREET"
+			description="COM_COPYMYPAGE_PROFILE_ADDRESS_FIELD_STREET_DESCRIPTION"
 			class="uk-input"
 			filter="string"
 			maxlength="500"
 			required="true"
-			autocomplete="address-line1"
+			autocomplete="off"
 		/>
 		<field
 			name="house_number"

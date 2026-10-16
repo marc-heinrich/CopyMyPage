@@ -497,6 +497,8 @@
         }
 
         runtime.availabilityRequestPending = true;
+        const requestStarted = window.performance.now();
+        const cartVersion = window.CopyMyPageTicketCart?.stateVersion || 0;
 
         try {
             const url = new URL(availabilityConfig.endpoint, window.location.href);
@@ -524,10 +526,16 @@
                 typeof cartState.active === 'boolean'
                 && ticketCartRuntime
                 && typeof ticketCartRuntime.setBasketState === 'function'
+                && !ticketCartRuntime.mutationRequests
+                && cartVersion === (ticketCartRuntime.stateVersion || 0)
             ) {
                 ticketCartRuntime.setBasketState(
                     cartState.active,
-                    typeof cartState.expiresAt === 'string' ? cartState.expiresAt : null
+                    typeof cartState.expiresAt === 'string' ? cartState.expiresAt : null,
+                    undefined,
+                    null,
+                    cartState,
+                    window.performance.now() - requestStarted
                 );
             }
 

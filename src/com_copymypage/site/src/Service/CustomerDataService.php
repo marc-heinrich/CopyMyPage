@@ -13,15 +13,16 @@ namespace Joomla\Component\CopyMyPage\Site\Service;
 
 use Joomla\CMS\Application\CMSWebApplicationInterface;
 use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\Event\User\AfterSaveEvent;
 use Joomla\CMS\Form\Form;
 use Joomla\CMS\Form\FormFactoryInterface;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\User\User;
-use Joomla\Component\CopyMyPage\Site\Repository\ProfileAddressRepository;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Database\ParameterType;
+use Joomla\Event\Priority;
 
 /**
  * Owns the guarded Step-3 customer draft and optional Joomla registration.
@@ -49,8 +50,8 @@ final class CustomerDataService
     private const CUSTOMER_FIELDS = [
         'first_name'   => 255,
         'last_name'    => 255,
-        'email'        => 320,
-        'street'       => 500,
+        'email'        => 255,
+        'street'       => 255,
         'house_number' => 100,
         'postcode'     => 100,
         'city'         => 100,
@@ -63,7 +64,7 @@ final class CustomerDataService
         private readonly CMSWebApplicationInterface $app,
         private readonly DatabaseInterface $db,
         private readonly FormFactoryInterface $formFactory,
-        private readonly ProfileAddressRepository $profileAddresses,
+        private readonly ProfileAddressService $profileAddresses,
         private readonly AddressCatalogService $catalogue,
         private readonly TicketCartContextService $cartContext,
         private readonly SeatSelectionService $seatSelection
@@ -79,6 +80,7 @@ final class CustomerDataService
     {
         return [
             'rootSelector' => '[' . self::ROOT_ATTRIBUTE . ']',
+            'privacyConsentRequired' => PluginHelper::isEnabled('system', 'privacyconsent'),
             'selectors'    => [
                 'accountFields'   => '[' . self::ACCOUNT_FIELDS_ATTRIBUTE . ']',
                 'accountRequired' => '#jform_username, #jform_password1, #jform_password2, '
@@ -89,6 +91,7 @@ final class CustomerDataService
                 'email'           => '#jform_email',
                 'loginMode'       => '[' . self::LOGIN_MODE_ATTRIBUTE . ']',
                 'modeSwitcher'    => '[' . self::MODE_SWITCHER_ATTRIBUTE . ']',
+                'privacyConsent'  => '[name="jform[privacyconsent][privacy]"]',
                 'username'        => '#jform_username',
             ],
         ];
@@ -137,6 +140,29 @@ final class CustomerDataService
     public function canReview(): bool
     {
         return $this->getReviewCustomerData() !== [];
+    }
+
+    /**
+     * Resolve ownership from the current session cart, never from submitted customer IDs.
+     */
+    public function getBookingOwnerId(int $cartId, bool $forUpdate = false): int
+    {
+        $cart = $forUpdate
+            ? $this->cartContext->getActiveCartForUpdate()
+            : $this->cartContext->getActiveCart();
+
+        if ($cart === null || (int) $cart->id !== $cartId) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_CONFLICT'));
+        }
+
+        $draft   = $this->findDraft($cartId, $forUpdate);
+        $ownerId = $this->resolveBookingOwner($cart, $draft, $forUpdate);
+
+        if ($draft === null || $this->validateCustomerData($this->draftToFormData($draft))['errors'] !== []) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_BLOCKED_MESSAGE'));
+        }
+
+        return $ownerId;
     }
 
     /**
@@ -209,6 +235,13 @@ final class CustomerDataService
 
         $cartId  = (int) $cart->id;
         $draft   = $this->findDraft($cartId);
+        $identity = $this->app->getIdentity();
+        $guest = (bool) ($identity->guest ?? true) || (int) ($identity->id ?? 0) === 0;
+        // Capture the version before prefill: a concurrent edit must conflict,
+        // rather than bless older displayed values with a newer profile version.
+        $profileAddressVersion = !$guest
+            ? $this->profileAddresses->getCheckoutVersion($identity, $cartId)
+            : '';
         $data    = $draft !== null ? $this->draftToFormData($draft) : $this->getPrefillData();
         $pending = $this->app->getUserState(self::STATE_PREFIX . $cartId, []);
 
@@ -217,8 +250,6 @@ final class CustomerDataService
         }
 
         $accountUserId    = max(0, (int) ($draft->account_user_id ?? 0));
-        $identity         = $this->app->getIdentity();
-        $guest            = (bool) ($identity->guest ?? true) || (int) ($identity->id ?? 0) === 0;
         $showAccount      = $guest && $accountUserId === 0 && $this->isRegistrationAllowed();
         $accountExpanded  = $showAccount && !empty($data['create_account']);
         $registrationForm = null;
@@ -246,6 +277,7 @@ final class CustomerDataService
             'guest'             => $guest,
             'loginForm'         => $loginForm,
             'loginModeActive'   => $loginModeActive,
+            'profileAddressVersion' => $profileAddressVersion,
             'showAccountOption' => $showAccount,
         ];
     }
@@ -257,7 +289,7 @@ final class CustomerDataService
      *
      * @return array{errors: array<int, \Throwable|string>, accountCreated: bool}
      */
-    public function save(array $rawData, int $expectedRevision): array
+    public function save(array $rawData, int $expectedRevision, string $profileAddressVersion = ''): array
     {
         $activeCart = $this->cartContext->getActiveCart();
 
@@ -301,6 +333,7 @@ final class CustomerDataService
 
             $this->cartContext->assertExpectedRevision($cart, $expectedRevision);
             $draft = $this->findDraft((int) $cart->id, true);
+            $this->resolveBookingOwner($cart, $draft, true);
 
             if ($createAccount && !$this->canCreateAccount($draft)) {
                 throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_UNAVAILABLE'));
@@ -310,16 +343,39 @@ final class CustomerDataService
             $draftId       = $this->saveDraft((int) $cart->id, $draft, $customerData, $accountUserId);
 
             if ($createAccount && \is_array($account)) {
-                $accountUserId = $this->registerAccount(
-                    $account['model'],
-                    $account['data'],
-                    $this->getSafeStateData($rawData)
+                $accountUserId = $this->profileAddresses->saveRegisteredCheckoutAddress(
+                    fn(): int => $this->registerAccount(
+                        $account['model'],
+                        $account['data'],
+                        $this->getSafeStateData($rawData)
+                    ),
+                    $customerData
                 );
                 $this->linkAccount($draftId, $accountUserId);
+            } else {
+                $identity = $this->app->getIdentity();
+
+                if ($identity instanceof User && !(bool) $identity->guest && (int) $identity->id > 0) {
+                    $this->profileAddresses->saveCheckoutAddress(
+                        $identity,
+                        $customerData,
+                        (int) $cart->id,
+                        $profileAddressVersion
+                    );
+                }
             }
 
             $this->cartContext->advanceCart((int) $cart->id);
             $this->cartContext->commitTransaction();
+
+            if ($createAccount) {
+                // Only a committed core registration may establish this session receipt.
+                $this->app->getSession()->set(TicketCartContextService::SESSION_REGISTRATION_KEY, [
+                    'cartId'  => (int) $cart->id,
+                    'draftId' => $draftId,
+                    'userId'  => $accountUserId,
+                ]);
+            }
 
             return ['errors' => [], 'accountCreated' => $accountUserId > 0];
         } catch (\Throwable $exception) {
@@ -341,9 +397,8 @@ final class CustomerDataService
         $safe = $this->projectCustomerData($data);
         $safe['username'] = $this->scalar($data['username'] ?? '', 150);
 
-        $privacy = $data['privacyconsent'] ?? [];
         $safe['privacyconsent'] = [
-            'privacy' => \is_array($privacy) && !empty($privacy['privacy']) ? 1 : 0,
+            'privacy' => $this->getPrivacyConsentValue($data),
         ];
 
         return $safe;
@@ -461,9 +516,17 @@ final class CustomerDataService
         [$model, $form, $captchaEnabled] = $this->getRegistrationResources();
         unset($model);
 
+        // Override the core default only for this checkout form.
+        $form->setFieldAttribute('privacy', 'default', '', 'privacyconsent');
+        $form->setFieldAttribute(
+            'privacy',
+            'note',
+            Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_PRIVACY_NOTE'),
+            'privacyconsent'
+        );
         $form->bind([
             'username'       => $this->scalar($data['username'] ?? '', 150),
-            'privacyconsent' => $data['privacyconsent'] ?? ['privacy' => 0],
+            'privacyconsent' => ['privacy' => $this->getPrivacyConsentValue($data)],
         ]);
 
         $requiredFields = [
@@ -557,7 +620,17 @@ final class CustomerDataService
     private function validateAccountData(array $rawData, array $customerData): array
     {
         [$model, $form] = $this->getRegistrationResources();
-        $privacy = $rawData['privacyconsent'] ?? [];
+        $privacy = $this->getPrivacyConsentValue($rawData);
+
+        // Reject raw input before Joomla's integer filter or any checkout writes.
+        if (PluginHelper::isEnabled('system', 'privacyconsent') && $privacy !== '1') {
+            return [
+                'model'  => null,
+                'data'   => [],
+                'errors' => [Text::_('PLG_SYSTEM_PRIVACYCONSENT_FIELD_ERROR')],
+            ];
+        }
+
         $data = [
             'name'           => trim($customerData['first_name'] . ' ' . $customerData['last_name']),
             'username'       => $this->scalar($rawData['username'] ?? '', 150),
@@ -565,7 +638,7 @@ final class CustomerDataService
             'password2'      => $this->scalar($rawData['password2'] ?? '', 99, false),
             'email1'         => (string) $customerData['email'],
             'privacyconsent' => [
-                'privacy' => \is_array($privacy) && !empty($privacy['privacy']) ? 1 : 0,
+                'privacy' => $privacy,
             ],
             'captcha' => $this->scalar($rawData['captcha'] ?? '', 16384, false),
         ];
@@ -634,9 +707,24 @@ final class CustomerDataService
         array $registrationData,
         array $safeRequestData
     ): int {
+        // Core returns activation status strings instead of an id for pending accounts.
+        // The unique username may only resolve the account created by this invocation.
+        $username = (string) ($registrationData['username'] ?? '');
+        $query = $this->db->getQuery(true)
+            ->select($this->db->quoteName('id'))
+            ->from($this->db->quoteName('#__users'))
+            ->where($this->db->quoteName('username') . ' = :username')
+            ->bind(':username', $username, ParameterType::STRING);
+
+        if ($username === '' || (int) $this->db->setQuery($query)->loadResult() > 0) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_ERROR'));
+        }
+
         $input          = $this->app->getInput();
         $originalOption = $input->get('option', 'com_copymypage', 'cmd');
         $originalTask   = $input->post->get('task', 'customerdata.save', 'cmd');
+        $session        = $this->app->getSession();
+        $previousBookingId = $session->get('com_dpcalendar.booking_id', 0);
         $state          = $this->app->getUserState('com_users.registration.data', []);
 
         if (\is_array($state)) {
@@ -649,10 +737,41 @@ final class CustomerDataService
         $input->set('option', 'com_users');
         $input->post->set('task', 'registration.register');
         $input->post->set('jform', $registrationData);
+        // DPCalendar's new-user plugin must not claim an earlier session booking.
+        $session->remove('com_dpcalendar.booking_id');
+
+        $dispatcher = $this->app->getDispatcher();
+        $consentRequired = PluginHelper::isEnabled('system', 'privacyconsent');
+        $consentedUserId = 0;
+        $consentGuard = function (AfterSaveEvent $event) use ($username, &$consentedUserId): void {
+            $user = $event->getUser();
+
+            if (!$event->getIsNew() || !$event->getSavingResult() || ($user['username'] ?? '') !== $username) {
+                return;
+            }
+
+            $userId = (int) ($user['id'] ?? 0);
+
+            if (!$this->hasActivePrivacyConsent($userId)) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_ERROR'));
+            }
+
+            $consentedUserId = $userId;
+        };
 
         try {
+            if ($consentRequired) {
+                // The native privacy subscriber runs at NORMAL; core mail follows User::save().
+                $dispatcher->addListener('onUserAfterSave', $consentGuard, Priority::BELOW_NORMAL);
+            }
+
             $result = $model->register($registrationData);
         } finally {
+            if ($consentRequired) {
+                $dispatcher->removeListener('onUserAfterSave', $consentGuard);
+            }
+
+            $session->set('com_dpcalendar.booking_id', $previousBookingId);
             $input->set('option', $originalOption);
             $input->post->set('task', $originalTask);
             $input->post->set('jform', $safeRequestData);
@@ -668,24 +787,62 @@ final class CustomerDataService
             );
         }
 
-        if (\is_int($result) || (\is_string($result) && ctype_digit($result))) {
-            $userId = (int) $result;
-        } else {
-            $username = (string) ($registrationData['username'] ?? '');
-            $query = $this->db->getQuery(true)
-                ->select($this->db->quoteName('id'))
-                ->from($this->db->quoteName('#__users'))
-                ->where($this->db->quoteName('username') . ' = :username')
-                ->bind(':username', $username, ParameterType::STRING)
-                ->setLimit(1);
-            $userId = (int) $this->db->setQuery($query)->loadResult();
+        $numericResult = \is_int($result) || (\is_string($result) && ctype_digit($result));
+
+        if (!$numericResult && !\in_array($result, ['useractivate', 'adminactivate'], true)) {
+            throw new \RuntimeException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_ERROR'));
         }
 
-        if ($userId < 1) {
+        $query->setQuery((string) $query . ' FOR UPDATE');
+        $userId = (int) $this->db->setQuery($query)->loadResult();
+
+        if (
+            $userId < 1
+            || ($numericResult && $userId !== (int) $result)
+            || ($consentRequired && $consentedUserId !== $userId)
+        ) {
             throw new \RuntimeException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_ERROR'));
         }
 
         return $userId;
+    }
+
+    /**
+     * Preserve only exact radio values; malformed input must render neutrally.
+     *
+     * @param   array<string, mixed>  $data
+     */
+    private function getPrivacyConsentValue(array $data): string
+    {
+        $privacy = $data['privacyconsent'] ?? null;
+        $value   = \is_array($privacy) ? ($privacy['privacy'] ?? null) : null;
+
+        if ($value === '1' || $value === 1) {
+            return '1';
+        }
+
+        return $value === '0' || $value === 0 ? '0' : '';
+    }
+
+    private function hasActivePrivacyConsent(int $userId, bool $forUpdate = false): bool
+    {
+        if ($userId < 1) {
+            return false;
+        }
+
+        $query = $this->db->getQuery(true)
+            ->select($this->db->quoteName('id'))
+            ->from($this->db->quoteName('#__privacy_consents'))
+            ->where($this->db->quoteName('user_id') . ' = :userId')
+            ->where($this->db->quoteName('subject') . ' = ' . $this->db->quote('PLG_SYSTEM_PRIVACYCONSENT_SUBJECT'))
+            ->where($this->db->quoteName('state') . ' = 1')
+            ->bind(':userId', $userId, ParameterType::INTEGER);
+
+        if ($forUpdate) {
+            $query->setQuery((string) $query . ' FOR UPDATE');
+        }
+
+        return (int) $this->db->setQuery($query)->loadResult() > 0;
     }
 
     /**
@@ -698,7 +855,9 @@ final class CustomerDataService
         $result = [];
 
         foreach (self::CUSTOMER_FIELDS as $fieldName => $maximumLength) {
-            $result[$fieldName] = $this->scalar($data[$fieldName] ?? '', $maximumLength + 1);
+            $value = $data[$fieldName] ?? '';
+            // Keep invalid input intact for validation and the PRG correction form.
+            $result[$fieldName] = \is_scalar($value) ? trim((string) $value) : '';
         }
 
         $result['create_account'] = !empty($data['create_account']) ? 1 : 0;
@@ -736,7 +895,7 @@ final class CustomerDataService
         $data['first_name'] = (string) array_shift($nameParts);
         $data['last_name']  = implode(' ', $nameParts);
         $data['email']      = trim((string) $identity->email);
-        $address            = $this->profileAddresses->findForUser((int) $identity->id);
+        $address            = $this->profileAddresses->getAddressData($identity);
 
         if ($address === null) {
             return $data;
@@ -744,15 +903,69 @@ final class CustomerDataService
 
         $data['first_name']   = $address->recipientFirstName ?: $data['first_name'];
         $data['last_name']    = $address->recipientLastName ?: $data['last_name'];
-        $data['street']       = $address->addressLine1;
-        $data['house_number'] = $address->houseNumber;
-        $data['postcode']     = $address->postalCode;
-        $data['city']         = $address->city;
-        $data['country_code'] = $address->countryCode;
-        $data['region_code']  = $address->regionCode;
+        $data = array_replace(
+            $data,
+            $this->profileAddresses->projectSubmittedData($this->profileAddresses->getAddress($identity))
+        );
         $data['telephone']    = $address->telephone;
 
         return $data;
+    }
+
+    /**
+     * Cross-check the server-written draft and registration receipt before any mutation.
+     * The random cart token binds both to this session; the account is locked at commit.
+     */
+    private function resolveBookingOwner(object $cart, ?object $draft, bool $forUpdate): int
+    {
+        $identity    = $this->app->getIdentity();
+        $actorId     = !(bool) ($identity->guest ?? true) ? max(0, (int) ($identity->id ?? 0)) : 0;
+        $accountId   = max(0, (int) ($draft->account_user_id ?? 0));
+        $draftUserId = max(0, (int) ($draft->user_id ?? 0));
+        $cartUserId  = max(0, (int) ($cart->user_id ?? 0));
+        $receipt     = $this->app->getSession()->get(TicketCartContextService::SESSION_REGISTRATION_KEY);
+        $conflict = ($draftUserId > 0 && $draftUserId !== $actorId)
+            || ($cartUserId > 0 && $cartUserId !== $actorId)
+            || ($accountId > 0 && $actorId > 0 && $accountId !== $actorId);
+
+        if ($accountId > 0 || $receipt !== null) {
+            $conflict = $conflict || !\is_array($receipt)
+                || ($receipt['cartId'] ?? null) !== (int) $cart->id
+                || ($receipt['draftId'] ?? null) !== (int) ($draft->id ?? 0)
+                || ($receipt['userId'] ?? null) !== $accountId
+                || $accountId < 1;
+        }
+
+        if ($conflict) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_CONFLICT'));
+        }
+
+        if (
+            $accountId > 0
+            && PluginHelper::isEnabled('system', 'privacyconsent')
+            && !$this->hasActivePrivacyConsent($accountId, $forUpdate)
+        ) {
+            throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_CONFLICT'));
+        }
+
+        $ownerId = $actorId > 0 ? $actorId : $accountId;
+
+        if ($ownerId > 0) {
+            $query = $this->db->getQuery(true)
+                ->select($this->db->quoteName('id'))
+                ->from($this->db->quoteName('#__users'))
+                ->where($this->db->quoteName('id') . ' = ' . $ownerId);
+
+            $storedUserId = (int) $this->db->setQuery(
+                (string) $query . ($forUpdate ? ' FOR UPDATE' : '')
+            )->loadResult();
+
+            if ($storedUserId !== $ownerId) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_CUSTOMER_DATA_ACCOUNT_CONFLICT'));
+            }
+        }
+
+        return $ownerId;
     }
 
     private function findDraft(int $cartId, bool $forUpdate = false): ?object

@@ -31,6 +31,8 @@ final class TicketCartContextService
 
     public const STATUS_RELEASED = 3;
 
+    public const SESSION_REGISTRATION_KEY = 'com_copymypage.ticket_cart_registration';
+
     private const DEFAULT_RESERVATION_MINUTES = 15;
 
     private const SESSION_TOKEN_KEY = 'com_copymypage.ticket_cart_token';
@@ -105,6 +107,7 @@ final class TicketCartContextService
                 $this->db->insertObject('#__copymypage_ticket_carts', $row);
                 $row->id = (int) $this->db->insertid();
                 $session->set(self::SESSION_TOKEN_KEY, $token);
+                $session->remove(self::SESSION_REGISTRATION_KEY);
                 $this->sessionTokenCreatedInTransaction = true;
 
                 return $row;
@@ -420,6 +423,7 @@ final class TicketCartContextService
         $session = $this->app->getSession();
         $session->remove(self::SESSION_TOKEN_KEY);
         $session->remove(self::SESSION_SEAT_SELECTION_CART_ID_KEY);
+        $session->remove(self::SESSION_REGISTRATION_KEY);
     }
 
     private function assertTransactionActive(): void

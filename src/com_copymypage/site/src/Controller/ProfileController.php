@@ -66,7 +66,7 @@ final class ProfileController extends AbstractUserFormController
     {
         $this->cancelProjectedForm(
             UserFormProjectionService::CONTEXT_PROFILE_EDIT,
-            'default'
+            'profile'
         );
     }
 
@@ -229,7 +229,7 @@ final class ProfileController extends AbstractUserFormController
         $addresses = $this->getAddressService();
 
         $this->app->setUserState($addresses->getStateKey($user), null);
-        $this->setRedirect($this->getDashboardUrl('default'));
+        $this->setRedirect($this->getDashboardUrl('profile'));
     }
 
     /**

@@ -18,6 +18,8 @@ use Joomla\CMS\Session\Session;
 use Joomla\Component\CopyMyPage\Site\Service\BookingCompletionService;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentHandoffService;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationService;
+use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentService;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentProviderConfig;
 
 /** @var \DigitalPeak\Component\DPCalendar\Site\View\Booking\HtmlView $this */
 
@@ -73,7 +75,8 @@ $validPostToken  = $requestMethod !== 'POST' || Session::checkToken();
 $canStartPayment = !empty($state['managed'])
     && !empty($state['integrityOk'])
     && (int) ($state['state'] ?? -1) === 3
-    && empty($state['transactionStarted']);
+    && ((!empty($state['canResumePayment']))
+        || (empty($state['transactionStarted']) && empty($state['paymentUncertain'])));
 $handoffValid = false;
 
 if ($canStartPayment && $validPostToken && $submittedToken !== '') {
@@ -92,10 +95,23 @@ if ($canStartPayment && $validPostToken && $submittedToken !== '') {
 }
 
 if ($canStartPayment && $handoffValid) {
+    $paymentAttemptToken = null;
+
+    if (!empty($state['canResumePayment']) && PaymentProviderConfig::isOwned((string) $this->booking->payment_provider)) {
+        try {
+            $url = $container->get(PayPalPaymentService::class)->start((int) $this->booking->id);
+            $app->redirect($url ?? DPCalendarRouteHelper::getBookingRoute($this->booking) . '&layout=order');
+        } catch (\Throwable $exception) {
+            Log::add('CopyMyPage owned payment resume requires reconciliation (' . $exception::class . ').', Log::WARNING, 'com_copymypage');
+            $app->redirect(DPCalendarRouteHelper::getBookingRoute($this->booking) . '&layout=order');
+        }
+        return;
+    }
+
     try {
         $paymentClaimed = $container
             ->get(PaymentReconciliationService::class)
-            ->beginPaymentAttempt((int) $this->booking->id);
+            ->beginPaymentAttempt((int) $this->booking->id, $paymentAttemptToken);
     } catch (\Throwable $exception) {
         Log::add(
             'CopyMyPage payment attempt could not be claimed for booking ID '
@@ -106,8 +122,30 @@ if ($canStartPayment && $handoffValid) {
         $paymentClaimed = false;
     }
 
-    if ($paymentClaimed) {
-        require JPATH_SITE . '/components/com_dpcalendar/tmpl/booking/pay.php';
+    if ($paymentClaimed && $paymentAttemptToken !== null) {
+        $this->booking->token = $paymentAttemptToken;
+        if (PaymentProviderConfig::isOwned((string) $this->booking->payment_provider)) {
+            try {
+                $url = $container->get(PayPalPaymentService::class)->start((int) $this->booking->id);
+                $app->redirect($url ?? DPCalendarRouteHelper::getBookingRoute($this->booking) . '&layout=order');
+            } catch (\Throwable $exception) {
+                Log::add('CopyMyPage owned payment start requires reconciliation (' . $exception::class . ').', Log::WARNING, 'com_copymypage');
+                $app->redirect(DPCalendarRouteHelper::getBookingRoute($this->booking) . '&layout=order');
+            }
+            return;
+        }
+        $originalToken = $input->get('token', null, 'raw');
+        $originalPaymentToken = $input->get('dptoken', null, 'raw');
+
+        try {
+            // The native provider must use this claimed booking capability.
+            $input->set('token', $paymentAttemptToken);
+            $input->set('dptoken', $paymentAttemptToken);
+            require JPATH_SITE . '/components/com_dpcalendar/tmpl/booking/pay.php';
+        } finally {
+            $input->set('token', $originalToken);
+            $input->set('dptoken', $originalPaymentToken);
+        }
 
         return;
     }

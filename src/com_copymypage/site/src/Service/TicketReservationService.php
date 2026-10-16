@@ -122,8 +122,14 @@ final class TicketReservationService
                 'expectedCartRevision' => self::EXPECTED_REVISION_FIELD,
             ],
             'basketMessageType'    => self::BASKET_MESSAGE_TYPE,
+            'initialCart'          => $this->getBasketIndicatorState(),
+            'refreshIntervalMs'    => 30000,
             'csrfToken'            => Session::getFormToken(),
             'endpoints'            => [
+                'state' => Route::_(
+                    'index.php?option=com_copymypage&task=ticketcart.state&format=json',
+                    false
+                ),
                 'reserve' => Route::_(
                     'index.php?option=com_copymypage&task=ticketcart.reserve&format=json',
                     false
@@ -332,16 +338,18 @@ final class TicketReservationService
     /**
      * Lightweight session state for server-rendered and live basket indicators.
      *
-     * @return array{active: bool, expiresAt: string}
+     * @return array{active: bool, expiresAt: string, secondsLeft: int}
      */
     public function getBasketIndicatorState(): array
     {
-        $cart   = $this->cartContext->getActiveCart();
-        $active = $cart !== null && $this->countCartItems((int) $cart->id) > 0;
+        $cart      = $this->cartContext->getActiveCart();
+        $active    = $cart !== null && $this->countCartItems((int) $cart->id) > 0;
+        $expiresAt = $active ? $this->toIso8601((string) ($cart->expires_at ?? '')) : '';
 
         return [
-            'active'    => $active,
-            'expiresAt' => $active ? $this->toIso8601((string) ($cart->expires_at ?? '')) : '',
+            'active'      => $active,
+            'expiresAt'   => $expiresAt,
+            'secondsLeft' => $active ? max(0, strtotime($expiresAt) - time()) : 0,
         ];
     }
 
