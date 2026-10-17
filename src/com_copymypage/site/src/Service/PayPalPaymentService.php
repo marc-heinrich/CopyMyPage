@@ -3,6 +3,7 @@ namespace Joomla\Component\CopyMyPage\Site\Service;
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Application\CMSApplicationInterface;
 use Joomla\CMS\Application\CMSWebApplicationInterface;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Language\LanguageHelper;
@@ -18,7 +19,7 @@ final class PayPalPaymentService
     private readonly \Closure $clientFactory;
 
     public function __construct(
-        private readonly CMSWebApplicationInterface $app,
+        private readonly CMSApplicationInterface $app,
         private readonly DatabaseInterface $db,
         private readonly BookingIntegrityService $integrity,
         private readonly PaymentAttemptRepository $attempts,
@@ -47,6 +48,237 @@ final class PayPalPaymentService
         $this->reconcile($bookingId);
     }
 
+    /**
+     * Scheduler path: GET only at the provider; never call reconcile(), start() or captureOrder().
+     * Dry-run does not claim/recover leases or persist observations, including on errors.
+     *
+     * @return array{dryRun: bool, scanned: int, releasable: int, released: int, finalizable: int, finalized: int, held: int, errors: int, results: array}
+     */
+    public function cleanupPending(int $timeoutMinutes = 60, int $batchSize = 50, bool $dryRun = true): array
+    {
+        $cutoff = (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))
+            ->modify('-' . min(1440, max(15, $timeoutMinutes)) . ' minutes')->format('Y-m-d H:i:s.u');
+        $query = $this->db->getQuery(true)->select('*')->from('#__copymypage_payment_attempts')
+            ->where("state NOT IN ('finalized','cancelled','failed','manual')")
+            ->order('(lease_id IS NOT NULL) ASC, modified ASC, id ASC')->bind(':cutoff', $cutoff);
+        $query->where($this->attempts->supportsReservations()
+            ? '(modified <= :cutoff OR reservation_expires_at <= UTC_TIMESTAMP(6))'
+            : 'modified <= :cutoff');
+        $attempts = $this->db->setQuery($query, 0, min(500, max(1, $batchSize)))->loadObjectList();
+        $report = ['dryRun' => $dryRun, 'scanned' => 0, 'releasable' => 0, 'released' => 0,
+            'finalizable' => 0, 'finalized' => 0, 'held' => 0, 'errors' => 0, 'results' => []];
+        foreach ($attempts as $attempt) {
+            ++$report['scanned'];
+            try {
+                $result = $this->cleanupAttempt($attempt, $cutoff, $dryRun);
+            } catch (\Throwable) {
+                // Never log exception text: provider/native exceptions may contain capabilities.
+                $result = ['outcome' => 'error', 'reason' => 'cleanup_failed'];
+            }
+            if (!$dryRun && $result['outcome'] === 'held' && empty($attempt->lease_id)
+                && PaymentProviderConfig::isOwned((string) $attempt->provider_id)) {
+                // Audit an unchanged observation so old orphans/manual cases cannot starve the next batch.
+                // CAS must lose to any concurrent financial claim; never refresh another worker's lease.
+                try {
+                    $this->attempts->transition($attempt, []);
+                } catch (\Throwable) {
+                    $result = ['outcome' => 'error', 'reason' => 'observation_audit_failed'];
+                }
+            }
+            $report['results'][] = ['bookingId' => (int) $attempt->booking_id] + $result;
+            if (in_array($result['outcome'], ['releasable', 'released'], true)) {
+                ++$report['releasable'];
+            }
+            if (in_array($result['outcome'], ['finalizable', 'finalized'], true)) {
+                ++$report['finalizable'];
+            }
+            if (in_array($result['outcome'], ['released', 'finalized'], true)) {
+                ++$report[$result['outcome']];
+            }
+            if (in_array($result['outcome'], ['held', 'error'], true)) {
+                ++$report['held'];
+            }
+            if ($result['outcome'] === 'error') {
+                ++$report['errors'];
+            }
+        }
+        return $report;
+    }
+
+    /** One frozen ledger observation; CAS and native transaction revalidate before any mutation. */
+    private function cleanupAttempt(object $attempt, string $cutoff, bool $dryRun): array
+    {
+        $held = static fn (string $reason): array => ['outcome' => 'held', 'reason' => $reason];
+        if (!PaymentProviderConfig::isOwned((string) $attempt->provider_id)) {
+            return $held('provider_not_owned');
+        }
+        $reservation = PaymentReservationPolicy::state($attempt);
+        if ((string) $attempt->modified > $cutoff && $reservation !== 'expired') {
+            return $held('grace_period');
+        }
+        $expiredFinalization = !empty($attempt->lease_id) && $attempt->state === 'finalizing'
+            && (string) $attempt->lease_expires < PaymentAttemptRepository::now()
+            && PaymentProof::hasDurableCapture($attempt);
+        if (!empty($attempt->lease_id) && !$expiredFinalization) {
+            return $held((string) $attempt->lease_expires >= PaymentAttemptRepository::now() ? 'lease_active' : 'lease_expired');
+        }
+        if (!in_array($attempt->state, ['order_created', 'order_observed', 'capture_unknown', 'captured', 'finalize_failed'], true)
+            && !$expiredFinalization) {
+            return $held('state_requires_review');
+        }
+        if (!(int) $this->db->setQuery('SELECT COUNT(*) FROM #__dpcalendar_bookings WHERE id = ' . (int) $attempt->booking_id)->loadResult()) {
+            return $held('native_booking_missing');
+        }
+        $inspection = $this->integrity->inspect((int) $attempt->booking_id);
+        if (!$inspection['valid'] || (int) $inspection['booking']->state !== 3) {
+            return $held('native_context_invalid');
+        }
+        try {
+            $config = ($this->providerResolver)($attempt->provider_id);
+            $this->attempts->assertBinding($attempt, $inspection, $config);
+        } catch (\DomainException) {
+            return $held('payment_binding_mismatch');
+        }
+        if (PaymentProof::hasDurableCapture($attempt)) {
+            if (!in_array($attempt->state, ['captured', 'finalize_failed'], true) && !$expiredFinalization) {
+                if (!$dryRun) {
+                    $this->manual($attempt, 'cleanup_capture_state_inconsistent');
+                }
+                return $held('capture_state_inconsistent');
+            }
+            if ($dryRun) {
+                return ['outcome' => 'finalizable', 'reason' => 'durable_capture'];
+            }
+            if ($expiredFinalization) {
+                // Only a proved capture's local finalization may recover an expired lease here.
+                // Creating/capturing/cancel leases remain unknown and cannot authorize a release.
+                $recovered = $this->attempts->recoverExpiredLease($attempt);
+                if ($recovered === null || !empty($recovered->lease_id)) {
+                    return $held('concurrent_change');
+                }
+            }
+            return $this->cleanupFinalize((int) $attempt->booking_id);
+        }
+        if (in_array($attempt->state, ['captured', 'finalize_failed'], true)) {
+            if (!$dryRun) {
+                $this->manual($attempt, 'cleanup_capture_proof_invalid');
+            }
+            return $held('capture_proof_invalid');
+        }
+        if ($reservation === 'invalid' || PaymentReservationPolicy::hasLocalClosure($attempt)) {
+            return $held('reservation_requires_review');
+        }
+        if (empty($attempt->order_id)) {
+            return $held('provider_order_missing');
+        }
+        $previousState = (string) $attempt->state;
+        if (!$dryRun) {
+            $attempt = $this->attempts->claim($attempt, [$previousState], 'cancel_check');
+            if ($attempt === null) {
+                return $held('concurrent_change');
+            }
+        }
+        try {
+            // The financial lease excludes an approved callback while the provider GET is in flight.
+            $order = ($this->clientFactory)($config)->getOrder($attempt->order_id);
+            PaymentProof::verifyOrder($attempt, $order);
+            if (($order['status'] ?? '') === 'COMPLETED') {
+                PaymentProof::verifyCapture($attempt, $order);
+                if ($dryRun) {
+                    return ['outcome' => 'finalizable', 'reason' => 'verified_provider_capture'];
+                }
+                $this->storeCapture($attempt, $order, 'cleanup_order_lookup');
+                return $this->cleanupFinalize((int) $attempt->booking_id);
+            }
+            $unit = $order['purchase_units'][0];
+            $payments = array_key_exists('payments', $unit) ? $unit['payments'] : [];
+            $captures = is_array($payments) ? (array_key_exists('captures', $payments) ? $payments['captures'] : []) : null;
+            $refunds = is_array($payments) ? (array_key_exists('refunds', $payments) ? $payments['refunds'] : []) : null;
+            $authorizations = is_array($payments) ? (array_key_exists('authorizations', $payments) ? $payments['authorizations'] : []) : null;
+            $hasEvidence = (string) ($attempt->provider_evidence ?? '') !== '';
+            $evidence = json_decode((string) ($attempt->provider_evidence ?? ''), true);
+            $reason = match (true) {
+                !is_array($payments) || !is_array($captures) || !is_array($refunds) || !is_array($authorizations) => 'provider_payment_details_invalid',
+                $hasEvidence && (!is_array($evidence) || !is_array($evidence['captures'] ?? null)) => 'capture_evidence_invalid',
+                $hasEvidence && (($evidence['attempt_id'] ?? '') !== $attempt->id
+                    || ($evidence['order_id'] ?? '') !== $attempt->order_id
+                    || ($evidence['reference_id'] ?? '') !== $attempt->id
+                    || ($evidence['payee'] ?? '') !== $attempt->expected_payee) => 'capture_evidence_inconsistent',
+                !empty($attempt->capture_id) || !empty($attempt->captured_at) || !empty($evidence['captures'])
+                    || !empty($attempt->finalized_at) || ($evidence['status'] ?? '') === 'COMPLETED'
+                    || $attempt->provider_status === 'COMPLETED' => 'capture_evidence_inconsistent',
+                !empty($attempt->capture_started) => 'capture_started',
+                $previousState === 'capture_unknown' => 'capture_unknown',
+                $captures !== [] || $refunds !== [] || $authorizations !== [] => 'provider_payment_present',
+                ($order['status'] ?? '') === 'APPROVED' && $reservation !== 'expired' => 'provider_approved',
+                in_array($order['status'] ?? '', ['CREATED', 'SAVED', 'PAYER_ACTION_REQUIRED'], true)
+                    && $reservation !== 'expired' => 'provider_order_open',
+                !in_array($order['status'] ?? '', ['CREATED', 'SAVED', 'PAYER_ACTION_REQUIRED', 'APPROVED', 'VOIDED'], true) => 'provider_status_uncertain',
+                default => '',
+            };
+            if ($reason !== '') {
+                if (!$dryRun) {
+                    $changes = ['state' => $previousState, 'lease_id' => null, 'lease_expires' => null];
+                    if (in_array($reason, ['capture_evidence_invalid', 'capture_evidence_inconsistent'], true)) {
+                        // Do not overwrite the contradictory capture marker with a later unpaid status.
+                        $changes['state'] = 'manual';
+                        $changes['manual_reason'] = 'cleanup_' . $reason;
+                    } else {
+                        $changes['provider_status'] = substr((string) ($order['status'] ?? 'UNKNOWN'), 0, 32);
+                        if ($reason === 'provider_payment_present') {
+                            $changes['state'] = 'capture_unknown';
+                            $changes['provider_evidence'] = PaymentProof::evidence($attempt, $order, 'cleanup_order_lookup', false);
+                        }
+                    }
+                    $this->change($attempt, $changes);
+                }
+                return $held($reason);
+            }
+            $closureReason = ($order['status'] ?? '') === 'VOIDED' ? 'provider_voided' : 'reservation_expired';
+            if ($dryRun) {
+                return ['outcome' => 'releasable', 'reason' => $closureReason === 'provider_voided' ? 'verified_voided' : $closureReason];
+            }
+            // Persist the authenticated terminal observation; cancelLocal rechecks the full locked context.
+            $attempt = $this->change($attempt, ['provider_status' => (string) $order['status'],
+                'provider_evidence' => PaymentProof::evidence($attempt, $order, 'cleanup_order_lookup', true)]);
+            try {
+                $this->cancelLocal($attempt, $config, $closureReason);
+            } catch (\Throwable) {
+                return ['outcome' => 'error', 'reason' => 'native_cancellation_failed'];
+            }
+            return ['outcome' => 'released', 'reason' => $closureReason === 'provider_voided' ? 'verified_voided' : $closureReason];
+        } catch (PaymentProviderException $error) {
+            if (!$dryRun) {
+                $this->attempts->transition($attempt, ['state' => $previousState, 'lease_id' => null, 'lease_expires' => null]);
+            }
+            $category = preg_match('/^(?:authentication_failed|transport_unknown|response_unknown|http_[1-5][0-9]{2})$/D',
+                $error->category) === 1 ? $error->category : 'unknown';
+            return ['outcome' => 'error', 'reason' => 'provider_unavailable', 'providerCategory' => $category];
+        } catch (\DomainException) {
+            if (!$dryRun) {
+                $this->manual($attempt, 'cleanup_provider_or_context_mismatch');
+            }
+            return $held('provider_or_context_mismatch');
+        }
+    }
+
+    private function cleanupFinalize(int $bookingId): array
+    {
+        // Installed DPCalendar SetupForMail builds web routes even when sending is deferred.
+        // Its CLI route helper cannot do that; retain durable proof for the existing web recovery.
+        if (!$this->app instanceof CMSWebApplicationInterface) {
+            return ['outcome' => 'held', 'reason' => 'native_web_context_required'];
+        }
+        try {
+            $this->finalize($bookingId);
+        } catch (\Throwable) {
+            return ['outcome' => 'error', 'reason' => 'native_finalization_failed'];
+        }
+        return $this->attempts->isFinalized($bookingId)
+            ? ['outcome' => 'finalized', 'reason' => 'verified_capture']
+            : ['outcome' => 'held', 'reason' => 'concurrent_change'];
+    }
+
     /** Caller must already have consumed the existing CSRF/session/booking handoff. */
     public function start(int $bookingId): ?string
     {
@@ -56,6 +288,9 @@ final class PayPalPaymentService
         }
         $config = ($this->providerResolver)((string) $inspection['booking']->payment_provider);
         $attempt = $this->attempts->prepare($bookingId, $config);
+        if (PaymentReservationPolicy::isClosed($attempt)) {
+            return null;
+        }
         $attempt = $this->attempts->recoverExpiredLease($attempt);
         if ($attempt === null || !empty($attempt->lease_id)) {
             return null;
@@ -75,6 +310,9 @@ final class PayPalPaymentService
                 if (($order['status'] ?? '') === 'COMPLETED') {
                     $this->storeCapture($attempt, $order, 'order_lookup');
                     $this->finalize($bookingId);
+                    return null;
+                }
+                if (!in_array(PaymentReservationPolicy::state($attempt), ['legacy', 'active'], true)) {
                     return null;
                 }
                 if ($attempt->state === 'capture_unknown') {
@@ -108,10 +346,12 @@ final class PayPalPaymentService
             $this->manual($attempt, 'create_payload_changed');
             return null;
         }
-        $attempt = $this->change($attempt, ['create_payload_hash' => $hash,
-            'create_started' => $attempt->create_started ?: PaymentAttemptRepository::now(),
-            // Orders Create documents six hours; leave a five-minute margin and never extend on retries.
-            'create_safe_until' => $attempt->create_safe_until ?: (new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->modify('+355 minutes')->format('Y-m-d H:i:s.u')]);
+        $authorized = $this->attempts->authorizeCreate($attempt, $hash);
+        if ($authorized === null) {
+            $this->attempts->transition($attempt, ['state' => 'create_unknown', 'lease_id' => null, 'lease_expires' => null]);
+            return null;
+        }
+        $attempt = $authorized;
         try {
             $response = $client->createOrder($body, $attempt->create_key);
             $orderId = (string) ($response['id'] ?? '');
@@ -152,6 +392,10 @@ final class PayPalPaymentService
         if ($attempt->state === 'finalized') {
             return;
         }
+        if (PaymentReservationPolicy::isClosed($attempt)) {
+            $this->observeClosed($attempt);
+            return;
+        }
         $attempt = $this->attempts->recoverExpiredLease($attempt);
         if ($attempt === null || !empty($attempt->lease_id)) {
             return;
@@ -174,7 +418,7 @@ final class PayPalPaymentService
             return;
         }
         // Acquire the financial lease before GET as well, so cancel cannot race an approved capture.
-        $claimed = $this->attempts->claim($attempt, ['order_created','order_observed','capture_unknown','cancel_unknown','cancelled','manual'], $cancel ? 'cancel_check' : 'capturing');
+        $claimed = $this->attempts->claim($attempt, ['order_created','order_observed','capture_unknown','cancel_unknown'], $cancel ? 'cancel_check' : 'capturing');
         if ($claimed === null) {
             return;
         }
@@ -189,14 +433,8 @@ final class PayPalPaymentService
                 return;
             }
             if (($order['status'] ?? '') === 'COMPLETED') {
-                $this->storeCapture($attempt, $order, 'order_lookup', $previousState === 'cancelled');
-                if ($previousState !== 'cancelled') {
-                    $this->finalize($bookingId);
-                }
-                return;
-            }
-            if ($previousState === 'cancelled' || $previousState === 'manual') {
-                $this->change($attempt, ['state' => $previousState, 'lease_id' => null, 'lease_expires' => null]);
+                $this->storeCapture($attempt, $order, 'order_lookup');
+                $this->finalize($bookingId);
                 return;
             }
             $inspection = $this->integrity->inspect($bookingId);
@@ -206,11 +444,22 @@ final class PayPalPaymentService
             }
             $captures = $order['purchase_units'][0]['payments']['captures'] ?? [];
             if ($cancel) {
-                if (empty($attempt->capture_started) && $captures === [] && in_array($order['status'] ?? '', ['CREATED','SAVED','PAYER_ACTION_REQUIRED','APPROVED','VOIDED'], true)) {
+                if ($previousState !== 'capture_unknown' && $previousState !== 'cancel_unknown'
+                    && empty($attempt->capture_started) && $captures === []
+                    && empty($attempt->capture_id) && empty($attempt->captured_at)
+                    && in_array($order['status'] ?? '', ['CREATED','SAVED','PAYER_ACTION_REQUIRED','APPROVED','VOIDED'], true)) {
+                    PaymentProof::assertUnchargedOrder($attempt, $order);
+                    $attempt = $this->change($attempt, ['provider_status' => (string) $order['status'],
+                        'provider_evidence' => PaymentProof::evidence($attempt, $order, 'customer_cancel_lookup', true)]);
                     $this->cancelLocal($attempt, $config);
                 } else {
                     $this->change($attempt, ['state' => 'cancel_unknown', 'lease_id' => null, 'lease_expires' => null, 'manual_reason' => 'capture_may_be_in_flight']);
                 }
+                return;
+            }
+            if (!in_array(PaymentReservationPolicy::state($attempt), ['legacy', 'active'], true)) {
+                // GET may still prove a capture, but an expired/invalid reservation never authorizes POST.
+                $this->change($attempt, ['state' => $previousState, 'lease_id' => null, 'lease_expires' => null]);
                 return;
             }
             if (($order['status'] ?? '') !== 'APPROVED' || $captures !== []) {
@@ -222,8 +471,13 @@ final class PayPalPaymentService
                 $this->manual($attempt, 'capture_retry_window_expired');
                 return;
             }
-            $attempt = $this->change($attempt, ['capture_started' => $attempt->capture_started ?: PaymentAttemptRepository::now()]);
             PaymentIntegrationContract::assertQualified();
+            $authorized = $this->attempts->authorizeCapture($attempt);
+            if ($authorized === null) {
+                $this->attempts->transition($attempt, ['state' => $previousState, 'lease_id' => null, 'lease_expires' => null]);
+                return;
+            }
+            $attempt = $authorized;
             // Always the same persisted single-CAPTURE order and key; never authorize, patch, or create a replacement.
             $response = $client->captureOrder($attempt->order_id, $attempt->capture_key);
             $this->storeCapture($attempt, $response, 'capture_response');
@@ -236,14 +490,39 @@ final class PayPalPaymentService
         }
     }
 
+    /** Closed attempts permit authenticated observations, never a financial claim or native activation. */
+    private function observeClosed(object $attempt): void
+    {
+        if (empty($attempt->order_id) || !empty($attempt->lease_id)) {
+            return;
+        }
+        try {
+            $config = ($this->providerResolver)($attempt->provider_id);
+            $this->assertAccount($attempt, $config);
+            $order = ($this->clientFactory)($config)->getOrder($attempt->order_id);
+            PaymentProof::verifyOrder($attempt, $order);
+            if (($order['status'] ?? '') === 'COMPLETED') {
+                $this->storeCapture($attempt, $order, 'closed_order_lookup', $attempt->state === 'cancelled'
+                    || PaymentReservationPolicy::hasLocalClosure($attempt)
+                    || $attempt->manual_reason === 'capture_after_local_cancel');
+            }
+        } catch (PaymentProviderException) {
+            // A failed GET says nothing about payment and must leave the terminal state untouched.
+        } catch (\DomainException) {
+            $this->manual($attempt, 'closed_provider_binding_mismatch');
+        }
+    }
+
     /** Verify the complete webhook through PayPal before looking at its resource as a reconciliation hint. */
-    public function webhook(string $providerId, array $event, array $headers): void
+    public function webhook(string $providerId, string $originalBody, array $headers): void
     {
         $config = ($this->providerResolver)($providerId);
         $client = ($this->clientFactory)($config);
-        if (!$client->verifyWebhook($event, $headers, $config->webhookId)) {
+        if (!$client->verifyWebhook($originalBody, $headers, $config->webhookId)) {
             throw new \RuntimeException('Unauthenticated payment notification.', 403);
         }
+        // Business data must come from the same original body that PayPal verified.
+        $event = json_decode($originalBody, true, 64, JSON_THROW_ON_ERROR);
         if (!in_array($event['event_type'] ?? '', ['CHECKOUT.ORDER.APPROVED','PAYMENT.CAPTURE.COMPLETED','PAYMENT.CAPTURE.DENIED','PAYMENT.CAPTURE.PENDING'], true)) {
             return;
         }
@@ -375,7 +654,7 @@ final class PayPalPaymentService
         }
     }
 
-    private function cancelLocal(object $attempt, PaymentProviderConfig $config): void
+    private function cancelLocal(object $attempt, PaymentProviderConfig $config, string $reason = 'customer_cancel'): void
     {
         $this->db->transactionStart();
         try {
@@ -385,6 +664,10 @@ final class PayPalPaymentService
                 throw new \DomainException('Cancellation lost its exclusive uncharged lease.');
             }
             $this->attempts->assertBinding($locked, $inspection, $config);
+            PaymentProof::assertUnchargedObservation($locked);
+            if ($reason === 'reservation_expired' && PaymentReservationPolicy::state($locked) !== 'expired') {
+                throw new \DomainException('Reservation deadline changed.');
+            }
             if ((int) $inspection['booking']->state !== 3) {
                 throw new \DomainException('Native cancellation state changed.');
             }
@@ -422,7 +705,11 @@ final class PayPalPaymentService
             if ($this->db->getAffectedRows() !== 1) {
                 throw new \DomainException('Cancellation cart release failed.');
             }
-            $this->change($locked, ['state' => 'cancelled', 'lease_id' => null, 'lease_expires' => null, 'manual_reason' => null]);
+            $evidence = json_decode((string) ($locked->provider_evidence ?? ''), true) ?? [];
+            $evidence['local_closure'] = ['reason' => $reason, 'closed_at' => $now,
+                'reservation_expires_at' => $locked->reservation_expires_at ?? null, 'capture_closed' => true];
+            $this->change($locked, ['state' => 'cancelled', 'lease_id' => null, 'lease_expires' => null,
+                'provider_evidence' => json_encode($evidence, JSON_THROW_ON_ERROR), 'manual_reason' => null]);
             $this->db->transactionCommit();
         } catch (\Throwable $error) {
             $this->db->transactionRollback();
@@ -439,16 +726,22 @@ final class PayPalPaymentService
             $this->storeObservedMismatch($attempt, $order, 'capture_proof_mismatch');
             return;
         }
+        $closed = $cancelled || PaymentReservationPolicy::isClosed($attempt);
         $this->change($attempt, ['capture_id' => $capture['id'], 'provider_status' => 'COMPLETED',
             'provider_evidence' => PaymentProof::evidence($attempt, $order, $source, true),
             'captured_at' => $attempt->captured_at ?: PaymentAttemptRepository::now(),
-            'state' => $cancelled ? 'manual' : 'captured', 'manual_reason' => $cancelled ? 'capture_after_local_cancel' : null,
+            'state' => $closed ? 'manual' : 'captured',
+            'manual_reason' => $cancelled ? 'capture_after_local_cancel' : ($closed ? 'capture_on_closed_attempt' : null),
             'lease_id' => null, 'lease_expires' => null]);
         // Autocommit completes here, before the separate native transaction begins.
     }
 
     private function storeObservedMismatch(object $attempt, array $order, string $reason): void
     {
+        if (PaymentProof::hasDurableCapture($attempt)) {
+            $this->manual($attempt, $reason);
+            return;
+        }
         $this->change($attempt, ['state' => 'manual', 'provider_status' => substr((string) ($order['status'] ?? 'UNKNOWN'), 0, 32),
             'provider_evidence' => PaymentProof::evidence($attempt, $order, 'server_lookup_or_capture', false),
             'manual_reason' => $reason, 'lease_id' => null, 'lease_expires' => null]);

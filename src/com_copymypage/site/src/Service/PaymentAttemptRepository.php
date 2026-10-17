@@ -9,10 +9,31 @@ use Joomla\Database\ParameterType;
 /** Unique booking binding plus compare-and-swap leases; no read-then-insert race. */
 final class PaymentAttemptRepository
 {
-    private const MUTABLE = ['state','create_payload_hash','order_id','capture_id','provider_status','provider_evidence','manual_reason','lease_id','lease_expires','create_started','create_safe_until','capture_started','captured_at','finalized_at','retry_count'];
+    private const MUTABLE = ['state','create_payload_hash','order_id','capture_id','provider_status','provider_evidence','manual_reason','lease_id','lease_expires','captured_at','finalized_at','retry_count'];
 
-    public function __construct(private readonly DatabaseInterface $db, private readonly BookingIntegrityService $integrity)
+    private ?bool $reservationStorage = null;
+
+    public function __construct(
+        private readonly DatabaseInterface $db,
+        private readonly BookingIntegrityService $integrity,
+        private readonly ?PaymentReservationPolicy $reservationPolicy = null
+    ) {
+    }
+
+    /** Source-only deployment must not silently migrate the installed business database. */
+    public function supportsReservations(): bool
     {
+        if ($this->reservationStorage === null) {
+            $columns = $this->db->getTableColumns('#__copymypage_payment_attempts');
+            $minutes = array_key_exists('reservation_minutes', $columns);
+            $expires = array_key_exists('reservation_expires_at', $columns);
+            if ($minutes !== $expires) {
+                throw new \DomainException('Incomplete payment reservation schema.');
+            }
+            $this->reservationStorage = $minutes && $expires;
+        }
+
+        return $this->reservationStorage;
     }
 
     public static function uuid(): string
@@ -87,6 +108,9 @@ final class PaymentAttemptRepository
                 'create_key' => self::uuid(), 'capture_key' => self::uuid(),
                 'state' => 'prepared', 'created' => $now, 'modified' => $now, 'version' => 0, 'retry_count' => 0,
             ];
+            if ($this->supportsReservations()) {
+                $row->reservation_minutes = ($this->reservationPolicy ?? new PaymentReservationPolicy($this->db))->minutesForNewAttempt();
+            }
             // Existing cart/booking row locks serialize this insertion; the UNIQUE booking_id is the final arbiter.
             $this->db->insertObject('#__copymypage_payment_attempts', $row);
             $this->db->transactionCommit();
@@ -126,11 +150,27 @@ final class PaymentAttemptRepository
     /** A transition succeeds only for the exact observed version, state and lease. */
     public function transition(object $attempt, array $changes): ?object
     {
-        $query = $this->db->getQuery(true)->update($this->db->quoteName('#__copymypage_payment_attempts'));
-        foreach ($changes as $name => $value) {
+        foreach (array_keys($changes) as $name) {
             if (!in_array($name, self::MUTABLE, true)) {
                 throw new \InvalidArgumentException('Immutable payment-attempt field.');
             }
+        }
+        $target = $changes['state'] ?? $attempt->state;
+        if (PaymentReservationPolicy::isClosed($attempt)
+            && ($target !== $attempt->state && $target !== 'manual'
+                || !empty($changes['lease_id'])
+                || ($attempt->state === 'finalized' && $target !== 'finalized'))) {
+            return null;
+        }
+
+        return $this->write($attempt, $changes);
+    }
+
+    /** Only dedicated financial authorization may write first-operation timestamps. */
+    private function write(object $attempt, array $changes, array $conditions = []): ?object
+    {
+        $query = $this->db->getQuery(true)->update($this->db->quoteName('#__copymypage_payment_attempts'));
+        foreach ($changes as $name => $value) {
             if ($value === null) {
                 $query->set($this->db->quoteName($name) . ' = NULL');
             } else {
@@ -151,6 +191,9 @@ final class PaymentAttemptRepository
         } else {
             $query->where('lease_id IS NULL');
         }
+        foreach ($conditions as $condition) {
+            $query->where($condition);
+        }
         $this->db->setQuery($query)->execute();
         if ($this->db->getAffectedRows() !== 1) {
             return null;
@@ -161,7 +204,8 @@ final class PaymentAttemptRepository
 
     public function claim(object $attempt, array $states, string $target): ?object
     {
-        if (!in_array((string) $attempt->state, $states, true) || !empty($attempt->lease_id)) {
+        if (PaymentReservationPolicy::isClosed($attempt)
+            || !in_array((string) $attempt->state, $states, true) || !empty($attempt->lease_id)) {
             return null;
         }
         return $this->transition($attempt, [
@@ -180,10 +224,55 @@ final class PaymentAttemptRepository
         $target = match ($attempt->state) {
             'creating' => 'create_unknown', 'capturing' => 'capture_unknown',
             'finalizing' => 'finalize_failed', 'cancel_check' => 'cancel_unknown',
-            default => 'manual',
+            default => PaymentReservationPolicy::isClosed($attempt) ? $attempt->state : 'manual',
         };
 
         return $this->transition($attempt, ['state' => $target, 'lease_id' => null, 'lease_expires' => null, 'manual_reason' => 'interrupted_operation']);
+    }
+
+    /** Persist the first real Create start and its frozen deadline in one leased CAS. */
+    public function authorizeCreate(object $attempt, string $payloadHash): ?object
+    {
+        if ($attempt->state !== 'creating' || PaymentReservationPolicy::isClosed($attempt)
+            || empty($attempt->lease_id)
+            || !in_array(PaymentReservationPolicy::state($attempt), ['legacy', 'unstarted', 'active'], true)
+            || (!empty($attempt->create_payload_hash) && !hash_equals($attempt->create_payload_hash, $payloadHash))) {
+            return null;
+        }
+        $now = (string) $this->db->setQuery('SELECT UTC_TIMESTAMP(6)')->loadResult();
+        $changes = ['create_payload_hash' => $payloadHash];
+        if (empty($attempt->create_started)) {
+            $changes['create_started'] = $now;
+            $changes['create_safe_until'] = (new \DateTimeImmutable($now, new \DateTimeZone('UTC')))->modify('+355 minutes')->format('Y-m-d H:i:s.u');
+            if (($attempt->reservation_minutes ?? null) !== null) {
+                $changes['reservation_expires_at'] = PaymentReservationPolicy::expiresAt($now, (int) $attempt->reservation_minutes);
+            }
+        }
+
+        return $this->write($attempt, $changes, $this->financialConditions());
+    }
+
+    /** The same order/key may be retried only while its reservation remains payable. */
+    public function authorizeCapture(object $attempt): ?object
+    {
+        if ($attempt->state !== 'capturing' || PaymentReservationPolicy::isClosed($attempt)
+            || empty($attempt->lease_id)
+            || !in_array(PaymentReservationPolicy::state($attempt), ['legacy', 'active'], true)) {
+            return null;
+        }
+        $now = (string) $this->db->setQuery('SELECT UTC_TIMESTAMP(6)')->loadResult();
+
+        return $this->write($attempt, ['capture_started' => $attempt->capture_started ?: $now], $this->financialConditions());
+    }
+
+    private function financialConditions(): array
+    {
+        $conditions = ['lease_expires > UTC_TIMESTAMP(6)'];
+        if ($this->supportsReservations()) {
+            $conditions[] = '(reservation_expires_at IS NULL OR reservation_expires_at > UTC_TIMESTAMP(6))';
+        }
+
+        return $conditions;
     }
 
     public function isFinalized(int $bookingId): bool

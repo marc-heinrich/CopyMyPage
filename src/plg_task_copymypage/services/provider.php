@@ -14,6 +14,10 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationService;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationServiceProvider;
+use Joomla\Component\CopyMyPage\Site\Service\BookingIntegrityService;
+use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentService;
+use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentServiceProvider;
+use Joomla\Database\DatabaseInterface;
 use Joomla\DI\Container;
 use Joomla\DI\ServiceProviderInterface;
 use Joomla\Plugin\Task\CopyMyPage\Extension\CopyMyPage;
@@ -30,6 +34,11 @@ return new class () implements ServiceProviderInterface {
     public function register(Container $container): void
     {
         $container->registerServiceProvider(new PaymentReconciliationServiceProvider());
+        if (!$container->has(BookingIntegrityService::class)) {
+            $container->share(BookingIntegrityService::class,
+                static fn (Container $c): BookingIntegrityService => new BookingIntegrityService($c->get(DatabaseInterface::class)), true);
+        }
+        $container->registerServiceProvider(new PayPalPaymentServiceProvider());
 
         $container->set(
             PluginInterface::class,
@@ -38,7 +47,8 @@ return new class () implements ServiceProviderInterface {
                 static function (Container $container): PluginInterface {
                     $plugin = new CopyMyPage(
                         (array) PluginHelper::getPlugin('task', 'copymypage'),
-                        $container->get(PaymentReconciliationService::class)
+                        $container->get(PaymentReconciliationService::class),
+                        $container->get(PayPalPaymentService::class)
                     );
                     $plugin->setApplication(Factory::getApplication());
 

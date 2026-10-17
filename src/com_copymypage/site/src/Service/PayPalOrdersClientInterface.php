@@ -8,5 +8,5 @@ interface PayPalOrdersClientInterface
     public function createOrder(array $body, string $requestId): array;
     public function getOrder(string $orderId): array;
     public function captureOrder(string $orderId, string $requestId): array;
-    public function verifyWebhook(array $event, array $headers, string $webhookId): bool;
+    public function verifyWebhook(string $originalBody, array $headers, string $webhookId): bool;
 }

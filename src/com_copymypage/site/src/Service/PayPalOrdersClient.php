@@ -40,12 +40,23 @@ final class PayPalOrdersClient implements PayPalOrdersClientInterface
         return $this->request('POST', '/v2/checkout/orders/' . $orderId . '/capture', [], $requestId);
     }
 
-    public function verifyWebhook(array $event, array $headers, string $webhookId): bool
+    public function verifyWebhook(string $originalBody, array $headers, string $webhookId): bool
     {
-        if ($webhookId === '' || !isset($event['id'], $event['event_type'], $event['resource'])) {
+        if ($webhookId === '' || $originalBody === '' || strlen($originalBody) > 262144) {
             return false;
         }
-        $body = ['webhook_id' => $webhookId, 'webhook_event' => $event];
+        try {
+            $event = json_decode($originalBody, false, 64, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+        if (!$event instanceof \stdClass
+            || !is_string($event->id ?? null) || $event->id === ''
+            || !is_string($event->event_type ?? null) || $event->event_type === ''
+            || !($event->resource ?? null) instanceof \stdClass) {
+            return false;
+        }
+        $body = ['webhook_id' => $webhookId];
         foreach (['auth_algo' => 'PAYPAL-AUTH-ALGO', 'cert_url' => 'PAYPAL-CERT-URL', 'transmission_id' => 'PAYPAL-TRANSMISSION-ID', 'transmission_sig' => 'PAYPAL-TRANSMISSION-SIG', 'transmission_time' => 'PAYPAL-TRANSMISSION-TIME'] as $field => $header) {
             $value = $headers[$header] ?? null;
             if (!is_string($value) || $value === '' || strlen($value) > 4096 || strpbrk($value, "\r\n") !== false) {
@@ -57,7 +68,15 @@ final class PayPalOrdersClient implements PayPalOrdersClientInterface
         if (($certificate['scheme'] ?? '') !== 'https' || !in_array($certificate['host'] ?? '', ['api.paypal.com', 'api-m.paypal.com', 'api.sandbox.paypal.com', 'api-m.sandbox.paypal.com'], true)) {
             return false;
         }
-        $response = $this->request('POST', '/v1/notifications/verify-webhook-signature', $body);
+        try {
+            $metadata = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return false;
+        }
+        // Only a complete, validated JSON object may be embedded. Preserve every original
+        // byte (including whitespace); re-encoding would alter signed objects and numbers.
+        $verificationBody = substr($metadata, 0, -1) . ',"webhook_event":' . $originalBody . '}';
+        $response = $this->request('POST', '/v1/notifications/verify-webhook-signature', $verificationBody);
 
         return ($response['verification_status'] ?? '') === 'SUCCESS';
     }
@@ -69,7 +88,7 @@ final class PayPalOrdersClient implements PayPalOrdersClientInterface
         }
     }
 
-    private function request(string $method, string $path, ?array $body = null, ?string $requestId = null): array
+    private function request(string $method, string $path, array|string|null $body = null, ?string $requestId = null): array
     {
         $headers = ['Authorization' => 'Bearer ' . $this->token(), 'Content-Type' => 'application/json', 'Accept' => 'application/json', 'Prefer' => 'return=representation'];
         if ($requestId !== null) {
@@ -81,7 +100,7 @@ final class PayPalOrdersClient implements PayPalOrdersClientInterface
         try {
             $response = $method === 'GET'
                 ? $this->http->get('https://api-m.sandbox.paypal.com' . $path, $headers, 20)
-                : $this->http->post('https://api-m.sandbox.paypal.com' . $path, $body === [] ? '{}' : json_encode($body, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR), $headers, 20);
+                : $this->http->post('https://api-m.sandbox.paypal.com' . $path, is_string($body) ? $body : ($body === [] ? '{}' : json_encode($body, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)), $headers, 20);
         } catch (\Throwable) {
             throw new PaymentProviderException('transport_unknown');
         }

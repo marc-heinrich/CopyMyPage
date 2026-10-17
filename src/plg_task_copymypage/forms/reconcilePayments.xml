@@ -3,6 +3,21 @@
   <fields name="params">
     <fieldset name="task_params">
       <field
+        name="payment_reservation_minutes"
+        type="number"
+        label="PLG_TASK_COPYMYPAGE_PAYMENT_RESERVATION_MINUTES_LABEL"
+        description="PLG_TASK_COPYMYPAGE_PAYMENT_RESERVATION_MINUTES_DESC"
+        message="PLG_TASK_COPYMYPAGE_PAYMENT_RESERVATION_MINUTES_INVALID"
+        addruleprefix="Joomla\Plugin\Task\CopyMyPage\Rule"
+        default="60"
+        min="15"
+        max="240"
+        step="1"
+        required="true"
+        filter="raw"
+        validate="paymentreservation"
+      />
+      <field
         name="timeout_minutes"
         type="number"
         label="PLG_TASK_COPYMYPAGE_TIMEOUT_MINUTES_LABEL"
@@ -26,6 +41,18 @@
         filter="uint"
         validate="number"
       />
+      <field
+        name="ledger_cleanup_enabled"
+        type="radio"
+        label="PLG_TASK_COPYMYPAGE_LEDGER_CLEANUP_LABEL"
+        description="PLG_TASK_COPYMYPAGE_LEDGER_CLEANUP_DESC"
+        layout="joomla.form.field.radio.switcher"
+        default="0"
+        filter="uint"
+      >
+        <option value="0">JNO</option>
+        <option value="1">JYES</option>
+      </field>
       <field
         name="dry_run"
         type="radio"

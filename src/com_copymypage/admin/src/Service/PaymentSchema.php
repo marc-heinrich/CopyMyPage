@@ -31,6 +31,20 @@ final class PaymentSchema
                     $this->db->setQuery($statement)->execute();
                 }
             }
+            // Verify the known old/new contract before applying only the approved additive delta.
+            $this->verify(true);
+            $columns = $this->db->getTableColumns('#__copymypage_payment_attempts');
+            foreach (['reservation_minutes' => 'SMALLINT UNSIGNED', 'reservation_expires_at' => 'DATETIME(6)'] as $name => $type) {
+                if (!array_key_exists($name, $columns)) {
+                    $this->db->setQuery('ALTER TABLE ' . $this->db->quoteName('#__copymypage_payment_attempts')
+                        . ' ADD COLUMN ' . $this->db->quoteName($name) . ' ' . $type . ' NULL DEFAULT NULL')->execute();
+                }
+            }
+            $indexes = $this->db->setQuery('SHOW INDEX FROM ' . $this->db->quoteName('#__copymypage_payment_attempts'))->loadAssocList();
+            if (!in_array('idx_cmp_payment_reservation', array_column($indexes, 'Key_name'), true)) {
+                $this->db->setQuery('ALTER TABLE ' . $this->db->quoteName('#__copymypage_payment_attempts')
+                    . ' ADD INDEX idx_cmp_payment_reservation (reservation_expires_at, state, id)')->execute();
+            }
             $this->verify();
         } finally {
             $this->db->setQuery('SELECT RELEASE_LOCK(' . $this->db->quote($lock) . ')')->loadResult();
@@ -38,7 +52,7 @@ final class PaymentSchema
     }
 
     /** Validate the actual contract; CREATE IF NOT EXISTS must not hide an incompatible table. */
-    public function verify(): void
+    public function verify(bool $allowMissingReservations = false): void
     {
         $contracts = [
             '#__copymypage_payment_attempts' => [
@@ -53,23 +67,32 @@ final class PaymentSchema
             ],
         ];
 
+        $contracts['#__copymypage_payment_attempts']['columns']['reservation_minutes'] = 'smallint unsigned';
+        $contracts['#__copymypage_payment_attempts']['columns']['reservation_expires_at'] = 'datetime(6)';
+
         foreach ($contracts as $table => $contract) {
             $columns = $this->db->getTableColumns($table, false);
             $nullable = $table === '#__copymypage_payment_attempts'
-                ? ['create_payload_hash','order_id','capture_id','provider_status','provider_evidence','manual_reason','lease_id','lease_expires','create_started','create_safe_until','capture_started','captured_at','finalized_at']
+                ? ['create_payload_hash','order_id','capture_id','provider_status','provider_evidence','manual_reason','lease_id','lease_expires','create_started','create_safe_until','capture_started','captured_at','finalized_at','reservation_minutes','reservation_expires_at']
                 : ['attempt_id','lease_id','lease_expires','last_error','sent_at'];
             $fullColumns = [];
             foreach ($this->db->setQuery('SHOW FULL COLUMNS FROM ' . $this->db->quoteName($table))->loadAssocList() as $column) {
                 $fullColumns[$column['Field']] = $column;
             }
             foreach ($contract['columns'] as $name => $type) {
+                if ($allowMissingReservations && !isset($columns[$name]) && str_starts_with($name, 'reservation_')) {
+                    continue;
+                }
                 $actual = strtolower((string) ($columns[$name]->Type ?? ''));
-                $actual = preg_replace('/\b(int|bigint|tinyint)\(\d+\)/', '$1', $actual);
+                $actual = preg_replace('/\b(int|bigint|tinyint|smallint)\(\d+\)/', '$1', $actual);
                 if ($actual !== $type) {
                     throw new \RuntimeException('Incompatible CopyMyPage payment column: ' . $name);
                 }
                 if (($columns[$name]->Null ?? '') !== (in_array($name, $nullable, true) ? 'YES' : 'NO')) {
                     throw new \RuntimeException('Incompatible CopyMyPage payment nullability: ' . $name);
+                }
+                if (str_starts_with($name, 'reservation_') && ($columns[$name]->Default ?? null) !== null) {
+                    throw new \RuntimeException('Payment reservations require a NULL default.');
                 }
                 $binaryIdentity = str_starts_with($type, 'char(') || in_array($name, ['provider_id','expected_payee','order_id','capture_id','state','provider_status','manual_reason','kind','last_error'], true);
                 if ($binaryIdentity && ($fullColumns[$name]['Collation'] ?? '') !== 'ascii_bin') {
@@ -90,6 +113,22 @@ final class PaymentSchema
                 ksort($actual);
                 if (array_values($actual) !== $expected) {
                     throw new \RuntimeException('Incompatible CopyMyPage payment unique index: ' . $name);
+                }
+            }
+            if ($table === '#__copymypage_payment_attempts') {
+                $reservationIndex = [];
+                foreach ($this->db->setQuery('SHOW INDEX FROM ' . $this->db->quoteName($table))->loadAssocList() as $index) {
+                    if ($index['Key_name'] === 'idx_cmp_payment_reservation') {
+                        if ($index['Sub_part'] !== null || (int) $index['Non_unique'] !== 1) {
+                            throw new \RuntimeException('Incompatible payment reservation index.');
+                        }
+                        $reservationIndex[(int) $index['Seq_in_index']] = $index['Column_name'];
+                    }
+                }
+                ksort($reservationIndex);
+                if ((!$allowMissingReservations || $reservationIndex !== [])
+                    && array_values($reservationIndex) !== ['reservation_expires_at', 'state', 'id']) {
+                    throw new \RuntimeException('Incompatible payment reservation index.');
                 }
             }
             $definition = (string) $this->db->setQuery('SHOW CREATE TABLE ' . $this->db->quoteName($table))->loadRow()[1];

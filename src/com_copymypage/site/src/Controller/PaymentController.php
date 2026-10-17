@@ -28,18 +28,18 @@ final class PaymentController extends BaseController
             throw new \RuntimeException('Invalid payment notification.', 400);
         }
         try {
-            $event = json_decode($body, true, 64, JSON_THROW_ON_ERROR);
+            $event = json_decode($body, false, 64, JSON_THROW_ON_ERROR);
         } catch (\JsonException) {
             throw new \RuntimeException('Invalid payment notification.', 400);
         }
-        if (!is_array($event)) {
+        if (!$event instanceof \stdClass) {
             throw new \RuntimeException('Invalid payment notification.', 400);
         }
         $headers = [];
         foreach (['PAYPAL-AUTH-ALGO','PAYPAL-CERT-URL','PAYPAL-TRANSMISSION-ID','PAYPAL-TRANSMISSION-SIG','PAYPAL-TRANSMISSION-TIME'] as $header) {
             $headers[$header] = $this->input->server->getString('HTTP_' . str_replace('-', '_', $header), '');
         }
-        Factory::getContainer()->get(PayPalPaymentService::class)->webhook($provider, $event, $headers);
+        Factory::getContainer()->get(PayPalPaymentService::class)->webhook($provider, $body, $headers);
         $this->app->setHeader('Cache-Control', 'no-store', true);
         $this->app->setHeader('Content-Type', 'application/json', true);
         echo '{"accepted":true}';

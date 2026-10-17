@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS `#__copymypage_payment_attempts` (
   `lease_id` CHAR(36) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
   `lease_expires` DATETIME(6) DEFAULT NULL,
   `create_started` DATETIME(6) DEFAULT NULL,
+  `reservation_minutes` SMALLINT UNSIGNED DEFAULT NULL,
+  `reservation_expires_at` DATETIME(6) DEFAULT NULL,
   `create_safe_until` DATETIME(6) DEFAULT NULL,
   `capture_started` DATETIME(6) DEFAULT NULL,
   `captured_at` DATETIME(6) DEFAULT NULL,
@@ -39,6 +41,7 @@ CREATE TABLE IF NOT EXISTS `#__copymypage_payment_attempts` (
   UNIQUE KEY `uq_cmp_payment_order` (`provider_id`,`order_id`),
   UNIQUE KEY `uq_cmp_payment_capture_id` (`provider_id`,`capture_id`),
   KEY `idx_cmp_payment_recovery` (`state`,`modified`),
+  KEY `idx_cmp_payment_reservation` (`reservation_expires_at`,`state`,`id`),
   CONSTRAINT `#__cmp_payment_amount` CHECK (`expected_amount` > 0),
   CONSTRAINT `#__cmp_payment_keys` CHECK (`create_key` <> `capture_key`),
   CONSTRAINT `#__cmp_payment_state` CHECK (`state` IN ('prepared','creating','create_unknown','order_observed','order_created','capturing','capture_unknown','captured','finalizing','finalize_failed','finalized','cancel_check','cancel_unknown','cancelled','failed','manual'))

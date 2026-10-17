@@ -13,8 +13,11 @@ final class PayPalPaymentServiceProvider implements ServiceProviderInterface
 {
     public function register(Container $container): void
     {
+        if (!$container->has(PaymentReservationPolicy::class)) {
+            $container->share(PaymentReservationPolicy::class, static fn (Container $c): PaymentReservationPolicy => new PaymentReservationPolicy($c->get(DatabaseInterface::class)), true);
+        }
         if (!$container->has(PaymentAttemptRepository::class)) {
-            $container->share(PaymentAttemptRepository::class, static fn (Container $c): PaymentAttemptRepository => new PaymentAttemptRepository($c->get(DatabaseInterface::class), $c->get(BookingIntegrityService::class)), true);
+            $container->share(PaymentAttemptRepository::class, static fn (Container $c): PaymentAttemptRepository => new PaymentAttemptRepository($c->get(DatabaseInterface::class), $c->get(BookingIntegrityService::class), $c->get(PaymentReservationPolicy::class)), true);
         }
         if (!$container->has(PaymentOutboxService::class)) {
             $container->share(PaymentOutboxService::class, static fn (Container $c): PaymentOutboxService => new PaymentOutboxService($c->get(DatabaseInterface::class), Factory::getApplication(), $c->get(BookingIntegrityService::class), $c->get(PaymentAttemptRepository::class), $c->get(MailerFactoryInterface::class)), true);

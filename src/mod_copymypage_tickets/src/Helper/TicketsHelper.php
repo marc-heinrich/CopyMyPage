@@ -19,7 +19,6 @@ use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Component\CopyMyPage\Site\Service\TicketCatalogService;
 use Joomla\Component\CopyMyPage\Site\Service\TicketReservationService;
-use Joomla\Database\DatabaseInterface;
 use Joomla\Registry\Registry;
 
 /**
@@ -352,7 +351,6 @@ final class TicketsHelper
 
         $catalog               = $this->getTicketCatalogService();
         $events                = $catalog->getUpcomingEventsForScope($calendarIds, $monthsAhead);
-        $latestPurchaseDates   = $this->getLatestPurchaseDates($events);
         $availabilitySnapshots = $this->getAvailabilitySnapshots($events);
 
         foreach ($events as $event) {
@@ -364,7 +362,7 @@ final class TicketsHelper
             $item    = $this->prepareEvent(
                 $event,
                 $fallback,
-                $latestPurchaseDates[(string) $eventId] ?? null,
+                $availabilitySnapshots[$eventId]['latestPurchaseDate'] ?? null,
                 $availabilitySnapshots[$eventId] ?? []
             );
 
@@ -514,7 +512,6 @@ final class TicketsHelper
     ): array
     {
         $capacity   = $availability['capacity'] ?? null;
-        $nativeUsed = max(0, (int) ($availability['nativeUsed'] ?? 0));
         $sellableCapacity = $availability['sellableCapacity'] ?? null;
         $sold       = max(0, (int) ($availability['sold'] ?? 0));
         $remaining  = $capacity === null
@@ -554,7 +551,7 @@ final class TicketsHelper
                 break;
         }
 
-        $lastPurchaseLabel = $this->resolveLastPurchaseLabel($latestPurchaseDate, $nativeUsed);
+        $lastPurchaseLabel = $this->resolveLastPurchaseLabel($latestPurchaseDate, $sold);
         $progressLabel     = '';
         $progress          = null;
 
@@ -701,78 +698,14 @@ final class TicketsHelper
     }
 
     /**
-     * Fetch the latest completed ticket creation date for every local event in one query.
-     *
-     * @param   array<int, object>  $events  DPCalendar events selected for the module.
-     *
-     * @return array<string, string>
-     */
-    private function getLatestPurchaseDates(array $events): array
-    {
-        $eventIds = [];
-
-        foreach ($events as $event) {
-            if (!\is_object($event)) {
-                continue;
-            }
-
-            $eventId = filter_var(
-                $event->id ?? null,
-                FILTER_VALIDATE_INT,
-                ['options' => ['min_range' => 1]]
-            );
-
-            if ($eventId !== false) {
-                $eventIds[] = $eventId;
-            }
-        }
-
-        $eventIds = array_values(array_unique($eventIds));
-
-        if ($eventIds === []) {
-            return [];
-        }
-
-        try {
-            $db    = Factory::getContainer()->get(DatabaseInterface::class);
-            $query = $db->getQuery(true)
-                ->select($db->quoteName('event_id'))
-                ->select(
-                    'MAX(' . $db->quoteName('created') . ') AS ' . $db->quoteName('latest_purchase_date')
-                )
-                ->from($db->quoteName('#__dpcalendar_tickets'))
-                ->where($db->quoteName('state') . ' = 1')
-                ->where($db->quoteName('event_id') . ' IN (' . implode(',', $eventIds) . ')')
-                ->group($db->quoteName('event_id'));
-
-            $rows = $db->setQuery($query)->loadAssocList();
-        } catch (\Throwable) {
-            return [];
-        }
-
-        $latestPurchaseDates = [];
-
-        foreach ($rows as $row) {
-            $eventId = trim((string) ($row['event_id'] ?? ''));
-            $date    = trim((string) ($row['latest_purchase_date'] ?? ''));
-
-            if ($eventId !== '' && $date !== '') {
-                $latestPurchaseDates[$eventId] = $date;
-            }
-        }
-
-        return $latestPurchaseDates;
-    }
-
-    /**
      * Format the latest completed ticket creation date without exposing buyer data.
      */
-    private function resolveLastPurchaseLabel(?string $latestPurchaseDate, int $used): string
+    private function resolveLastPurchaseLabel(?string $latestPurchaseDate, int $sold): string
     {
         $latestPurchaseDate = trim((string) $latestPurchaseDate);
 
         if ($latestPurchaseDate === '') {
-            return $used === 0 ? Text::_('MOD_COPYMYPAGE_TICKETS_LAST_PURCHASE_NONE') : '';
+            return $sold === 0 ? Text::_('MOD_COPYMYPAGE_TICKETS_LAST_PURCHASE_NONE') : '';
         }
 
         try {

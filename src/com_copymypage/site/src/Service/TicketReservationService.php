@@ -246,7 +246,7 @@ final class TicketReservationService
         $events   = $this->catalog->getUpcomingEvents();
         $eventIds = array_map(static fn(\stdClass $event): int => (int) $event->id, $events);
         $held     = $this->getHeldQuantities($eventIds);
-        $sold     = $this->getConfirmedSoldQuantities($eventIds);
+        $sales    = $this->getConfirmedSales($eventIds);
         $seating  = $this->seatSelection->getInventoryConstraints($eventIds);
         $cart     = $this->cartContext->getActiveCart();
         $rows     = $cart === null ? [] : $this->loadCartItems((int) $cart->id);
@@ -259,7 +259,7 @@ final class TicketReservationService
                 $event,
                 $held[$eventId] ?? 0,
                 $seating[$eventId] ?? null,
-                $sold[$eventId] ?? 0
+                $sales[$eventId]['sold'] ?? 0
             );
             $eventCurrent = $current[$eventId] ?? [];
             $currentTotal = array_sum($eventCurrent);
@@ -378,7 +378,7 @@ final class TicketReservationService
 
         $eventIds = array_map(static fn(\stdClass $event): int => (int) $event->id, $events);
         $held     = $this->getHeldQuantities($eventIds);
-        $sold     = $this->getConfirmedSoldQuantities($eventIds);
+        $sales    = $this->getConfirmedSales($eventIds);
         $seating  = $this->seatSelection->getInventoryConstraints($eventIds);
         $result   = [];
 
@@ -388,8 +388,9 @@ final class TicketReservationService
                 $event,
                 $held[$eventId] ?? 0,
                 $seating[$eventId] ?? null,
-                $sold[$eventId] ?? 0
+                $sales[$eventId]['sold'] ?? 0
             );
+            $availability['latestPurchaseDate'] = $sales[$eventId]['latestPurchaseDate'] ?? null;
             $availability['selectionUrl'] = $availability['bookable']
                 ? $this->getSelectionUrl($eventId)
                 : '';
@@ -444,14 +445,15 @@ final class TicketReservationService
     }
 
     /**
-     * Count completed DPCalendar tickets assigned to sellable CopyMyPage seats.
+     * Aggregate completed DPCalendar ticket sales assigned to sellable CopyMyPage seats.
      * A booked seat alone is not a sale while its paid booking is still pending.
+     * Ticket creation remains the purchase date even after a later check-in.
      *
      * @param   array<int, int|string>  $eventIds
      *
-     * @return array<int, int>
+     * @return array<int, array{sold: int, latestPurchaseDate: ?string}>
      */
-    private function getConfirmedSoldQuantities(array $eventIds): array
+    private function getConfirmedSales(array $eventIds): array
     {
         $eventIds = $this->normalizeEventIds($eventIds);
 
@@ -462,6 +464,8 @@ final class TicketReservationService
         $query = $this->db->getQuery(true)
             ->select($this->db->quoteName('s.event_id'))
             ->select('COUNT(' . $this->db->quoteName('s.id') . ') AS ' . $this->db->quoteName('sold'))
+            ->select('MAX(' . $this->db->quoteName('t.created') . ') AS '
+                . $this->db->quoteName('latest_purchase_date'))
             ->from($this->db->quoteName('#__copymypage_event_seats', 's'))
             ->innerJoin($this->db->quoteName('#__dpcalendar_tickets', 't')
                 . ' ON ' . $this->db->quoteName('t.id') . ' = ' . $this->db->quoteName('s.ticket_id')
@@ -479,7 +483,10 @@ final class TicketReservationService
         $result = [];
 
         foreach ((array) $this->db->setQuery($query)->loadObjectList() as $row) {
-            $result[(int) $row->event_id] = max(0, (int) $row->sold);
+            $result[(int) $row->event_id] = [
+                'sold'               => max(0, (int) $row->sold),
+                'latestPurchaseDate' => $row->latest_purchase_date,
+            ];
         }
 
         return $result;

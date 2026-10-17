@@ -184,6 +184,8 @@ final class BookingCompletionService
                 // Read-only projection: refresh never contacts PayPal or mutates financial state.
                 $this->paymentAttempts->assertBinding($attempt, $integrity, PaymentProviderConfig::load($attempt->provider_id));
                 $state['canResumePayment'] = empty($attempt->lease_id)
+                    && !PaymentReservationPolicy::isClosed($attempt)
+                    && in_array(PaymentReservationPolicy::state($attempt), ['legacy', 'unstarted', 'active'], true)
                     && (in_array($attempt->state, ['prepared','order_created','order_observed'], true)
                         || ($attempt->state === 'create_unknown' && $attempt->create_safe_until > PaymentAttemptRepository::now())
                         || ($attempt->state === 'capture_unknown' && !empty($attempt->capture_started)

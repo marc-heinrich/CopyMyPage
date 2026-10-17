@@ -14,6 +14,7 @@ namespace Joomla\Plugin\Task\CopyMyPage\Extension;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationService;
+use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentService;
 use Joomla\Component\Scheduler\Administrator\Event\ExecuteTaskEvent;
 use Joomla\Component\Scheduler\Administrator\Task\Status;
 use Joomla\Component\Scheduler\Administrator\Traits\TaskPluginTrait;
@@ -48,7 +49,8 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
 
     public function __construct(
         array $config,
-        private readonly PaymentReconciliationService $paymentReconciliation
+        private readonly PaymentReconciliationService $paymentReconciliation,
+        private readonly ?PayPalPaymentService $ownedPayments = null
     ) {
         parent::__construct($config);
     }
@@ -120,6 +122,22 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                 ),
                 'error'
             );
+        }
+
+        // Existing tasks have no opt-in and cannot start provider lookups or ledger mutations.
+        if ((int) ($params->ledger_cleanup_enabled ?? 0) === 1) {
+            try {
+                if ($this->ownedPayments === null) {
+                    throw new \RuntimeException('Owned payment cleanup is unavailable.');
+                }
+                $ledger = $this->ownedPayments->cleanupPending($timeoutMinutes, $batchSize, $dryRun);
+                $this->logTask('CopyMyPage ledger cleanup: ' . json_encode($ledger, JSON_THROW_ON_ERROR),
+                    $ledger['errors'] > 0 ? 'error' : ($ledger['held'] > 0 ? 'warning' : 'info'));
+                $report['errors'] += $ledger['errors'];
+            } catch (\Throwable) {
+                $this->logTask('CopyMyPage ledger cleanup: {"reason":"cleanup_failed"}', 'error');
+                ++$report['errors'];
+            }
         }
 
         return (int) $report['errors'] > 0 ? Status::KNOCKOUT : Status::OK;
