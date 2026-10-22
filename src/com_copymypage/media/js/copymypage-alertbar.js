@@ -208,10 +208,9 @@ window.CopyMyPage = window.CopyMyPage || {};
             const rootStyles = window.getComputedStyle(this.root);
             const headerOffset = Number.parseFloat(rootStyles.getPropertyValue('--cmp-header-offset')) || 0;
             const stickyOffset = Math.ceil(headerOffset + alertOffset);
-            const heroViewportHeight = Math.max(0, Math.ceil(window.innerHeight - alertOffset));
 
             this.root.style.setProperty('--cmp-sticky-offset', `${stickyOffset}px`);
-            this.root.style.setProperty('--cmp-hero-viewport-height', `${heroViewportHeight}px`);
+            this.root.style.setProperty('--cmp-hero-viewport-height', 'max(0px, calc(100svh - var(--cmp-alert-offset, 0px)))');
         }
 
         _getActiveSlot() {
