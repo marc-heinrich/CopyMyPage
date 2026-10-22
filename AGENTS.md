@@ -4,11 +4,15 @@
 
 Diese Datei enthält die verbindlichen allgemeinen Arbeitsregeln für KI-Agenten bei CopyMyPage.
 
-Sie gilt für Entwicklungsarbeiten in der lokalen Joomla-Instanz:
+Sie gilt für Arbeiten an der maßgeblichen lokalen Joomla-Entwicklungsinstallation
 
 `C:\wamp\www\joomla6`
 
-sofern für ein betroffenes Unterverzeichnis keine spezifischere `AGENTS.md` existiert.
+und an der isolierten Testinstallation
+
+`C:\wamp\www\joomla6_test`
+
+sofern für ein betroffenes Unterverzeichnis keine spezifischere `AGENTS.md` existiert. Die weitergehenden Testrechte nach Abschnitt 2 gelten ausschließlich für die dort definierte Testinstallation.
 
 Bei Konflikten gilt folgende Reihenfolge:
 
@@ -25,7 +29,7 @@ Bestehender Code wird nicht allein deshalb geändert, weil er von allgemeinen Em
 
 ## 2. Entwicklungsumgebung und Pfade
 
-Die tatsächliche Joomla-Entwicklung erfolgt ausschließlich in:
+Die autoritative Joomla-Entwicklung und die zur späteren Übernahme vorgesehenen Änderungen erfolgen in:
 
 `C:\wamp\www\joomla6`
 
@@ -41,11 +45,34 @@ Existiert dieselbe Datei in Live-Instanz und Repository, ist für Entwicklungsar
 
 Reine Projekt- und Agentendokumentation wie `AGENTS.md`, `DESIGN.md` und Dateien unter `docs/` wird an ihrem tatsächlichen Repository-Standort bearbeitet. Dafür ist kein Live→Repo-Sync erforderlich. Die Live-Vorrangregel gilt nur für Entwicklungsartefakte, die sowohl in der Live-Instanz als auch im Repository vorhanden sind.
 
+### Isolierte Testumgebung: `C:\wamp\www\joomla6_test`
+
+`joomla6_test` ist ein **nicht autoritatives, veränderbares Testlabor** für Codex und andere ausdrücklich beauftragte Agenten. Ein Auftrag zur Durchführung von Tests oder zur Erprobung einer Lösung in dieser Umgebung erlaubt dort selbstständige Testaufbauten, gezielte Codeänderungen, Debugging, Installations-/Versionsversuche, Datenbankmigrationen sowie schreibende und auch destruktive Regressionstests. Dafür ist innerhalb des beauftragten Test-Scopes **keine weitere Einzelgenehmigung** nötig. Synthetische Testdaten, temporäre Dateien, Testkonfigurationen und Testdatenbankeinträge dürfen dabei angelegt, überschrieben oder entfernt werden.
+
+**Vor dem ersten schreibenden oder destruktiven Zugriff zwingend Isolation prüfen:**
+
+1. Den kanonischen Zielpfad einschließlich Junctions, Symlinks und verlinkter Unterverzeichnisse auflösen: kein Schreibzugriff darf tatsächlich in `C:\wamp\www\joomla6`, das Repository, andere Installationen oder ein externes System führen.
+2. Die tatsächliche `configuration.php` und gegebenenfalls weitere DB-Verbindungen prüfen: Testdatenbank/-Schema und möglichst DB-Benutzer müssen eindeutig von `joomla6` und allen öffentlich erreichbaren Umgebungen getrennt sein. **Ein anderer Joomla-Tabellenpräfix allein genügt nicht.** Keine geteilten Tabellen, Credentials mit unbeabsichtigten Schreibrechten oder gemeinsam genutzten Datenverzeichnisse.
+3. `tmp_path`, `log_path`, Cache-, Upload-, Session- und sonstige schreibbare Pfade auf Test-Isolation prüfen. Vorhandene echte oder kopierte Nutzer-, Buchungs-, Zahlungs- und Maildaten nicht als Wegwerf-Testdaten behandeln: nur synthetische oder ausreichend anonymisierte Daten für destruktive Versuche verwenden.
+4. Automatische Tasks, Web-Crons, externe Webhooks, FTP/Deployments, echtes SMTP und Zahlungsprovider-I/O auf unbeabsichtigte Nebenwirkungen prüfen. Standard: simulierte Provider-/SMTP-Grenzen und keine Nachrichten oder API-Aktionen nach außen. PayPal-Sandbox-Transaktionen, reale Mailzustellung oder andere externe Schreibzugriffe nur auf gesonderten ausdrücklichen Auftrag; LIVE-Zahlungszugänge nie für Testläufe verwenden.
+
+**Falls die Isolation nicht zweifelsfrei nachgewiesen ist: keine schreibenden Tests, sondern Befund melden und den sicheren Aufbau vorschlagen.** Die Bezeichnung `joomla6_test` allein gilt nicht als Isolationsnachweis.
+
+**Klare Grenzen der Testfreiheit:**
+
+- Schreibrechte des Agenten aus diesem Abschnitt gelten nur für isolierte Testdateien und die zugehörige Testdatenbank; Dateien außerhalb dürfen für Vergleiche gelesen, aber nicht verändert werden.
+- Innerhalb der isolierten Testkopie dürfen bei entsprechendem Testauftrag ausnahmsweise auch Joomla-/DPCalendar-Core-Dateien experimentell verändert werden. Solche Änderungen sind **niemals automatisch produktionsgeeignet** und dürfen nicht ungeprüft in `joomla6` oder das Repository übernommen werden.
+- Keine eigenständigen Änderungen an WAMP-globaler Konfiguration, Windows-Diensten, fremden Datenbanken, anderen Websites, Git-Repositories oder öffentlich erreichbaren Systemen.
+- Keine automatischen Syncs, Kopien oder Deployments von Testergebnissen in die autoritative Entwicklungsinstallation, das Repository oder die öffentliche Sandbox. Eine Übernahme braucht einen eigenen ausdrücklichen Implementierungsauftrag und erneute Prüfung der dort maßgeblichen Dateien.
+- Ein Testauftrag ist keine pauschale Erlaubnis für fachfremde Änderungen, unbeauftragte Agenten/Subagents oder Git-Schreiboperationen. Für ausdrücklich reine Analyseaufträge bleibt auch `joomla6_test` zunächst read-only.
+
+Tests sind im Bericht als **Testumgebung** zu kennzeichnen; relevante Versionen, verwendete Testdaten, echte gegenüber simulierten Schnittstellen, Änderungen und verbleibende Live-/Sandbox-Abnahmen offenlegen.
+
 ---
 
 ## 3. Benutzeränderungen schützen
 
-Vor jeder Änderung werden die konkret betroffenen Live-Dateien erneut gelesen.
+Vor Änderungen in der autoritativen Entwicklungsinstallation werden die konkret betroffenen Live-Dateien erneut gelesen. In `joomla6_test` sind vor Änderungen die jeweiligen Testdateien und die Isolationsbedingungen aus Abschnitt 2 zu prüfen.
 
 Ungewöhnlicher, unvollständiger oder fehlerhaft wirkender Code kann eine laufende oder absichtliche Benutzeränderung sein. Nicht unmittelbar beauftragte Bereiche werden deshalb nicht zurückgesetzt, bereinigt, formatiert, refaktoriert oder überschrieben.
 
@@ -68,6 +95,8 @@ Anschließend knapp zusammenfassen:
 Danach auf ausdrückliche Freigabe warten.
 
 Enthält der Auftrag bereits eine eindeutige Handlungsanweisung wie „ändere“, „behebe“, „implementiere“, „erstelle“, „ergänze“, „entferne“ oder „setze um“, ist dies bereits die Freigabe. Keine zusätzliche Bestätigung einholen.
+
+Ein ausdrücklich beauftragter Test- oder Erprobungslauf in `joomla6_test` gilt nur für die dort in Abschnitt 2 erlaubten Eingriffe als freigegeben; die Freigabe erstreckt sich nie automatisch auf `joomla6`, Repository oder öffentliche Systeme.
 
 Nach Freigabe im vereinbarten Scope bleiben.
 
@@ -225,7 +254,7 @@ Farbe darf nicht die einzige Informationsquelle sein.
 
 Direkt und ergebnisorientiert arbeiten. Keine Background-Agents, Subagents, parallel arbeitenden Helferprozesse oder externen Design-Evaluatoren starten, sofern der Benutzer sie nicht ausdrücklich verlangt.
 
-Prüfungen an produktiven Systemen nur auf ausdrücklichen Wunsch. Entwicklung und Tests erfolgen grundsätzlich in der lokalen Joomla-Instanz.
+Prüfungen an öffentlich erreichbaren Systemen nur auf ausdrücklichen Wunsch. Die maßgebliche Entwicklung erfolgt in `C:\wamp\www\joomla6`; schreibende, insbesondere destruktive Versuche erfolgen bevorzugt in der nach Abschnitt 2 verifizierten isolierten Installation `C:\wamp\www\joomla6_test`.
 
 Temporäre Testdateien, Diagnoseartefakte, Kommentarentwürfe und Zwischenexporte nicht dauerhaft in Live-Instanz oder Repository hinterlassen. Nach Möglichkeit im temporären Systemverzeichnis ablegen und nach Gebrauch entfernen.
 
@@ -257,6 +286,6 @@ Eine erfolgreiche Änderung:
 - respektiert die vorhandene Architektur,
 - lädt nur den benötigten Kontext,
 - folgt bei UI-Arbeiten dem Designsystem,
-- schützt Benutzeränderungen,
+- schützt Benutzeränderungen und trennt autoritative Entwicklung von destruktiven Testläufen,
 - besteht die erforderlichen Prüfungen,
 - vermeidet unbeauftragte Nebenänderungen.
