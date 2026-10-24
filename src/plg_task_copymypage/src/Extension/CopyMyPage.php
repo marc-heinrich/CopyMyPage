@@ -14,6 +14,7 @@ namespace Joomla\Plugin\Task\CopyMyPage\Extension;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationService;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentOutboxService;
 use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentService;
 use Joomla\Component\Scheduler\Administrator\Event\ExecuteTaskEvent;
 use Joomla\Component\Scheduler\Administrator\Task\Status;
@@ -50,7 +51,8 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     public function __construct(
         array $config,
         private readonly PaymentReconciliationService $paymentReconciliation,
-        private readonly ?PayPalPaymentService $ownedPayments = null
+        private readonly ?PayPalPaymentService $ownedPayments = null,
+        private readonly ?PaymentOutboxService $outbox = null
     ) {
         parent::__construct($config);
     }
@@ -136,6 +138,25 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                 $report['errors'] += $ledger['errors'];
             } catch (\Throwable) {
                 $this->logTask('CopyMyPage ledger cleanup: {"reason":"cleanup_failed"}', 'error');
+                ++$report['errors'];
+            }
+        }
+
+        // Independent opt-in: finalized attempts are deliberately absent from ledger cleanup.
+        if ((int) ($params->outbox_recovery_enabled ?? 0) === 1) {
+            try {
+                if ($this->outbox === null) {
+                    throw new \RuntimeException('Outbox recovery is unavailable.');
+                }
+                $outbox = $this->outbox->recoverPending((int) ($params->outbox_batch_size ?? 5), $dryRun);
+                $failed = $outbox['errors'] + $outbox['retryable'];
+                $this->logTask(
+                    'CopyMyPage outbox recovery: ' . json_encode($outbox, JSON_THROW_ON_ERROR),
+                    $failed > 0 ? 'error' : ($outbox['critical'] > 0 || $outbox['held'] > 0 ? 'warning' : 'info')
+                );
+                $report['errors'] += $failed;
+            } catch (\Throwable) {
+                $this->logTask('CopyMyPage outbox recovery: {"reason":"recovery_failed"}', 'error');
                 ++$report['errors'];
             }
         }

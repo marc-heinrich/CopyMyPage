@@ -80,8 +80,85 @@ final class PaymentOutboxService
         }
     }
 
+    /**
+     * Recover persisted paid-booking jobs independently of payment finalization.
+     * A five-minute retry interval uses the existing modified timestamp; no schema migration.
+     * The job limit is hard. The time budget stops new work, never interrupts an SMTP outcome.
+     */
+    public function recoverPending(int $limit = 5, bool $dryRun = true): array
+    {
+        $limit = min(20, max(1, $limit));
+        $deadline = hrtime(true) + 30_000_000_000;
+        $now = PaymentAttemptRepository::now();
+        $retryBefore = (new \DateTimeImmutable($now, new \DateTimeZone('UTC')))
+            ->modify('-5 minutes')->format('Y-m-d H:i:s.u');
+        $query = $this->db->getQuery(true)->select('id, booking_id')->from('#__copymypage_mail_outbox')
+            ->where('attempt_id IS NOT NULL')
+            ->where("(state = 'ready' OR (state = 'retryable' AND modified <= :retry)"
+                . " OR (state = 'sending' AND lease_expires < :now))")
+            ->bind(':retry', $retryBefore)->bind(':now', $now)->order('modified, id');
+        $jobs = $this->db->setQuery($query, 0, $limit)->loadObjectList();
+        $report = ['dryRun' => $dryRun, 'selected' => count($jobs), 'processed' => 0,
+            'sent' => 0, 'retryable' => 0, 'unknown' => 0, 'skipped' => 0, 'errors' => 0,
+            'timeLimitReached' => false];
+
+        if (!$dryRun) {
+            foreach ($jobs as $job) {
+                if (hrtime(true) >= $deadline) {
+                    $report['timeLimitReached'] = true;
+                    break;
+                }
+                try {
+                    // Exact job scope prevents a booking with many messages exceeding the batch limit.
+                    $result = $this->dispatchBooking((int) $job->booking_id, 1, (int) $job->id, $retryBefore);
+                    foreach (['sent', 'retryable', 'unknown', 'skipped'] as $key) {
+                        $report[$key] += $result[$key];
+                    }
+                } catch (\Throwable) {
+                    // Never expose transport exceptions or reset an uncertain delivery to ready.
+                    ++$report['errors'];
+                    try {
+                        $id = (int) $job->id;
+                        $modified = PaymentAttemptRepository::now();
+                        $query = $this->db->getQuery(true)->update('#__copymypage_mail_outbox')
+                            ->set("state = 'retryable'")->set("last_error = 'recovery_failed'")
+                            ->set('modified = :modified')->where('id = :id')
+                            ->where("(state = 'ready' OR (state = 'retryable' AND modified <= :retry))")
+                            ->bind(':modified', $modified)->bind(':id', $id, ParameterType::INTEGER)
+                            ->bind(':retry', $retryBefore);
+                        // Only provably unsent states may be deferred. Sending/sent/unknown stay untouched.
+                        $this->db->setQuery($query)->execute();
+                    } catch (\Throwable) {
+                        // A database outage is reported, never worked around by an unleased send.
+                    }
+                }
+                ++$report['processed'];
+            }
+        }
+
+        $now = PaymentAttemptRepository::now();
+        $query = $this->db->getQuery(true)
+            ->select("COALESCE(SUM(state = 'ready'), 0) AS ready")
+            ->select("COALESCE(SUM(state = 'retryable' AND modified <= :retryDue), 0) AS retryDue")
+            ->select("COALESCE(SUM(state = 'retryable' AND modified > :retryWait), 0) AS notDue")
+            ->select("COALESCE(SUM(state = 'unknown'), 0) AS manualReview")
+            ->select("COALESCE(SUM(state = 'sending' AND lease_expires < :expired), 0) AS expiredSending")
+            ->select("COALESCE(SUM(state = 'sending' AND (lease_expires IS NULL OR lease_expires >= :active)), 0) AS sending")
+            ->from('#__copymypage_mail_outbox')->where('attempt_id IS NOT NULL')
+            ->bind(':retryDue', $retryBefore)->bind(':retryWait', $retryBefore)
+            ->bind(':expired', $now)->bind(':active', $now);
+        $backlog = array_map('intval', $this->db->setQuery($query)->loadAssoc());
+        $report['backlog'] = $backlog;
+        $report['notDue'] = $backlog['notDue'];
+        $report['held'] = $backlog['manualReview'] + $backlog['sending'];
+        $report['critical'] = $backlog['ready'] + $backlog['retryDue']
+            + $backlog['expiredSending'] + $backlog['manualReview'];
+
+        return $report;
+    }
+
     /** Commit the send lease before I/O. A lost worker becomes unknown, never automatically redeliverable. */
-    public function dispatchBooking(int $bookingId, int $limit = 20): array
+    public function dispatchBooking(int $bookingId, int $limit = 20, ?int $jobId = null, ?string $retryBefore = null): array
     {
         $report = ['sent' => 0, 'retryable' => 0, 'unknown' => 0, 'skipped' => 0];
         if ($bookingId < 1) {
@@ -92,12 +169,26 @@ final class PaymentOutboxService
             ->set("state = 'unknown'")->set("last_error = 'worker_interrupted'")->set('modified = :now')
             ->where('booking_id = :booking')->where("state = 'sending'")->where('lease_expires < :expired')
             ->bind(':now', $expired)->bind(':expired', $expired)->bind(':booking', $bookingId, ParameterType::INTEGER);
+        if ($jobId !== null) {
+            $query->where('id = :job')->bind(':job', $jobId, ParameterType::INTEGER);
+        }
         $this->db->setQuery($query)->execute();
         $report['unknown'] += $this->db->getAffectedRows();
-        $ids = $this->db->setQuery('SELECT id FROM #__copymypage_mail_outbox WHERE booking_id = ' . $bookingId
-            . " AND state IN ('ready','retryable') ORDER BY id", 0, min(100, max(1, $limit)))->loadColumn();
+        $query = $this->db->getQuery(true)->select('id')->from('#__copymypage_mail_outbox')
+            ->where('booking_id = :booking')->bind(':booking', $bookingId, ParameterType::INTEGER)
+            ->where("state IN ('ready','retryable')")->order('id');
+        if ($jobId !== null) {
+            $query->where('id = :job')->bind(':job', $jobId, ParameterType::INTEGER);
+        }
+        if ($retryBefore !== null) {
+            $query->where("(state = 'ready' OR modified <= :retry)")->bind(':retry', $retryBefore);
+        }
+        $ids = $this->db->setQuery($query, 0, min(100, max(1, $limit)))->loadColumn();
+        if ($jobId !== null && $ids === [] && $report['unknown'] === 0) {
+            ++$report['skipped'];
+        }
         foreach ($ids as $id) {
-            $row = $this->claim((int) $id);
+            $row = $this->claim((int) $id, $retryBefore);
             if ($row === null) {
                 ++$report['skipped'];
                 continue;
@@ -109,12 +200,13 @@ final class PaymentOutboxService
         return $report;
     }
 
-    private function claim(int $id): ?object
+    private function claim(int $id, ?string $retryBefore = null): ?object
     {
         $this->db->transactionStart();
         try {
             $row = $this->db->setQuery('SELECT * FROM #__copymypage_mail_outbox WHERE id = ' . $id . ' FOR UPDATE')->loadObject();
-            if (!$row || !in_array($row->state, ['ready','retryable'], true)) {
+            if (!$row || !in_array($row->state, ['ready','retryable'], true)
+                || ($row->state === 'retryable' && $retryBefore !== null && $row->modified > $retryBefore)) {
                 $this->db->transactionCommit();
                 return null;
             }
@@ -153,14 +245,51 @@ final class PaymentOutboxService
                 $this->finish($row, 'unknown', 'booking_no_longer_sendable');
                 return 'unknown';
             }
+            $attempt = null;
             if ($row->attempt_id !== null) {
                 $attempt = $this->attempts->getForBooking((int) $row->booking_id);
-                if (!$attempt || !hash_equals((string) $row->attempt_id, (string) $attempt->id) || !$this->attempts->isFinalized((int) $row->booking_id)) {
+                $booking = $inspection['booking'];
+                if (!$attempt || !hash_equals((string) $row->attempt_id, (string) $attempt->id)
+                    || $attempt->state !== 'finalized' || empty($attempt->finalized_at)
+                    || !PaymentProof::hasDurableCapture($attempt)
+                    || (int) $attempt->cart_id !== (int) $inspection['cart']->id
+                    || (int) $attempt->owner_id !== (int) $booking->user_id
+                    || !hash_equals((string) $attempt->snapshot_hash, (string) $row->snapshot_hash)
+                    || !hash_equals((string) $attempt->provider_id, (string) $booking->payment_provider)
+                    || !hash_equals((string) $attempt->expected_currency, (string) $booking->currency)
+                    || !hash_equals((string) $attempt->expected_amount, PaymentAmount::fromBooking($booking))
+                    || !hash_equals((string) $attempt->capture_id, (string) $booking->transaction_id)) {
                     $this->finish($row, 'unknown', 'payment_proof_unavailable');
                     return 'unknown';
                 }
             } elseif ((float) $inspection['booking']->price !== 0.0 || (string) $inspection['booking']->payment_provider !== '') {
                 $this->finish($row, 'unknown', 'free_proof_changed');
+                return 'unknown';
+            }
+            // Recheck the persisted logical envelope; never derive new recipients during recovery.
+            try {
+                $recipients = json_decode((string) $row->recipients, true, 512, JSON_THROW_ON_ERROR);
+                if (!is_array($recipients) || $recipients === [] || !array_is_list($recipients)
+                    || !str_starts_with((string) $row->kind, 'com_dpcalendar.booking.')
+                    || strlen((string) $row->kind) > 96 || (string) $row->mime === '') {
+                    throw new \DomainException('Invalid persisted envelope.');
+                }
+                foreach (array_merge($recipients, [$row->sender]) as $address) {
+                    if (!is_string($address) || !filter_var($address, FILTER_VALIDATE_EMAIL)
+                        || strpbrk($address, "\r\n") !== false) {
+                        throw new \DomainException('Invalid persisted address.');
+                    }
+                }
+                $recipients = array_values(array_unique($recipients));
+                sort($recipients, SORT_STRING);
+                $key = hash('sha256', implode("\0", [(string) $row->booking_id,
+                    $attempt !== null ? (string) $attempt->capture_id : 'free:' . $row->snapshot_hash,
+                    (string) $row->kind, implode(',', $recipients)]));
+                if (!hash_equals((string) $row->dedupe_key, $key)) {
+                    throw new \DomainException('Persisted message binding changed.');
+                }
+            } catch (\Throwable) {
+                $this->finish($row, 'unknown', 'message_binding_invalid');
                 return 'unknown';
             }
             if (!$this->app->get('mailonline', 1)) {
@@ -184,7 +313,6 @@ final class PaymentOutboxService
                 $this->finish($row, 'retryable', 'smtp_sender_rejected');
                 return 'retryable';
             }
-            $recipients = json_decode((string) $row->recipients, true, 512, JSON_THROW_ON_ERROR);
             foreach ($recipients as $recipient) {
                 if (!$smtp->recipient($recipient)) {
                     $this->finish($row, 'retryable', 'smtp_recipient_rejected');

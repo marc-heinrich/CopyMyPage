@@ -13,6 +13,7 @@ use Joomla\CMS\Extension\PluginInterface;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationService;
+use Joomla\Component\CopyMyPage\Site\Service\PaymentOutboxService;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationServiceProvider;
 use Joomla\Component\CopyMyPage\Site\Service\BookingIntegrityService;
 use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentService;
@@ -48,7 +49,8 @@ return new class () implements ServiceProviderInterface {
                     $plugin = new CopyMyPage(
                         (array) PluginHelper::getPlugin('task', 'copymypage'),
                         $container->get(PaymentReconciliationService::class),
-                        $container->get(PayPalPaymentService::class)
+                        $container->get(PayPalPaymentService::class),
+                        $container->get(PaymentOutboxService::class)
                     );
                     $plugin->setApplication(Factory::getApplication());
 

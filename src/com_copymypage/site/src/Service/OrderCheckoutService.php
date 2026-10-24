@@ -742,21 +742,37 @@ final class OrderCheckoutService
 
         foreach ((array) ($reviewState['items'] ?? []) as $item) {
             $eventId = max(0, (int) ($item['eventId'] ?? 0));
-            $tickets = [];
+
+            if ($eventId < 1 || empty($item['prices'])) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_CONFLICT'));
+            }
+
+            $event = $this->ticketCatalog->getEvent($eventId);
+
+            if (!$event instanceof \stdClass) {
+                throw new \DomainException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_AVAILABILITY'));
+            }
+
+            // Native preview and creation require a quantity for every current price index.
+            $tickets = array_fill_keys(
+                array_column($this->ticketCatalog->getPriceTypes($event), 'index'),
+                0
+            );
 
             foreach ((array) ($item['prices'] ?? []) as $price) {
-                $priceIndex = max(0, (int) ($price['index'] ?? 0));
+                $priceIndex = filter_var(
+                    $price['index'] ?? null,
+                    FILTER_VALIDATE_INT,
+                    ['options' => ['min_range' => 0]]
+                );
                 $quantity   = max(0, (int) ($price['quantity'] ?? 0));
 
-                if ($quantity < 1 || isset($tickets[$priceIndex])) {
+                if ($priceIndex === false || $quantity < 1
+                    || !isset($tickets[$priceIndex]) || $tickets[$priceIndex] !== 0) {
                     throw new \DomainException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_CONFLICT'));
                 }
 
                 $tickets[$priceIndex] = $quantity;
-            }
-
-            if ($eventId < 1 || $tickets === []) {
-                throw new \DomainException(Text::_('COM_COPYMYPAGE_ORDER_REVIEW_ERROR_CONFLICT'));
             }
 
             $eventSelection[$eventId] = ['tickets' => $tickets];
@@ -821,7 +837,9 @@ final class OrderCheckoutService
 
         foreach ((array) $bookingInput['event_id'] as $eventId => $selection) {
             foreach ((array) ($selection['tickets'] ?? []) as $priceIndex => $quantity) {
-                $expected[(int) $eventId][(int) $priceIndex] = (int) $quantity;
+                if ((int) $quantity > 0) {
+                    $expected[(int) $eventId][(int) $priceIndex] = (int) $quantity;
+                }
             }
         }
 
