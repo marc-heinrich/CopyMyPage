@@ -177,6 +177,8 @@ final class PaymentReconciliationService
             ->select([
                 $this->db->quoteName('c.id'),
                 $this->db->quoteName('c.booking_id'),
+                $this->db->quoteName('c.modified'),
+                $this->db->quoteName('c.revision'),
             ])
             ->from($this->db->quoteName('#__copymypage_ticket_carts', 'c'))
             ->leftJoin(
@@ -186,10 +188,14 @@ final class PaymentReconciliationService
             ->where($this->db->quoteName('c.status') . ' = ' . TicketCartContextService::STATUS_CONVERTED)
             ->where($this->db->quoteName('c.booking_id') . ' IS NOT NULL')
             ->where($this->db->quoteName('c.modified') . ' <= :cutoff')
+            // Every financial attempt belongs to ledger reconciliation, never legacy TTL release.
+            ->where('NOT EXISTS (SELECT 1 FROM #__copymypage_payment_attempts AS p'
+                . ' WHERE p.booking_id = c.booking_id)')
             ->where(
                 '(' . $this->db->quoteName('b.id') . ' IS NULL OR '
                     . $this->db->quoteName('b.state') . ' <> ' . self::BOOKING_STATE_COMPLETED . ')'
             )
+            ->order($this->db->quoteName('c.modified') . ' ASC')
             ->order($this->db->quoteName('c.id') . ' ASC')
             ->bind(':cutoff', $cutoff, ParameterType::STRING);
         $candidates = (array) $this->db->setQuery($query, 0, $batchSize)->loadObjectList();
@@ -197,6 +203,7 @@ final class PaymentReconciliationService
         foreach ($candidates as $candidate) {
             $cartId    = max(0, (int) ($candidate->id ?? 0));
             $bookingId = max(0, (int) ($candidate->booking_id ?? 0));
+            $deferred  = false;
             $report['scanned']++;
 
             try {
@@ -210,14 +217,25 @@ final class PaymentReconciliationService
                     $report['repaired']++;
                     $report['repairedIds'][] = $bookingId;
                 } elseif ($type === 'manual') {
+                    $deferred = true;
                     $report['manualReview']++;
                     $report['manualReviewIds'][] = $bookingId;
                 } else {
                     $report['skipped']++;
                 }
             } catch (\Throwable) {
+                $deferred = true;
                 $report['errors']++;
                 $report['errorIds'][] = $bookingId;
+            }
+
+            if ($deferred && !$dryRun) {
+                try {
+                    $this->deferCandidate($candidate);
+                } catch (\Throwable) {
+                    $report['errors']++;
+                    $report['errorIds'][] = $bookingId;
+                }
             }
         }
 
@@ -226,6 +244,38 @@ final class PaymentReconciliationService
         }
 
         return $report;
+    }
+
+    /**
+     * Audit a deferred legacy observation without changing payment evidence or deadlines.
+     * Oldest observation first plus this bounded cooldown gives later carts their turn,
+     * including when several manual/error cases precede them and the batch is one.
+     * A payment start or any concurrent cart change must win over this audit CAS.
+     */
+    private function deferCandidate(object $candidate): void
+    {
+        $modified = $this->now();
+        $cartId = (int) $candidate->id;
+        $bookingId = (int) $candidate->booking_id;
+        $revision = (int) $candidate->revision;
+        $observed = (string) $candidate->modified;
+        $query = $this->db->getQuery(true)
+            ->update($this->db->quoteName('#__copymypage_ticket_carts'))
+            ->set($this->db->quoteName('modified') . ' = :modified')
+            ->where($this->db->quoteName('id') . ' = :cartId')
+            ->where($this->db->quoteName('booking_id') . ' = :bookingId')
+            ->where($this->db->quoteName('revision') . ' = :revision')
+            ->where($this->db->quoteName('modified') . ' = :observed')
+            ->where($this->db->quoteName('status') . ' = ' . TicketCartContextService::STATUS_CONVERTED)
+            ->where('NOT EXISTS (SELECT 1 FROM #__copymypage_payment_attempts AS p'
+                . ' WHERE p.booking_id = :ledgerBookingId)')
+            ->bind(':modified', $modified, ParameterType::STRING)
+            ->bind(':cartId', $cartId, ParameterType::INTEGER)
+            ->bind(':bookingId', $bookingId, ParameterType::INTEGER)
+            ->bind(':ledgerBookingId', $bookingId, ParameterType::INTEGER)
+            ->bind(':revision', $revision, ParameterType::INTEGER)
+            ->bind(':observed', $observed, ParameterType::STRING);
+        $this->db->setQuery($query)->execute();
     }
 
     /**
@@ -410,8 +460,7 @@ final class PaymentReconciliationService
             $state         = (int) ($booking->state ?? -1);
             $transactionId = trim((string) ($booking->transaction_id ?? ''));
 
-            if (PaymentProviderConfig::isOwned((string) $booking->payment_provider)
-                && (int) $this->db->setQuery('SELECT COUNT(*) FROM #__copymypage_payment_attempts WHERE booking_id = ' . $bookingId)->loadResult() > 0) {
+            if ((int) $this->db->setQuery('SELECT COUNT(*) FROM #__copymypage_payment_attempts WHERE booking_id = ' . $bookingId)->loadResult() > 0) {
                 // The financial ledger, including unconfirmed captures, takes precedence over the old TTL cleanup.
                 $this->db->transactionCommit();
                 return ['type' => 'manual'];
@@ -439,7 +488,7 @@ final class PaymentReconciliationService
             $tickets = $this->lockTickets($bookingId);
             $seats   = $this->lockSeats($cartId);
 
-            if (!$this->hasExactSeatIntegrity($tickets, $seats)) {
+            if (!$this->hasExactSeatIntegrity($tickets, $seats, $state)) {
                 $this->db->transactionCommit();
 
                 return ['type' => 'manual'];
@@ -447,7 +496,7 @@ final class PaymentReconciliationService
 
             if (!$dryRun) {
                 $terminalState = $isAbandoned ? self::BOOKING_STATE_CANCELLED : $state;
-                $this->releaseBooking($bookingId, $cartId, $terminalState, $isAbandoned, \count($seats));
+                $this->releaseBooking($bookingId, $cartId, $terminalState, $isAbandoned, $tickets, $seats);
             }
 
             $this->db->transactionCommit();
@@ -527,6 +576,7 @@ final class PaymentReconciliationService
                 $this->db->quoteName('event_id'),
                 $this->db->quoteName('status'),
                 $this->db->quoteName('ticket_id'),
+                $this->db->quoteName('allocation_type'),
             ])
             ->from($this->db->quoteName('#__copymypage_event_seats'))
             ->where($this->db->quoteName('cart_id') . ' = ' . $cartId)
@@ -539,8 +589,15 @@ final class PaymentReconciliationService
      * @param   list<object>  $tickets
      * @param   list<object>  $seats
      */
-    private function hasExactSeatIntegrity(array $tickets, array $seats): bool
+    private function hasExactSeatIntegrity(array $tickets, array $seats, int $bookingState): bool
     {
+        // Pending 3 -> cancelled 6: only pending tickets. Terminal repairs may
+        // finish pending tickets or retain that SAME terminal state (-2/6/7).
+        // Active 1, checked-in 9, other terminal states and unknowns always hold.
+        $allowedStates = $bookingState === self::BOOKING_STATE_PENDING
+            ? [self::BOOKING_STATE_PENDING]
+            : (\in_array($bookingState, self::RELEASED_BOOKING_STATES, true)
+                ? [self::BOOKING_STATE_PENDING, $bookingState] : []);
         if ($tickets === [] || \count($tickets) !== \count($seats)) {
             return false;
         }
@@ -551,7 +608,8 @@ final class PaymentReconciliationService
             $ticketId = max(0, (int) ($ticket->id ?? 0));
             $eventId  = max(0, (int) ($ticket->event_id ?? 0));
 
-            if ($ticketId < 1 || $eventId < 1 || isset($ticketEvents[$ticketId])) {
+            if ($ticketId < 1 || $eventId < 1 || isset($ticketEvents[$ticketId])
+                || $ticket->state === null || !\in_array((int) $ticket->state, $allowedStates, true)) {
                 return false;
             }
 
@@ -565,6 +623,7 @@ final class PaymentReconciliationService
 
             if (
                 (int) ($seat->status ?? -1) !== EventSeatInventoryService::SEAT_STATUS_BOOKED
+                || (int) ($seat->allocation_type ?? -1) !== EventSeatInventoryService::SEAT_ALLOCATION_STANDARD
                 || !isset($ticketEvents[$ticketId])
                 || $ticketEvents[$ticketId] !== (int) ($seat->event_id ?? 0)
                 || isset($seenTickets[$ticketId])
@@ -586,8 +645,20 @@ final class PaymentReconciliationService
         int $cartId,
         int $terminalState,
         bool $updateBooking,
-        int $seatCount
+        array $tickets,
+        array $seats
     ): void {
+        $sourceState = $updateBooking ? self::BOOKING_STATE_PENDING : $terminalState;
+        if (!\in_array($terminalState, self::RELEASED_BOOKING_STATES, true)
+            || ($updateBooking && $terminalState !== self::BOOKING_STATE_CANCELLED)
+            || !$this->hasExactSeatIntegrity($tickets, $seats, $sourceState)) {
+            throw new \RuntimeException('The legacy ticket release is not permitted.');
+        }
+        $ticketIds = array_map(static fn(object $ticket): int => (int) $ticket->id, $tickets);
+        $seatIds = array_map(static fn(object $seat): int => (int) $seat->id, $seats);
+        $pendingCount = \count(array_filter($tickets,
+            static fn(object $ticket): bool => (int) $ticket->state === self::BOOKING_STATE_PENDING));
+
         if ($updateBooking) {
             $query = $this->db->getQuery(true)
                 ->update($this->db->quoteName('#__dpcalendar_bookings'))
@@ -598,6 +669,8 @@ final class PaymentReconciliationService
                     '(' . $this->db->quoteName('transaction_id') . ' IS NULL OR TRIM('
                         . $this->db->quoteName('transaction_id') . ") = '')"
                 )
+                ->where('(' . $this->db->quoteName('token') . ' IS NULL OR TRIM('
+                    . $this->db->quoteName('token') . ") = '')")
                 ->bind(':terminalState', $terminalState, ParameterType::INTEGER)
                 ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
             $this->db->setQuery($query)->execute();
@@ -612,9 +685,22 @@ final class PaymentReconciliationService
             ->update($this->db->quoteName('#__dpcalendar_tickets'))
             ->set($this->db->quoteName('state') . ' = :terminalState')
             ->where($this->db->quoteName('booking_id') . ' = :bookingId')
+            ->where($this->db->quoteName('id') . ' IN (' . implode(',', $ticketIds) . ')')
+            ->where($this->db->quoteName('state') . ' = ' . self::BOOKING_STATE_PENDING)
             ->bind(':terminalState', $terminalState, ParameterType::INTEGER)
             ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
         $this->db->setQuery($query)->execute();
+
+        if ($this->db->getAffectedRows() !== $pendingCount) {
+            throw new \RuntimeException('The legacy ticket states changed during reconciliation.');
+        }
+        $actualTickets = $this->lockTickets($bookingId);
+        if (array_map(static fn(object $ticket): int => (int) $ticket->id, $actualTickets) !== $ticketIds
+            || !$this->hasExactSeatIntegrity($actualTickets, $seats, $terminalState)
+            || \count(array_filter($actualTickets,
+                static fn(object $ticket): bool => (int) $ticket->state === $terminalState)) !== \count($tickets)) {
+            throw new \RuntimeException('The legacy ticket release postcondition failed.');
+        }
 
         $modified = $this->now();
         $query = $this->db->getQuery(true)
@@ -628,11 +714,14 @@ final class PaymentReconciliationService
             ->set($this->db->quoteName('modified_by') . ' = 0')
             ->where($this->db->quoteName('cart_id') . ' = :cartId')
             ->where($this->db->quoteName('status') . ' = ' . EventSeatInventoryService::SEAT_STATUS_BOOKED)
+            ->where($this->db->quoteName('allocation_type') . ' = ' . EventSeatInventoryService::SEAT_ALLOCATION_STANDARD)
+            ->where($this->db->quoteName('id') . ' IN (' . implode(',', $seatIds) . ')')
+            ->where($this->db->quoteName('ticket_id') . ' IN (' . implode(',', $ticketIds) . ')')
             ->bind(':modified', $modified, ParameterType::STRING)
             ->bind(':cartId', $cartId, ParameterType::INTEGER);
         $this->db->setQuery($query)->execute();
 
-        if ($this->db->getAffectedRows() !== $seatCount) {
+        if ($this->db->getAffectedRows() !== \count($seats)) {
             throw new \RuntimeException('The CopyMyPage seat assignment changed during reconciliation.');
         }
 
@@ -651,6 +740,19 @@ final class PaymentReconciliationService
 
         if ($this->db->getAffectedRows() !== 1) {
             throw new \RuntimeException('The CopyMyPage cart changed during reconciliation.');
+        }
+
+        $released = $this->db->getQuery(true)->select('COUNT(*)')->from('#__copymypage_event_seats')
+            ->where('id IN (' . implode(',', $seatIds) . ')')->where('status = 0')->where('allocation_type = 0')
+            ->where('cart_id IS NULL')->where('ticket_id IS NULL')
+            ->where('price_index IS NULL')->where('assignment_order IS NULL');
+        $actualCarts = $this->lockCartsForBooking($bookingId);
+        if ((int) $this->db->setQuery($released)->loadResult() !== \count($seats)
+            || $this->lockSeats($cartId) !== []
+            || \count($actualCarts) !== 1 || (int) $actualCarts[0]->id !== $cartId
+            || (int) $actualCarts[0]->status !== TicketCartContextService::STATUS_RELEASED
+            || (int) ($this->lockBooking($bookingId)->state ?? -1) !== $terminalState) {
+            throw new \RuntimeException('The legacy booking release postcondition failed.');
         }
     }
 
