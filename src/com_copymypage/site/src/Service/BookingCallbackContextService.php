@@ -89,7 +89,13 @@ final class BookingCallbackContextService
                 return;
             }
 
-            $controller = $factory->createController('Booking', 'Site', [], $this->app, $input);
+            $controller = $factory->createController(
+                'Booking',
+                'Site',
+                ['base_path' => JPATH_SITE . '/components/com_dpcalendar'],
+                $this->app,
+                $input
+            );
 
             if ($task === 'booking.pay') {
                 $controller->pay();

@@ -94,6 +94,18 @@
       }
     },
     {
+      "name": "copymypage.registration",
+      "type": "script",
+      "uri": "com_copymypage/copymypage-registration.min.js",
+      "dependencies": [
+        "core",
+        "form.validate"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
       "name": "copymypage.finder.autosubmit",
       "type": "script",
       "uri": "com_copymypage/copymypage-finder-autosubmit.min.js",

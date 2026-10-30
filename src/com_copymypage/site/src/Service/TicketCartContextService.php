@@ -252,6 +252,18 @@ final class TicketCartContextService
             ->bind(':modified', $modified, ParameterType::STRING)
             ->bind(':cartId', $cartId, ParameterType::INTEGER);
 
+        if (NativePayPalProviderRegistry::isReference($paymentProvider)) {
+            $providers = new NativePayPalProviderRegistry($this->db);
+            if (!$providers->isAvailable($paymentProvider)) {
+                throw new \DomainException('Native PayPal provider association requires review.');
+            }
+            $columns = $this->db->getTableColumns('#__copymypage_ticket_carts');
+            if (isset($columns['native_payment_phase'])) {
+                $query->set('native_payment_phase = ' . NativeReservationService::NOT_STARTED)
+                    ->where('native_payment_phase = ' . NativeReservationService::UNKNOWN);
+            }
+        }
+
         $this->db->setQuery($query)->execute();
 
         if ($this->db->getAffectedRows() !== 1) {
@@ -320,6 +332,7 @@ final class TicketCartContextService
             ->select($this->db->quoteName('id'))
             ->from($this->db->quoteName('#__copymypage_ticket_carts'))
             ->where($this->db->quoteName('status') . ' = ' . self::STATUS_ACTIVE)
+            ->where($this->db->quoteName('booking_id') . ' IS NULL')
             ->where($this->db->quoteName('expires_at') . ' <= ' . $this->db->quote($now));
         $delete = $this->db->getQuery(true)
             ->delete($this->db->quoteName('#__copymypage_ticket_customers'))
@@ -330,6 +343,7 @@ final class TicketCartContextService
             ->set($this->db->quoteName('revision') . ' = ' . $this->db->quoteName('revision') . ' + 1')
             ->set($this->db->quoteName('modified') . ' = :modified')
             ->where($this->db->quoteName('status') . ' = ' . self::STATUS_ACTIVE)
+            ->where($this->db->quoteName('booking_id') . ' IS NULL')
             ->where($this->db->quoteName('expires_at') . ' <= :now')
             ->bind(':modified', $modified, ParameterType::STRING)
             ->bind(':now', $now, ParameterType::STRING);
@@ -375,6 +389,7 @@ final class TicketCartContextService
             ->from($this->db->quoteName('#__copymypage_ticket_carts'))
             ->where($this->db->quoteName('token_hash') . ' = ' . $this->db->quote($tokenHash))
             ->where($this->db->quoteName('status') . ' = ' . self::STATUS_ACTIVE)
+            ->where($this->db->quoteName('booking_id') . ' IS NULL')
             ->where($this->db->quoteName('expires_at') . ' > ' . $this->db->quote($now));
 
         $sql  = (string) $query . ($forUpdate ? ' FOR UPDATE' : '');

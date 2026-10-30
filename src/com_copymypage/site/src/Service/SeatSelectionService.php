@@ -830,6 +830,11 @@ final class SeatSelectionService
                 $this->db->quoteName('i.cart_id'),
                 $this->db->quoteName('c.status', 'held_cart_status'),
                 $this->db->quoteName('c.expires_at', 'held_cart_expires'),
+                'CASE WHEN c.id IS NOT NULL AND c.booking_id IS NULL AND c.terms_accepted_at IS NULL'
+                    . ' AND c.native_payment_phase = 0 AND i.ticket_id IS NULL'
+                    . " AND COALESCE(TRIM(c.payment_provider), '') = '' AND COALESCE(TRIM(c.terms_snapshot), '') = ''"
+                    . ' AND NOT EXISTS (SELECT 1 FROM #__copymypage_payment_attempts p WHERE p.cart_id = c.id)'
+                    . ' THEN 1 ELSE 0 END AS plain_cart_hold',
             ])
             ->from($this->db->quoteName('#__copymypage_event_seating', 'a'))
             ->innerJoin($this->db->quoteName('#__copymypage_seat_layouts', 'l')
@@ -917,9 +922,12 @@ final class SeatSelectionService
                 );
                 $result[$eventId]['statusesValid'] = $result[$eventId]['statusesValid']
                     && $seatStateValid;
-                $holdActive      = (int) ($row->held_cart_status ?? -1)
+                $plainHold       = (int) $row->plain_cart_hold === 1;
+                $holdActive      = $plainHold && (int) ($row->held_cart_status ?? -1)
                     === TicketCartContextService::STATUS_ACTIVE
                     && (string) ($row->held_cart_expires ?? '') > $now;
+                $holdExpired     = $plainHold && \in_array((int) $row->held_cart_status, [0, 2, 3], true)
+                    && (string) $row->held_cart_expires <= $now;
 
                 if (
                     $seatStateValid
@@ -931,7 +939,7 @@ final class SeatSelectionService
                     && ($inventoryStatus === EventSeatInventoryService::SEAT_STATUS_AVAILABLE
                         || (
                             $inventoryStatus === EventSeatInventoryService::SEAT_STATUS_HELD
-                            && !$holdActive
+                            && $holdExpired
                         ))
                 ) {
                     $seatStatus = 'available';
@@ -1015,6 +1023,7 @@ final class SeatSelectionService
                 $this->db->quoteName('i.cart_id'),
                 $this->db->quoteName('i.price_index'),
                 $this->db->quoteName('i.assignment_order'),
+                $this->db->quoteName('i.ticket_id'),
                 $this->db->quoteName('t.id', 'table_id'),
                 $this->db->quoteName('t.sort_order', 'table_sort'),
                 $this->db->quoteName('s.sort_order', 'seat_sort'),
@@ -1033,7 +1042,7 @@ final class SeatSelectionService
     }
 
     /**
-     * Release held rows whose owning cart is no longer active and unexpired.
+     * Release only expired, unconverted cart holds. Missing or converted owners remain held.
      *
      * @param   list<object>  $rows
      */
@@ -1060,14 +1069,22 @@ final class SeatSelectionService
             ->select($this->db->quoteName('id'))
             ->from($this->db->quoteName('#__copymypage_ticket_carts'))
             ->where($this->db->quoteName('id') . ' IN (' . implode(',', $cartIds) . ')')
-            ->where($this->db->quoteName('status') . ' = ' . TicketCartContextService::STATUS_ACTIVE)
-            ->where($this->db->quoteName('expires_at') . ' > ' . $this->db->quote($now));
-        $activeCartIds = array_fill_keys(array_map('intval', $this->db->setQuery($query)->loadColumn()), true);
+            ->where($this->db->quoteName('booking_id') . ' IS NULL')
+            ->where($this->db->quoteName('terms_accepted_at') . ' IS NULL')
+            ->where('native_payment_phase = ' . NativeReservationService::UNKNOWN)
+            ->where("COALESCE(TRIM(payment_provider), '') = '' AND COALESCE(TRIM(terms_snapshot), '') = ''")
+            ->where('NOT EXISTS (SELECT 1 FROM #__copymypage_payment_attempts p'
+                . ' WHERE p.cart_id = #__copymypage_ticket_carts.id)')
+            ->where($this->db->quoteName('status') . ' IN (0, 2, 3)')
+            ->where($this->db->quoteName('expires_at') . ' <= ' . $this->db->quote($now));
+        $expiredCartIds = array_fill_keys(array_map('intval', $this->db->setQuery($query)->loadColumn()), true);
         $releaseIds    = [];
 
         foreach ($rows as $row) {
             if ((int) $row->status === EventSeatInventoryService::SEAT_STATUS_HELD
-                && !isset($activeCartIds[(int) $row->cart_id])) {
+                && (int) $row->allocation_type === EventSeatInventoryService::SEAT_ALLOCATION_STANDARD
+                && ($row->ticket_id ?? null) === null
+                && isset($expiredCartIds[(int) $row->cart_id])) {
                 $releaseIds[]          = (int) $row->inventory_id;
                 $row->status           = EventSeatInventoryService::SEAT_STATUS_AVAILABLE;
                 $row->cart_id          = null;
@@ -1109,7 +1126,9 @@ final class SeatSelectionService
             ->set($this->db->quoteName('modified') . ' = ' . $this->db->quote($now))
             ->set($this->db->quoteName('modified_by') . ' = 0')
             ->where($this->db->quoteName('id') . ' IN (' . implode(',', $inventoryIds) . ')')
-            ->where($this->db->quoteName('status') . ' = ' . EventSeatInventoryService::SEAT_STATUS_HELD);
+            ->where($this->db->quoteName('status') . ' = ' . EventSeatInventoryService::SEAT_STATUS_HELD)
+            ->where($this->db->quoteName('allocation_type') . ' = ' . EventSeatInventoryService::SEAT_ALLOCATION_STANDARD)
+            ->where($this->db->quoteName('ticket_id') . ' IS NULL');
         $this->db->setQuery($query)->execute();
     }
 

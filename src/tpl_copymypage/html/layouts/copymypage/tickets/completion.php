@@ -95,15 +95,6 @@ $announcementLive = $announcementRole === 'alert' ? 'assertive' : 'polite';
 
                 <?php if ($showRefresh || $showResume) : ?>
                     <div class="cmp-booking-completion__actions-next">
-                        <?php if ($showRefresh && (string) ($displayData['refreshUrl'] ?? '') !== '') : ?>
-                            <a
-                                class="uk-button uk-button-default cmp-button cmp-button--secondary"
-                                href="<?php echo $escape($displayData['refreshUrl']); ?>"
-                            >
-                                <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_ACTION_REFRESH')); ?>
-                            </a>
-                        <?php endif; ?>
-
                         <?php if ($showResume) : ?>
                             <form
                                 class="cmp-form cmp-booking-completion__resume-form"
@@ -123,6 +114,15 @@ $announcementLive = $announcementRole === 'alert' ? 'assertive' : 'polite';
                                 </button>
                                 <?php echo HTMLHelper::_('form.token'); ?>
                             </form>
+                        <?php endif; ?>
+
+                        <?php if ($showRefresh && (string) ($displayData['refreshUrl'] ?? '') !== '') : ?>
+                            <a
+                                class="uk-button uk-button-default cmp-button cmp-button--secondary"
+                                href="<?php echo $escape($displayData['refreshUrl']); ?>"
+                            >
+                                <?php echo $escape(Text::_('COM_COPYMYPAGE_BOOKING_COMPLETION_ACTION_REFRESH')); ?>
+                            </a>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>

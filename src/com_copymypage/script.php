@@ -106,6 +106,10 @@ return new class () implements ServiceProviderInterface
                             (new \Joomla\Component\CopyMyPage\Administrator\Service\PaymentSchema(
                                 Factory::getContainer()->get(DatabaseInterface::class)
                             ))->ensure();
+                            require_once JPATH_ADMINISTRATOR . '/components/com_copymypage/src/Service/ReservationSchema.php';
+                            (new \Joomla\Component\CopyMyPage\Administrator\Service\ReservationSchema(
+                                Factory::getContainer()->get(DatabaseInterface::class)
+                            ))->ensure();
                         } catch (\Throwable $exception) {
                             Factory::getApplication()->enqueueMessage(
                                 'CopyMyPage payment schema setup failed. Existing payment records were retained.',

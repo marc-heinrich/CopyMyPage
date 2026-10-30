@@ -14,6 +14,7 @@ namespace Joomla\Plugin\Task\CopyMyPage\Extension;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentReconciliationService;
+use Joomla\Component\CopyMyPage\Site\Service\ReservationCleanupService;
 use Joomla\Component\CopyMyPage\Site\Service\PaymentOutboxService;
 use Joomla\Component\CopyMyPage\Site\Service\PayPalPaymentService;
 use Joomla\Component\Scheduler\Administrator\Event\ExecuteTaskEvent;
@@ -35,6 +36,11 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
      * @since  0.0.19
      */
     private const TASKS_MAP = [
+        'copymypage.release_reservations' => [
+            'langConstPrefix' => 'PLG_TASK_COPYMYPAGE_RESERVATIONS',
+            'method'          => 'releaseReservations',
+            'form'            => 'releaseReservations',
+        ],
         'copymypage.reconcile_payments' => [
             'langConstPrefix' => 'PLG_TASK_COPYMYPAGE',
             'method'          => 'reconcilePayments',
@@ -52,7 +58,8 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         array $config,
         private readonly PaymentReconciliationService $paymentReconciliation,
         private readonly ?PayPalPaymentService $ownedPayments = null,
-        private readonly ?PaymentOutboxService $outbox = null
+        private readonly ?PaymentOutboxService $outbox = null,
+        private readonly ?ReservationCleanupService $reservations = null
     ) {
         parent::__construct($config);
     }
@@ -74,6 +81,28 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     /**
      * @since   0.0.19
      */
+    private function releaseReservations(ExecuteTaskEvent $event): int
+    {
+        $params = $event->getArgument('params');
+        try {
+            if ($this->reservations === null) {
+                throw new \RuntimeException('Reservation cleanup is unavailable.');
+            }
+            $report = $this->reservations->run(
+                (int) ($params->timeout_minutes ?? 60),
+                (int) ($params->batch_size ?? 50),
+                (int) ($params->dry_run ?? 1) !== 0,
+                (int) ($params->max_seconds ?? 20)
+            );
+            $this->logTask('CopyMyPage reservations: ' . json_encode($report, JSON_THROW_ON_ERROR),
+                $report['errors'] > 0 ? 'error' : ($report['held'] > 0 ? 'warning' : 'info'));
+            return $report['errors'] > 0 ? Status::KNOCKOUT : Status::OK;
+        } catch (\Throwable) {
+            $this->logTask('CopyMyPage reservations: {"reason":"cleanup_unavailable"}', 'error');
+            return Status::KNOCKOUT;
+        }
+    }
+
     private function reconcilePayments(ExecuteTaskEvent $event): int
     {
         $params         = $event->getArgument('params');

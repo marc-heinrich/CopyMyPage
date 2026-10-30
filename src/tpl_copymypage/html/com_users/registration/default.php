@@ -26,6 +26,14 @@ $wa = $this->getDocument()->getWebAssetManager();
 $wa->useScript('keepalive')
    ->useScript('form.validate');
 
+$privacyField = $this->form->getField('privacy', 'privacyconsent');
+
+if ($privacyField !== false) {
+    Text::script('PLG_SYSTEM_PRIVACYCONSENT_FIELD_ERROR');
+    $wa->getRegistry()->addExtensionRegistryFile('com_copymypage');
+    $wa->useScript('copymypage.registration');
+}
+
 $escape        = static fn(mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 $pageTitle     = Text::_('COM_USERS_REGISTRATION');
 $pageHeading   = trim((string) $this->params->get('page_heading', ''));
@@ -76,7 +84,9 @@ $this->getDocument()->setTitle($documentTitle);
 
         <div class="cmp-form__actions cmp-auth__actions com-users-registration__submit control-group">
             <div class="controls">
-                <button type="submit" class="uk-button uk-button-primary cmp-button cmp-button--primary validate">
+                <button type="submit" class="uk-button uk-button-primary cmp-button cmp-button--primary validate"<?php
+                    echo $privacyField !== false ? ' disabled aria-disabled="true"' : '';
+                ?>>
                     <?php echo Text::_('JREGISTER'); ?>
                 </button>
                 <input type="hidden" name="option" value="com_users">

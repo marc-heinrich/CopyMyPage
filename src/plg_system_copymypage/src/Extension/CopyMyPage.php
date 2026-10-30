@@ -40,6 +40,7 @@ use Joomla\Component\CopyMyPage\Site\Service\AvatarService;
 use Joomla\Component\CopyMyPage\Site\Service\BookingCallbackContextService;
 use Joomla\Component\CopyMyPage\Site\Service\BookingCompletionService;
 use Joomla\Component\CopyMyPage\Site\Service\BookingIntegrityService;
+use Joomla\Component\CopyMyPage\Site\Service\NativeReservationService;
 use Joomla\Component\CopyMyPage\Site\Service\ContactClaimService;
 use Joomla\Component\CopyMyPage\Site\Service\CountryCodeResolver;
 use Joomla\Component\CopyMyPage\Site\Service\CustomerDataService;
@@ -67,6 +68,7 @@ use Joomla\Database\DatabaseInterface;
 use Joomla\Database\ParameterType;
 use Joomla\DI\Container;
 use Joomla\Event\Priority;
+use Joomla\Event\EventInterface;
 use Joomla\Event\SubscriberInterface;
 use Joomla\Registry\Registry;
 
@@ -115,15 +117,58 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     public static function getSubscribedEvents(): array
     {
         return [
+            \Joomla\Application\ApplicationEvents::BEFORE_EXECUTE => 'registerReservationCommand',
             'onAfterInitialise'    => 'onAfterInitialise',
+            'onAfterExtensionBoot' => 'attachNativeCleanup',
             'onAfterRoute'         => ['guardDPCalendarRoutes', Priority::MAX],
             'onContentAfterDelete' => 'onContentAfterDelete',
             'onContentAfterSave'   => 'onContentAfterSave',
+            'onContentBeforeDelete' => ['guardNativeReservationDeletion', Priority::MAX],
+            'onContentBeforeSave' => ['guardNativeReservationSave', Priority::MAX],
             'onContentChangeState' => 'onContentChangeState',
             'onContentPrepare'     => ['onContentPrepare', Priority::MIN],
-            'onContentPrepareForm' => 'onContentPrepareForm',
+            'onContentPrepareForm' => ['onContentPrepareForm', Priority::BELOW_NORMAL],
+            'onDPCalendarBeforeSendMail' => 'attachPaidBookingCalendar',
             'onUserAfterLogout'    => 'onUserAfterLogout',
+            'onDPPaymentNew' => ['guardNativeProviderStart', Priority::MAX],
+            'onDPPaymentCallBack' => ['guardNativeProviderCallback', Priority::MAX],
         ];
+    }
+
+    public function registerReservationCommand(\Joomla\Application\Event\ApplicationEvent $event): void
+    {
+        $app = $event->getApplication();
+        if ($app instanceof \Joomla\CMS\Application\ConsoleApplication) {
+            Factory::getContainer()->registerServiceProvider(new PaymentReconciliationServiceProvider());
+            $app->addCommand(new \Joomla\Component\CopyMyPage\Site\Console\ReleaseNativeReservationCommand());
+        }
+    }
+
+    public function attachNativeCleanup(EventInterface $event): void
+    {
+        if ($event->getArgument('extensionName') === 'dpcalendar:task'
+            && $event->getArgument('type') === \Joomla\CMS\Extension\PluginInterface::class) {
+            Factory::getContainer()->registerServiceProvider(new PaymentReconciliationServiceProvider());
+            $event->getArgument('container')->set(\Joomla\CMS\Extension\PluginInterface::class,
+                static function (Container $container): \Joomla\Component\CopyMyPage\Site\Service\NativeCleanupTask {
+                    $plugin = new \Joomla\Component\CopyMyPage\Site\Service\NativeCleanupTask(
+                        $container->get(\Joomla\Event\DispatcherInterface::class),
+                        (array) PluginHelper::getPlugin('task', 'dpcalendar'));
+                    $plugin->setApplication(Factory::getApplication());
+                    $plugin->setDatabase($container->get(DatabaseInterface::class));
+                    $plugin->setUserFactory($container->get(\Joomla\CMS\User\UserFactoryInterface::class));
+                    return $plugin;
+                });
+            return;
+        }
+        if ($event->getArgument('extensionName') !== 'dpcalendar'
+            || $event->getArgument('type') !== \Joomla\CMS\Extension\ComponentInterface::class
+            || Factory::getApplication()->isClient('api')) {
+            return;
+        }
+        Factory::getContainer()->registerServiceProvider(new PaymentReconciliationServiceProvider());
+        $event->getArgument('container')->registerServiceProvider(
+            new \Joomla\Component\CopyMyPage\Site\Service\NativeCleanupMVCFactoryProvider('\\DigitalPeak\\Component\\DPCalendar'));
     }
 
     /**
@@ -162,6 +207,7 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         $this->guardDPCalendarBookingForm($event);
         $this->guardDPCalendarCustomerDetails($event);
         $this->guardDPCalendarCustomerBookingMutation($event);
+        $this->guardNativeBookingMutation();
         $this->guardDPCalendarPaymentCallback($event);
     }
 
@@ -845,6 +891,11 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
             );
 
             throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 503, $exception);
+        }
+
+        if ($nativeTask === 'paycancel' && !empty($decision['managed']) && !empty($decision['authorized'])
+            && Factory::getContainer()->get(NativeReservationService::class)->protectsBooking($bookingId)) {
+            $decision['block'] = true;
         }
 
         if (!empty($decision['managed']) && !empty($decision['authorized']) && empty($decision['block'])) {
@@ -1765,6 +1816,22 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     {
         $app = $this->getApplication();
 
+        $form = $event->getForm();
+
+        if ($app->isClient('site') && $form->getName() === 'com_users.registration'
+            && PluginHelper::isEnabled('system', 'privacyconsent')) {
+            // Run after the native plugin has added its field; keep its consent storage unchanged.
+            FormHelper::addRulePrefix('Joomla\\Component\\CopyMyPage\\Site\\Rule');
+            foreach ([
+                'default' => '',
+                'filter' => 'raw',
+                'validate' => 'CopyMyPagePrivacyConsent',
+                'message' => 'PLG_SYSTEM_PRIVACYCONSENT_FIELD_ERROR',
+            ] as $attribute => $value) {
+                $form->setFieldAttribute('privacy', $attribute, $value, 'privacyconsent');
+            }
+        }
+
         if (!$app->isClient('administrator')) {
             return true;
         }
@@ -1805,10 +1872,160 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     }
 
     /**
-     * Release linked seats after a DPCalendar booking has been deleted.
+     * Add the native calendar to the existing paid mail, once its event data is available.
      */
+    public function attachPaidBookingCalendar(EventInterface $event): void
+    {
+        // 10.12.4 also fires the hook for the resolved mail template, with all booked events.
+        // Ignore the earlier booking.paid hook so the same mail never gets two calendars.
+        if ($event->getArgument(0) !== 'com_dpcalendar.booking.user.pay') {
+            return;
+        }
+
+        $mailer = $event->getArgument(1);
+        $data   = $event->getArgument(2, []);
+        $events = \is_array($data) ? ($data['events'] ?? []) : [];
+        $booking = \is_array($data) ? ($data['booking'] ?? null) : null;
+
+        if (!$mailer instanceof \Joomla\CMS\Mail\Mail || !\is_array($events) || $events === []
+            || !\is_object($booking) || (int) ($booking->state ?? 0) !== 1) {
+            return;
+        }
+
+        $app = $this->getApplication();
+        $params = $app instanceof \Joomla\CMS\Application\SiteApplication
+            ? $app->getParams()
+            : \Joomla\CMS\Component\ComponentHelper::getParams('com_dpcalendar');
+
+        if (!$params->get('booking_include_ics', 1)) {
+            return;
+        }
+
+        foreach ($mailer->getAttachments() as $attachment) {
+            if (strtolower(pathinfo((string) ($attachment[2] ?? ''), PATHINFO_EXTENSION)) === 'ics') {
+                return;
+            }
+        }
+
+        try {
+            $content = $app->bootComponent('dpcalendar')->getMVCFactory()
+                ->createModel('Ical', 'Administrator')->createIcalFromEvents($events, false, true);
+
+            if ($content !== '') {
+                $name = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) ($booking->uid ?? ''));
+                $name = $name !== '' ? $name : 'booking-' . (int) ($booking->id ?? 0);
+                $mailer->addStringAttachment($content, $name . '.ics', 'base64', 'text/calendar', 'attachment');
+            }
+        } catch (\Throwable $exception) {
+            // A calendar failure must not prevent the native ticket and receipt mail.
+            Log::add('CopyMyPage paid booking calendar could not be attached ('
+                . $exception::class . ').', Log::WARNING, 'com_copymypage');
+        }
+    }
+
+    /** Managed checkout already confirms internally; direct native mutations must not revive it. */
+    private function guardNativeBookingMutation(): void
+    {
+        $app = $this->getApplication();
+        if (!$app instanceof CMSWebApplicationInterface || !$app->isClient('site')) {
+            return;
+        }
+        $input = $app->getInput();
+        if (strtolower($input->getCmd('option', '')) !== 'com_dpcalendar') {
+            return;
+        }
+        $command = strtolower($input->getCmd('task', ''));
+        [$controller, $task] = str_contains($command, '.')
+            ? explode('.', $command, 2) : [strtolower($input->getCmd('controller', '')), $command];
+        if ($controller !== 'booking' || !\in_array($task, ['confirm', 'review', 'calculateproviderfee'], true)) {
+            return;
+        }
+        $db = Factory::getContainer()->get(DatabaseInterface::class);
+        $ids = [max(0, $input->getInt('b_id', 0))];
+        foreach (['uid' => $input->getString('uid', ''),
+            'token' => $input->getString('dptoken', $input->getString('token', ''))] as $column => $value) {
+            if ($value !== '') {
+                $ids = array_merge($ids, (array) $db->setQuery('SELECT id FROM #__dpcalendar_bookings WHERE '
+                    . $db->quoteName($column) . ' = ' . $db->quote($value))->loadColumn());
+            }
+        }
+        foreach (array_unique(array_map('intval', $ids)) as $id) {
+            if (Factory::getContainer()->get(NativeReservationService::class)->protectsBooking($id)) {
+                throw new \RuntimeException(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+            }
+        }
+    }
+
+    /** Runs before the vendor listener, including when a direct native template dispatches payment. */
+    public function guardNativeProviderStart(EventInterface $event): void
+    {
+        $booking = $event->getArgument(0, $event->getArgument('booking'));
+        if (\is_object($booking)) {
+            $native = Factory::getContainer()->get(NativeReservationService::class);
+            $managed = $native->protectsBooking((int) ($booking->id ?? 0));
+            $native->beforeProviderStart($booking);
+            if ($managed && $this->getApplication() instanceof CMSWebApplicationInterface) {
+                $this->getApplication()->getInput()->set('token', $booking->token);
+                $this->getApplication()->getInput()->set('dptoken', $booking->token);
+            }
+        }
+    }
+
+    public function guardNativeProviderCallback(EventInterface $event): void
+    {
+        $booking = $event->getArgument(0, $event->getArgument('booking'));
+        if (\is_object($booking)) {
+            Factory::getContainer()->get(NativeReservationService::class)->assertCallback((int) ($booking->id ?? 0), false, $booking);
+        }
+    }
+
+    public function guardNativeReservationDeletion(Model\BeforeDeleteEvent $event): void
+    {
+        $bookingId = $this->nativeReservationBookingId($event->getContext(), $event->getItem());
+        if ($bookingId > 0 && Factory::getContainer()->get(NativeReservationService::class)->protectsBooking($bookingId)) {
+            if (Factory::getContainer()->get(\Joomla\Component\CopyMyPage\Site\Service\ReservationCleanupService::class)->permitsNativeDeletion($bookingId)) {
+                return;
+            }
+            $event->addResult(false);
+            Log::add('Native reservation deletion held for booking ID ' . $bookingId . '.', Log::WARNING, 'com_copymypage');
+        }
+    }
+
+    public function guardNativeReservationSave(Model\BeforeSaveEvent $event): void
+    {
+        $item = $event->getItem();
+        $bookingId = $this->nativeReservationBookingId($event->getContext(), $item);
+        if ($bookingId > 0) {
+            $native = Factory::getContainer()->get(NativeReservationService::class);
+            if ($native->protectsBooking($bookingId)
+                && (\in_array((int) ($item->state ?? 0), [6, 7, -2], true) || $native->isReleased($bookingId))) {
+                $event->addResult(false);
+            }
+        }
+    }
+
+    private function nativeReservationBookingId(string $context, object $item): int
+    {
+        if ($context === 'com_dpcalendar.booking') {
+            return max(0, (int) ($item->id ?? 0));
+        }
+        if ($context === 'com_dpcalendar.ticket') {
+            return max(0, (int) ($item->booking_id ?? 0));
+        }
+        return 0;
+    }
+
+    /** Release linked seats after an unmanaged DPCalendar booking has been deleted. */
     public function onContentAfterDelete(Model\AfterDeleteEvent $event): void
     {
+        if (\in_array($event->getContext(), ['com_dpcalendar.booking', 'com_dpcalendar.ticket'], true)) {
+            $cleanup = Factory::getContainer()->get(\Joomla\Component\CopyMyPage\Site\Service\ReservationCleanupService::class);
+            $id = $this->nativeReservationBookingId($event->getContext(), $event->getItem());
+            if ($cleanup->permitsNativeDeletion($id)) {
+                $cleanup->recordNativeDeletion($event->getContext(), $event->getItem());
+                return;
+            }
+        }
         if ($event->getContext() !== 'com_dpcalendar.booking') {
             return;
         }
@@ -1977,6 +2194,13 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
         }
 
         try {
+            $native = Factory::getContainer()->get(NativeReservationService::class);
+            if ($native->protectsBooking($bookingId)) {
+                // Also covers model publish(), whose native state event occurs after the write.
+                // Keep inventory occupied; a local terminal state is not payment exclusion evidence.
+                Log::add('Native reservation seat release held for booking ID ' . $bookingId . '.', Log::WARNING, 'com_copymypage');
+                return;
+            }
             Factory::getContainer()
                 ->get(OrderCheckoutService::class)
                 ->releaseBookingSeats($bookingId);

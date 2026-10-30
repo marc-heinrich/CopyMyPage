@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `#__copymypage_ticket_carts` (
   `status` tinyint unsigned NOT NULL DEFAULT 0,
   `booking_id` int unsigned DEFAULT NULL,
   `payment_provider` varchar(255) DEFAULT NULL,
+  `native_payment_phase` tinyint unsigned NOT NULL DEFAULT 0,
   `terms_accepted_at` datetime DEFAULT NULL,
   `terms_snapshot` mediumtext DEFAULT NULL,
   `revision` int unsigned NOT NULL DEFAULT 0,

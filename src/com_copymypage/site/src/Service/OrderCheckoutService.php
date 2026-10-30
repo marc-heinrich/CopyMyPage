@@ -267,6 +267,10 @@ final class OrderCheckoutService
             return;
         }
 
+        if (NativePayPalProviderRegistry::hasManagedBooking($this->db, $bookingId)) {
+            throw new \DomainException('Native PayPal seat release requires verified reservation evidence.');
+        }
+
         $this->db->transactionStart();
 
         try {

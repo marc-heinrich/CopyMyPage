@@ -3930,17 +3930,18 @@ body:is(.is-tablet, .is-desktop) .cmp-ticket-selection-event__cart-link {
 }
 
 .cmp-ticket-cart__empty {
-    color: var(--cmp-color-text-muted);
+    margin: 0;
+    color: var(--cmp-color-text-default);
     font-family: var(--cmp-font-family-body-alt);
-    font-size: var(--cmp-font-size-sm);
+    font-size: var(--cmp-font-size);
     line-height: 1.55;
 }
 
-.cmp-ticket-cart__empty {
-    margin: var(--cmp-spacing-lg) 0 0;
-    padding: var(--cmp-spacing-md);
-    background: var(--cmp-color-surface);
-    border-radius: var(--cmp-border-radius);
+.cmp-ticket-cart:has(> .cmp-ticket-cart__empty:not([hidden])) {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .cmp-ticket-cart__items {
@@ -6373,6 +6374,7 @@ body.is-small .cmp-ticket-message {
 }
 
 .cmp-booking-completion__resume-form {
+    inline-size: auto;
     margin: 0;
 }
 
@@ -6393,6 +6395,11 @@ body.is-small .cmp-ticket-message {
     justify-content: flex-end;
     margin-inline-start: auto;
     gap: var(--cmp-spacing-sm);
+}
+
+.cmp-booking-completion__actions-next:has(> .cmp-booking-completion__resume-form) {
+    flex: 1;
+    justify-content: space-between;
 }
 
 body.is-small .cmp-booking-completion__panel {
@@ -10500,6 +10507,12 @@ body.is-authpage.view-captive :is(#system-message-container, .cmp-section--compo
     inline-size: min(100%, 42rem);
     padding-block-start: var(--cmp-spacing-md);
     margin-inline: auto;
+}
+
+.cmp-basket > .cmp-ticket-cart:has(> .cmp-ticket-cart__empty:not([hidden])) {
+    inline-size: 100%;
+    padding: var(--cmp-spacing-md) 0;
+    margin-inline: 0;
 }
 
 body.cmp-component-page--drawer .cmp-basket__title {

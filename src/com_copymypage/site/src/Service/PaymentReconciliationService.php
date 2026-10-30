@@ -32,7 +32,10 @@ final class PaymentReconciliationService
     /** @var list<int> */
     private const RELEASED_BOOKING_STATES = [-2, 6, 7];
 
-    public function __construct(private readonly DatabaseInterface $db)
+    public function __construct(
+        private readonly DatabaseInterface $db,
+        private readonly ?NativeReservationService $nativeReservations = null
+    )
     {
     }
 
@@ -53,6 +56,11 @@ final class PaymentReconciliationService
 
         if ($bookingId < 1) {
             return false;
+        }
+
+        if ($this->nativeReservations?->protectsBooking($bookingId)) {
+            $bookingToken = $this->nativeReservations->beginPayment($bookingId);
+            return $bookingToken !== null;
         }
 
         $this->db->transactionStart();
@@ -188,6 +196,9 @@ final class PaymentReconciliationService
             ->where($this->db->quoteName('c.status') . ' = ' . TicketCartContextService::STATUS_CONVERTED)
             ->where($this->db->quoteName('c.booking_id') . ' IS NOT NULL')
             ->where($this->db->quoteName('c.modified') . ' <= :cutoff')
+            // Native PayPal, including unresolved historical instance IDs, has a separate policy.
+            ->where("COALESCE(c.payment_provider, '') NOT LIKE 'paypal-%'")
+            ->where("COALESCE(b.payment_provider, '') NOT LIKE 'paypal-%'")
             // Every financial attempt belongs to ledger reconciliation, never legacy TTL release.
             ->where('NOT EXISTS (SELECT 1 FROM #__copymypage_payment_attempts AS p'
                 . ' WHERE p.booking_id = c.booking_id)')
@@ -451,6 +462,12 @@ final class PaymentReconciliationService
 
             $booking = $this->lockBooking($bookingId);
 
+            if (NativePayPalProviderRegistry::isReference((string) ($cart->payment_provider ?? ''))
+                || NativePayPalProviderRegistry::isReference((string) ($booking->payment_provider ?? ''))) {
+                $this->db->transactionCommit();
+                return ['type' => 'manual'];
+            }
+
             if ($booking === null) {
                 $this->db->transactionCommit();
 
@@ -640,13 +657,61 @@ final class PaymentReconciliationService
         return array_keys($ticketEvents) === array_keys($seenTickets);
     }
 
+    /** Caller owns the transaction and must hold cart, booking, ticket and seat locks. */
+    public function releaseUnstartedNativeWithinTransaction(array $integrity): void
+    {
+        $cart = $integrity['cart'];
+        $booking = $integrity['booking'];
+        if (!$integrity['valid'] || !$cart || !$booking
+            || (int) ($cart->native_payment_phase ?? 0) !== NativeReservationService::NOT_STARTED
+            || !NativePayPalProviderRegistry::isReference((string) $booking->payment_provider)
+            || !$this->providersMatch($cart, $booking) || (int) $booking->state !== 3) {
+            throw new \DomainException('Native reservation is not safely unstarted.');
+        }
+        $this->releaseBooking((int) $booking->id, (int) $cart->id, self::BOOKING_STATE_CANCELLED,
+            true, $integrity['tickets'], $integrity['seats']);
+        $this->db->setQuery('UPDATE #__copymypage_ticket_carts SET native_payment_phase = '
+            . NativeReservationService::RELEASED_BEFORE_START . ' WHERE id = ' . (int) $cart->id
+            . ' AND status = 3 AND native_payment_phase = ' . NativeReservationService::NOT_STARTED)->execute();
+        if ($this->db->getAffectedRows() !== 1) {
+            throw new \RuntimeException('Native reservation release evidence changed.');
+        }
+    }
+
+    /** Caller holds the callback named lock, all row locks and a fresh verified provider proof. */
+    public function releaseExcludedNativeWithinTransaction(array $integrity, array $proof): void
+    {
+        $cart = $integrity['cart'];
+        $booking = $integrity['booking'];
+        if (!$integrity['valid'] || !$cart || !$booking || (int) $booking->state !== 3
+            || !\in_array((int) $cart->native_payment_phase,
+                [NativeReservationService::STARTED_OR_UNKNOWN, NativeReservationService::CALLBACK_STARTED_OR_UNKNOWN], true)
+            || !NativePayPalProviderRegistry::isReference((string) $booking->payment_provider)
+            || !$this->providersMatch($cart, $booking) || trim((string) $booking->transaction_id) === ''
+            || !$this->nativeReservations?->hasAdministrativeLock((int) $booking->id)
+            || ($proof['status'] ?? '') !== 'VOIDED' || ($proof['environment'] ?? '') !== 'sandbox'
+            || ($proof['provider'] ?? '') !== (string) $booking->payment_provider
+            || ($proof['orderHash'] ?? '') !== hash('sha256', (string) $booking->transaction_id)) {
+            throw new \DomainException('Native reservation exclusion context is invalid.');
+        }
+        $this->releaseBooking((int) $booking->id, (int) $cart->id, self::BOOKING_STATE_CANCELLED,
+            true, $integrity['tickets'], $integrity['seats'], (string) $booking->transaction_id);
+        $this->db->setQuery('UPDATE #__copymypage_ticket_carts SET native_payment_phase = '
+            . NativeReservationService::RELEASED_AFTER_EXCLUSION . ' WHERE id = ' . (int) $cart->id
+            . ' AND status = 3 AND native_payment_phase = ' . (int) $cart->native_payment_phase)->execute();
+        if ($this->db->getAffectedRows() !== 1) {
+            throw new \RuntimeException('Native reservation exclusion changed.');
+        }
+    }
+
     private function releaseBooking(
         int $bookingId,
         int $cartId,
         int $terminalState,
         bool $updateBooking,
         array $tickets,
-        array $seats
+        array $seats,
+        ?string $excludedOrderId = null
     ): void {
         $sourceState = $updateBooking ? self::BOOKING_STATE_PENDING : $terminalState;
         if (!\in_array($terminalState, self::RELEASED_BOOKING_STATES, true)
@@ -665,14 +730,19 @@ final class PaymentReconciliationService
                 ->set($this->db->quoteName('state') . ' = :terminalState')
                 ->where($this->db->quoteName('id') . ' = :bookingId')
                 ->where($this->db->quoteName('state') . ' = ' . self::BOOKING_STATE_PENDING)
-                ->where(
+                ->bind(':terminalState', $terminalState, ParameterType::INTEGER)
+                ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
+            if ($excludedOrderId !== null) {
+                $query->where($this->db->quoteName('transaction_id') . ' = :excludedOrderId')
+                    ->bind(':excludedOrderId', $excludedOrderId, ParameterType::STRING);
+            } else {
+                $query->where(
                     '(' . $this->db->quoteName('transaction_id') . ' IS NULL OR TRIM('
                         . $this->db->quoteName('transaction_id') . ") = '')"
                 )
                 ->where('(' . $this->db->quoteName('token') . ' IS NULL OR TRIM('
-                    . $this->db->quoteName('token') . ") = '')")
-                ->bind(':terminalState', $terminalState, ParameterType::INTEGER)
-                ->bind(':bookingId', $bookingId, ParameterType::INTEGER);
+                    . $this->db->quoteName('token') . ") = '')");
+            }
             $this->db->setQuery($query)->execute();
 
             if ($this->db->getAffectedRows() !== 1) {
