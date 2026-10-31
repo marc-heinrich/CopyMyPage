@@ -3,7 +3,7 @@
     <name>PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL</name>
     <author>CopyMyPage</author>
     <license>GNU General Public License version 3 or later</license>
-    <version>0.0.26</version>
+    <version>0.0.27</version>
     <description>PLG_DPCALENDARPAY_COPYMYPAGEPAYPAL_DESCRIPTION</description>
     <namespace path="src">Joomla\Plugin\DPCalendarPay\CopyMyPagePayPal</namespace>
     <files><folder>language</folder><folder plugin="copymypagepaypal">services</folder><folder>src</folder></files>

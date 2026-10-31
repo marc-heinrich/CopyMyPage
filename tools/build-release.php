@@ -63,7 +63,7 @@ final class BuildRelease
                 $zipPath = $subpackagesDir . '/' . $zipName;
 
                 echo "[zip]    {$entry} -> pkg_copymypage/subpackages/{$zipName}\n";
-                $this->zipDirectory($extPath, $zipPath);
+                $this->zipDirectory($extPath, $zipPath, $entry === 'com_copymypage' ? ['site/tests'] : []);
             }
         }
 
@@ -89,7 +89,7 @@ final class BuildRelease
         echo "\nBuild complete.\n";
     }
 
-    private function zipDirectory(string $dir, string $zipFile): void
+    private function zipDirectory(string $dir, string $zipFile, array $exclude = []): void
     {
         $zip = new ZipArchive();
 
@@ -119,6 +119,13 @@ final class BuildRelease
             }
 
             $localName = substr($normalizedPath, strlen($dir) + 1);
+
+            // Keep component regression fixtures in the repository, outside installable archives.
+            foreach ($exclude as $excludedPath) {
+                if ($localName === $excludedPath || str_starts_with($localName, $excludedPath . '/')) {
+                    continue 2;
+                }
+            }
 
             if ($file->isDir()) {
                 $zip->addEmptyDir($localName);

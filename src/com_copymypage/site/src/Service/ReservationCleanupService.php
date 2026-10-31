@@ -4,6 +4,7 @@ namespace Joomla\Component\CopyMyPage\Site\Service;
 \defined('_JEXEC') or die;
 
 use Joomla\Database\DatabaseInterface;
+use Joomla\CMS\Log\Log;
 use Joomla\CMS\User\User;
 
 /** Cart housekeeping and atomic accompaniment of DPCalendar's own ticket deletions. */
@@ -62,9 +63,15 @@ final class ReservationCleanupService
                         ++$report['held'];
                     }
                     $report['decisions'][] = ['cartId' => (int) $id, 'reason' => $reason];
-                } catch (\Throwable) {
+                } catch (ReservationCleanupReviewException $exception) {
+                    ++$report['held'];
+                    $report['decisions'][] = ['cartId' => (int) $id, 'reason' => $exception->reason];
+                    $this->logCleanupFailure((int) $id, $exception);
+                } catch (\Throwable $exception) {
                     ++$report['errors'];
-                    $report['decisions'][] = ['cartId' => (int) $id, 'reason' => 'transaction_failed'];
+                    $category = $this->logCleanupFailure((int) $id, $exception);
+                    $report['decisions'][] = ['cartId' => (int) $id,
+                        'reason' => $category === 'locking_conflict' ? 'locking_conflict' : 'transaction_failed'];
                 }
             }
         } finally {
@@ -77,6 +84,62 @@ final class ReservationCleanupService
             }
         }
         return $report;
+    }
+
+    /** Log only internal IDs, classes and controlled causes, never exception payloads or SQL. */
+    private function logCleanupFailure(int $cartId, \Throwable $exception): string
+    {
+        $review = $exception instanceof ReservationCleanupReviewException;
+        $category = $review ? 'data_inconsistency' : 'program_error';
+        $databaseCode = null;
+        $cause = $review ? $exception->reason : match ($exception->getMessage()) {
+            'Expired hold postcondition failed.' => 'hold_postcondition_failed',
+            'Expired cart postcondition failed.' => 'cart_postcondition_failed',
+            'Reservation changed concurrently.' => 'affected_rows_mismatch',
+            default => 'unexpected_exception',
+        };
+        for ($error = $exception; $error !== null; $error = $error->getPrevious()) {
+            $isDatabaseError = $error instanceof \mysqli_sql_exception
+                || $error instanceof \Joomla\Database\Exception\ExecutionFailureException;
+            if (!$isDatabaseError) {
+                continue;
+            }
+            $databaseCode = (int) $error->getCode();
+            if (\in_array((string) $error->getCode(), ['1205', '1213', '40001'], true)) {
+                $category = 'locking_conflict';
+                $cause = 'database_lock_conflict';
+                break;
+            }
+            $category = 'database_error';
+            $cause = 'database_execution_failed';
+        }
+        $eventIds = $review && $exception->eventId !== null ? [$exception->eventId] : [];
+        if ($eventIds === []) {
+            try {
+                $eventIds = array_map('intval', $this->db->setQuery('SELECT DISTINCT event_id'
+                    . ' FROM #__copymypage_ticket_cart_items WHERE cart_id = ' . $cartId . ' ORDER BY event_id')->loadColumn());
+            } catch (\Throwable) {
+                // A failed connection must not hide the original failure or permit a release.
+            }
+        }
+        try {
+            Log::addLogger([
+                'text_file' => 'copymypage-reservations.php',
+                'text_entry_format' => "{DATETIME}\t{PRIORITY}\t{CATEGORY}\t{MESSAGE}",
+            ], Log::WARNING | Log::ERROR, ['com_copymypage.reservations']);
+            Log::add('CopyMyPage reservation cleanup: ' . json_encode([
+                'cartId' => $cartId,
+                'eventIds' => $eventIds,
+                'category' => $category,
+                'exception' => $exception::class,
+                'databaseCode' => $databaseCode,
+                'cause' => $cause,
+            ], JSON_THROW_ON_ERROR), $review ? Log::WARNING : Log::ERROR, 'com_copymypage.reservations');
+        } catch (\Throwable) {
+            // Logging availability never changes the fail-closed transaction outcome.
+        }
+
+        return $category;
     }
 
     private function process(int $cartId, string $now, bool $dryRun): string
@@ -113,10 +176,13 @@ final class ReservationCleanupService
         sort($eventIds, SORT_NUMERIC);
         foreach ($eventIds as $id) {
             if ($id < 1 || (int) $this->db->setQuery('SELECT id FROM #__dpcalendar_events WHERE id = '
-                . $id . ' FOR UPDATE')->loadResult() !== $id
-                || (int) $this->db->setQuery('SELECT event_id FROM #__copymypage_event_seating WHERE event_id = '
+                . $id . ' FOR UPDATE')->loadResult() !== $id) {
+                // Missing vendor data is not proof that the remaining holds are safe to release.
+                throw new ReservationCleanupReviewException('event_missing_requires_review', $id);
+            }
+            if ((int) $this->db->setQuery('SELECT event_id FROM #__copymypage_event_seating WHERE event_id = '
                     . $id . ' AND status = 1 FOR UPDATE')->loadResult() !== $id) {
-                throw new \DomainException('Reservation event inventory requires review.');
+                throw new ReservationCleanupReviewException('inventory_requires_review', $id);
             }
         }
         return $eventIds;
@@ -129,7 +195,7 @@ final class ReservationCleanupService
             || $cart->terms_accepted_at !== null || (int) $cart->native_payment_phase !== NativeReservationService::UNKNOWN
             || trim((string) $cart->payment_provider) !== '' || trim((string) $cart->terms_snapshot) !== ''
             || (int) $this->db->setQuery('SELECT COUNT(*) FROM #__copymypage_payment_attempts WHERE cart_id = ' . $cartId)->loadResult() > 0) {
-            return 'cart_requires_review';
+            throw new ReservationCleanupReviewException('cart_requires_review');
         }
         $eventIds = $this->lockEvents($cartId);
         $seats = $this->db->setQuery('SELECT * FROM #__copymypage_event_seats WHERE cart_id = '
@@ -138,7 +204,7 @@ final class ReservationCleanupService
             if ((int) $seat->status !== EventSeatInventoryService::SEAT_STATUS_HELD
                 || (int) $seat->allocation_type !== EventSeatInventoryService::SEAT_ALLOCATION_STANDARD
                 || $seat->ticket_id !== null || !\in_array((int) $seat->event_id, $eventIds, true)) {
-                return 'seat_requires_review';
+                throw new ReservationCleanupReviewException('seat_requires_review', (int) $seat->event_id);
             }
         }
         if ($dryRun) {
@@ -357,12 +423,17 @@ final class ReservationCleanupService
                 . ' AND TABLE_NAME IN (' . implode(',', $tables) . ") AND ENGINE='InnoDB'")->loadResult() !== \count($tables)) {
                 throw new \DomainException('Native cleanup requires transactional tables.');
             }
+            $connection = $this->db->getConnection();
+            $mysqli = $this->db instanceof \Joomla\Database\Mysqli\MysqliDriver && $connection instanceof \mysqli;
+            $pdoMysql = $this->db instanceof \Joomla\Database\Mysql\MysqlDriver
+                && $connection instanceof \PDO && $connection->getAttribute(\PDO::ATTR_DRIVER_NAME) === 'mysql';
+            if (!$mysqli && !$pdoMysql) {
+                throw new \DomainException('Native cleanup requires a supported MySQL connection.');
+            }
             $this->db->transactionStart(true);
             try {
-                $savepoint = 'cmp_native_' . $bookingId;
-                $connection = $this->db->getConnection();
-                if (!$connection instanceof \mysqli) { throw new \DomainException('Native cleanup requires the verified mysqli driver.'); }
-                $connection->savepoint($savepoint);
+                // Keep Joomla's nesting depth and an independent physical-transaction sentinel.
+                $this->nativeCleanupSavepoint($connection, $bookingId, false);
                 $carts = $this->db->setQuery('SELECT * FROM #__copymypage_ticket_carts WHERE booking_id = '
                     . $bookingId . ' ORDER BY id FOR UPDATE')->loadObjectList();
                 if (\count($carts) !== 1) { throw new \DomainException('Native deletion cart binding is ambiguous.'); }
@@ -381,6 +452,7 @@ final class ReservationCleanupService
                             . ' AND message_language_key = ' . $this->db->quote(self::NATIVE_DELETE_LOG))->loadResult()) {
                         throw new \DomainException('Incomplete native deletion requires review.');
                     }
+                    $this->nativeCleanupSavepoint($connection, $bookingId, true);
                     $this->db->transactionCommit(true);
                     return true;
                 }
@@ -390,7 +462,7 @@ final class ReservationCleanupService
                     $this->nativeDeletions[$bookingId] = ['tickets' => [], 'deleted' => []];
                     if (!$nativeDelete() || (int) $this->db->setQuery('SELECT COUNT(*) FROM #__dpcalendar_bookings WHERE id='
                         . $bookingId)->loadResult()) { throw new \DomainException('Empty native booking deletion failed.'); }
-                    $connection->release_savepoint($savepoint);
+                    $this->nativeCleanupSavepoint($connection, $bookingId, true);
                     $this->db->transactionCommit(true);
                     return true;
                 }
@@ -447,13 +519,26 @@ final class ReservationCleanupService
                 if (!$this->nativeReservations->hasAdministrativeLock($bookingId)) {
                     throw new \RuntimeException('Native deletion transaction or lock was lost.');
                 }
-                $connection->release_savepoint($savepoint);
+                $this->nativeCleanupSavepoint($connection, $bookingId, true);
                 $this->db->transactionCommit(true);
                 return true;
             } catch (\Throwable $error) {
                 $this->db->transactionRollback(true); throw $error;
             } finally { unset($this->nativeDeletions[$bookingId]); }
         });
+    }
+
+    /** MySQL savepoint statements cannot use MySQLi's prepared-statement protocol. */
+    private function nativeCleanupSavepoint(\mysqli|\PDO $connection, int $bookingId, bool $release): void
+    {
+        if ($this->db->getConnection() !== $connection) {
+            throw new \RuntimeException('Native cleanup connection changed.');
+        }
+        $sql = ($release ? 'RELEASE SAVEPOINT ' : 'SAVEPOINT ')
+            . $this->db->quoteName('cmp_native_' . $bookingId);
+        if ($connection->query($sql) === false) {
+            throw new \RuntimeException('Native cleanup savepoint operation failed.');
+        }
     }
 
     private function assertChanged(int $expected): void

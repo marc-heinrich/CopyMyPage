@@ -1,0 +1,1108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<changelogs>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.27</version>
+        <fix>
+            <item><![CDATA[Keep orphaned seat reservations on hold when their DPCalendar event no longer exists, returning event_missing_requires_review instead of an undifferentiated transaction failure. No automatic release is attempted without verified reservation integrity.]]></item>
+            <item><![CDATA[Support Joomla MysqliDriver with native mysqli and Joomla MysqlDriver with PDO-MySQL for native DPCalendar booking and ticket cleanup. Preserve physical savepoints, Joomla transaction nesting, InnoDB checks, booking locks, ACL, inventory revisions and atomic auditing.]]></item>
+            <item><![CDATA[Add structured reservation-cleanup diagnostics containing internal IDs, controlled causes and exception classes without SQL, exception payloads or customer/payment credentials.]]></item>
+        </fix>
+        <addition>
+            <item><![CDATA[Package the new automatically loadable ReservationCleanupReviewException class with the component service.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Align all 15 CopyMyPage extension manifests and the package manifest with 0.0.27. Keep component regression tests in the source repository and exclude site/tests from installable component archives.]]></item>
+        </change>
+        <note>
+            <item><![CDATA[Hotfix release dev0.0.27; no unrelated frontend, language, vendor or database-schema changes. DPCalendar remains an external prerequisite and is not bundled.]]></item>
+            <item><![CDATA[Reverified locally: 28 cart-cleanup tests, 24 native-cleanup checks on each of MySQLi and PDO-MySQL (48 runs), 39 existing MySQL reservation regressions and 15 SQLite callback regressions. External PayPal and mail boundaries were simulated or disabled.]]></item>
+            <item><![CDATA[The operator-approved native deletion states remain 3 (Confirmed) and 6 (Cancelled), subject to the configured date and age criteria. Native deletion does not prove external payment exclusion; paymentExclusionProven=false remains accurate. No additional PayPal/provider check is introduced.]]></item>
+            <item><![CDATA[Operator-reported staging FTP hotfixes removed two previously problematic test bookings. Regular package installation, detailed staging inventory/cart/audit checks and unattended Hetzner cron acceptance remain separate deployment checks; issue #189 remains open.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.26</version>
+        <security>
+            <item><![CDATA[Hardened native DPCalendar booking cleanup under Joomla's Lazy Scheduler: a locked task may use only its verified, active task creator with real scheduler and DPCalendar deletion permissions. Normal visitor and model permissions remain unchanged.]]></item>
+            <item><![CDATA[Kept DPCalendar's original BookingModel and TicketModel delete checks while coordinating booking-scoped locks, seat release, cart finalization, inventory updates and audit in one rollback-safe operation.]]></item>
+            <item><![CDATA[Added persistent guards around native PayPal payment starts and callbacks to reject duplicate or late processing for protected or already deleted reservations; uncertain provider outcomes are not treated as evidence of non-payment.]]></item>
+            <item><![CDATA[Required explicit affirmative privacy consent during Joomla frontend registration, without a preselected consent choice and with server-side rejection if consent is absent.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed the native DPCalendar 10.12.4 PayPal return/controller bootstrap where Joomla 6.2 could reject controller creation because JPATH_COMPONENT was not yet defined.]]></item>
+            <item><![CDATA[Fixed the permission-context failure that prevented a scheduled DPCalendar cleanup task from deleting an eligible booking owned by a different user, while retaining normal authorization checks.]]></item>
+            <item><![CDATA[Aligned the pending-payment completion actions for resuming payment and refreshing status, including responsive button placement.]]></item>
+            <item><![CDATA[Simplified the empty ticket-cart presentation without changing cart or reservation-expiry behavior.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added German and English descriptions for the revised CopyMyPage reservation-cleanup task settings and reused Joomla's existing privacy-consent localization.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Integrated native DPCalendar booking and ticket deletion with CopyMyPage seating cleanup, inventory revisions, cart completion and transactional Joomla action-log auditing; expired carts without a native booking remain the responsibility of the separate CopyMyPage cleanup task.]]></item>
+            <item><![CDATA[Added a guarded native-cleanup task adapter and Joomla MVC factory bridge, using the original DPCalendar task, booking and ticket implementations without modifying vendor files.]]></item>
+            <item><![CDATA[Added an optional iCalendar (.ics) attachment to paid DPCalendar booking confirmation emails by reusing DPCalendar's native event iCalendar generator; it does not duplicate an existing calendar attachment.]]></item>
+            <item><![CDATA[Added narrowly scoped administrative diagnostics/release support for native reservations and an idempotent cart payment-phase schema check, without introducing a separate ticket store.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Separated cleanup responsibilities: DPCalendar selects and deletes native bookings and tickets; CopyMyPage cleanup handles only expired carts with no native booking and transactionally releases seats for successful native deletions.]]></item>
+            <item><![CDATA[Strengthened native PayPal reservation and callback coordination without replacing DPCalendar's official PayPal integration. The own CopyMyPage PayPal plugin remains Sandbox-only.]]></item>
+            <item><![CDATA[Updated all 15 CopyMyPage extension manifests and the package manifest to version 0.0.26, and synchronized affected source/minified frontend assets.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed the separate CopyMyPage time-based deletion decision for carts that already have native DPCalendar bookings; no packaged extensions were removed.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[dev0.0.26 is a development release focused on DPCalendar 10.12.4 native PayPal callback compatibility, booking cleanup with linked seat release, explicit Joomla registration privacy consent and customer-facing checkout refinements.]]></item>
+            <item><![CDATA[Local native cleanup acceptance included 18 targeted test groups and 39 existing regression tests. A maintainer-run manual DPCalendar task deleted the previously blocked booking #1102. Automated browser Lazy Scheduler and Hetzner Web-Cron execution after this fix have not yet been accepted on staging.]]></item>
+            <item><![CDATA[The native booking-deletion decision does not prove a PayPal order can no longer be captured; audit metadata explicitly distinguishes native deletion from payment exclusion. The 15-minute deletion interval used locally is a development test setting, not an approved production policy.]]></item>
+            <item><![CDATA[Live-money deployment and unattended scheduled cleanup require separate staging verification of real task-creator permissions, checkout/payment completion, calendar/PDF mail delivery, booking/ticket/seat inventory consistency and safe cleanup selection.]]></item>
+            <item><![CDATA[Issues #189 and #190 provide the implementation and callback-fix records. Issues #174, #183 and #184 were deferred to dev0.0.27; #185 remains a separate payment/mail recovery follow-up.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.25</version>
+        <security>
+            <item><![CDATA[Requalified the active fail-closed PaymentIntegrationContract for the verified DPCalendar 10.12.3 mail files while preserving all nine native Joomla, DPCalendar and PHPMailer SHA-256 integrity checks.]]></item>
+            <item><![CDATA[Hardened recovery of persisted paid-booking e-mails by rechecking finalized payment attempts, durable capture evidence, booking ownership, amounts, currency and saved message bindings before attempting SMTP delivery.]]></item>
+            <item><![CDATA[Kept uncertain or interrupted mail delivery out of automatic resend paths; expired sending leases and unverifiable message states require manual review rather than risking duplicate customer messages.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Resolved the DPCalendar 10.12.3 checkout step-four block caused by the intentional vendor-file integrity guard after the DPCalendar update, without bypassing or weakening the guard.]]></item>
+            <item><![CDATA[Fixed native ticket quantities for events with multiple price groups: unselected valid price indices now carry zero quantities, original and noncontiguous indices are preserved, and invalid or outdated selections are rejected before booking.]]></item>
+            <item><![CDATA[Continued to compare only positive ticket quantities in the native booking preview, preventing zero-quantity price groups from creating extra tickets, seat assignments or capacity usage.]]></item>
+            <item><![CDATA[Refined the ticket-cart action layout to a vertically stacked flex arrangement and changed alert-bar-adjusted Hero sizing to use the small viewport height for more consistent responsive rendering.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized the optional mail-outbox recovery, batch-size and dry-run descriptions in German, English, Spanish, French and Italian.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added opt-in recovery of persisted payment-related mail-outbox jobs independently of payment finalization, with dry-run reporting, a configurable batch of 1 to 20 jobs (default 5), a five-minute retry interval and a bounded work-start window.]]></item>
+            <item><![CDATA[Added scheduled outbox backlog and outcome reporting, including ready, retryable, expired-sending and manually reviewable message states, without introducing a database schema migration.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Extended the existing CopyMyPage Joomla task-plugin form and task execution path with separate, default-disabled outbox recovery controls alongside payment reconciliation.]]></item>
+            <item><![CDATA[Kept Joomla and DPCalendar responsible for native bookings, ticket and PDF handling; the compatibility fixes and recovery extension are implemented entirely within CopyMyPage-owned files.]]></item>
+            <item><![CDATA[Regenerated the affected readable/minified CSS and JavaScript pairs for the ticket-cart and alert-bar refinements.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[No packaged extensions or database structures were removed.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[dev0.0.25 is a development release focused on DPCalendar 10.12.3 checkout compatibility, multi-price-group robustness and opt-in recovery of persisted payment-related mail messages.]]></item>
+            <item><![CDATA[Local qualification passed: 38 of 40 original isolated end-to-end scenarios passed before the price-group fix; the two affected scenarios were subsequently corrected and included in a separate 12-of-12 targeted regression pass. All nine native file-integrity checks and a real assertQualified() invocation passed. The maintainer confirmed a successful local checkout on 24 October 2026. The original 40-scenario matrix was not rerun in full.]]></item>
+            <item><![CDATA[Issues #185 (public Web-Cron, payment/outbox recovery acceptance) and #186 (public DPCalendar 10.12.3 checkout acceptance) remain open pending controlled tests on copymypage.de, including PayPal Sandbox capture, mail delivery, ticket PDFs and scheduler monitoring. Local and isolated test success does not constitute public production acceptance.]]></item>
+            <item><![CDATA[The durable verified-PayPal-webhook inbox remains an open risk in issue #184, deferred to dev0.0.26. This development release does not authorize live-money payments or unattended production recovery.]]></item>
+            <item><![CDATA[Issues #174 (viewport runtime hardening) and #183 (permanent Joomla 6.2 / DPCalendar language-association compatibility) were also deferred to dev0.0.26. The previously accepted item-associations-disabled workaround remains temporary and site-specific.]]></item>
+            <item><![CDATA[The CopyMyPage-owned runtime source changes relative to dev0.0.24 are limited to the booking/guard/outbox services, scheduler plugin and language files, and focused ticket-cart and alert-bar assets. Repository agent-guidance changes are not part of the installable package.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.24</version>
+        <security>
+            <item><![CDATA[Preserved verified checkout-registration ownership on new DPCalendar bookings and all associated tickets before account activation, while keeping the session actor, pricing and access permissions unchanged.]]></item>
+            <item><![CDATA[Required explicit affirmative privacy consent during checkout registration and verified that Joomla persisted the consent record, rolling back registration when consent could not be saved.]]></item>
+            <item><![CDATA[Restricted managed customer ticket PDFs to paid, active bookings and eligible tickets while retaining ownership checks and final DPCalendar authorization.]]></item>
+            <item><![CDATA[Hardened payment initiation and finalization with exclusive attempt claims, stable Create/Capture idempotency keys, durable capture evidence and booking, ticket and seat integrity checks.]]></item>
+            <item><![CDATA[Protected paid and ambiguous payment attempts from automatic cancellation or seat release; missing webhooks, timeouts and provider HTTP 404 responses are not treated as proof of non-payment.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed guest-session ticket filtering during checkout confirmation so a newly registered booking owner no longer leaves ticket states incomplete or blocks the PayPal handoff.]]></item>
+            <item><![CDATA[Fixed PayPal webhook signature verification by preserving the original validated JSON body, including empty objects, instead of reserializing the event payload.]]></item>
+            <item><![CDATA[Made the reservation countdown independent of client/server clock differences using server-derived remaining time and a monotonic browser timer shared by cart and navbar displays.]]></item>
+            <item><![CDATA[Preserved the configured Navbar dropdown close delay after ticket PDF navigation by keeping the CopyMyPage runtime active until the page actually leaves.]]></item>
+            <item><![CDATA[Prevented concurrent ticket-cart status polling from overwriting newer avatar session state or consuming Joomla messages intended for the visible interface.]]></item>
+            <item><![CDATA[Validated checkout data against both DPCalendar booking and ticket storage limits, including a 255-character street limit and stricter e-mail validation, while preserving rejected input and preventing silent truncation or invalid Profile updates.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Updated Profile, checkout consent, validation and payment feedback across German, English, Spanish, French and Italian, and reused existing localized per-ticket check-in labels.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added explicit checked-in/open status to each Dashboard ticket row using localized text and closed/open lock icons derived from the authoritative DPCalendar ticket projection.]]></item>
+            <item><![CDATA[Added a CopyMyPage-owned PayPal Orders v2 integration with a persistent payment-attempt ledger and a post-commit mail outbox for ticket and booking messages.]]></item>
+            <item><![CDATA[Added opt-in scheduled PayPal ledger reconciliation with dry-run support and a configurable payment reservation of 15 to 240 minutes, defaulting to 60 minutes.]]></item>
+            <item><![CDATA[Stored each new payment attempt's reservation duration and fixed expiry deadline so later configuration changes or retries cannot extend it; expired attempts block new local Create/Capture starts while in-flight or uncertain operations remain protected.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Reduced the visible Dashboard navigation to Overview, Bookings and Profile, integrating Security into Profile with a dedicated MFA subpage.]]></item>
+            <item><![CDATA[Refined Profile and Security into grouped CopyMyPage Chevron rows with useful current values and consistent Save/Cancel returns to the parent section.]]></item>
+            <item><![CDATA[Aligned the six shared Profile and checkout address fields in order, labels, autocomplete and country/region behavior while retaining the standalone Profile street limit of 500 characters.]]></item>
+            <item><![CDATA[Prefilled new authenticated checkouts from the canonical Profile address and automatically synchronized successfully validated checkout address submissions back to that user's Profile, preserving explicitly edited drafts and historical booking/ticket address snapshots.]]></item>
+            <item><![CDATA[Kept Joomla authentication and DPCalendar booking, ticket, PDF and check-in contracts authoritative while implementing the scoped payment adapter, ledger and outbox within CopyMyPage.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed the separate top-level Security destination and duplicate inline password form in favor of task-specific Profile subpages.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[dev0.0.24 is a development release focused on Profile and checkout consistency, secure account ownership, reliable reservations and the CopyMyPage PayPal payment workflow.]]></item>
+            <item><![CDATA[Issue #169 closes the revised PDF-sharing scope already delivered in 0.0.23: native sharing is confirmed on iPhone, capable browsers show Download and Share, and unsupported browsers show Download only. The previously planned e-mail attachment fallback is no longer required.]]></item>
+            <item><![CDATA[Issue #177 remains open. Maintainer-run public HTTPS Sandbox tests on 18 October 2026 confirmed a paid booking with active tickets, delivered mail, successful webhooks and a finalized ledger, plus an abandoned new booking canceled after its stored deadline with seats available again. These are partial acceptance results.]]></item>
+            <item><![CDATA[Remaining #177 work includes unresolved historical payment attempts, durable webhook recovery, CLI finalization, Safari back-navigation and scheduler operation/monitoring. Ambiguous historical attempts remain protected from automatic release.]]></item>
+            <item><![CDATA[Full authenticated MFA activation, save/cancel, deletion and deactivation regression remains a manual release-acceptance check.]]></item>
+            <item><![CDATA[Issue #182 was accepted with a configuration workaround for Joomla 6.2/DPCalendar event creation: disabling Language Filter item associations restores the new-event form but disables content associations system-wide. Site-specific effects must be checked; the permanent fix is deferred to #183 in dev0.0.25.]]></item>
+            <item><![CDATA[Completed milestone scope: #161, #165, #166, #167, #169, #171, #172, #175, #176, #179, #180 and #181. Issue #182 was closed as not planned for a code fix in this version; #177 remains open.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.23</version>
+        <security>
+            <item><![CDATA[Preserved the protected QR staff check-in workflow and authoritative DPCalendar ticket state from #168.]]></item>
+            <item><![CDATA[Added a fail-closed guard for managed ticket PDF downloads, requiring an authenticated owner or native administrative access while preserving final DPCalendar PDF authorization and private no-store responses.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Polished Dashboard navigation, conditional scroll controls, Chevron menus and sticky behavior on narrow screens.]]></item>
+            <item><![CDATA[Kept ticket sharing capability-based: browsers without native PDF file sharing retain the existing download action and do not show an unavailable share action.]]></item>
+            <item><![CDATA[Corrected Windows path normalization in the release builder so extension archives contain portable relative paths rather than absolute local source paths.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added accessible ticket PDF share labels and loading, ready, cancellation and error feedback in German, English, Spanish, French and Italian.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added native sharing of the existing authorized DPCalendar ticket PDF, including its QR code, in browsers supporting the Web Share file capability.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Completed the mobile-first Dashboard presentation with Bookings as the central destination, active/completed booking tabs, nested booking and ticket content, and check-in progress.]]></item>
+            <item><![CDATA[Refined the Booking accordion, ticket download/share actions and Overview destination hierarchy while retaining the shared account navigation and Drawer contract.]]></item>
+            <item><![CDATA[Kept DPCalendar responsible for PDF generation, QR identity and check-in state; no second PDF generator or writable attendance state was introduced.]]></item>
+            <item><![CDATA[Aligned CopyMyPage package and extension manifests and changed release assets with version 0.0.23.]]></item>
+        </change>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[dev0.0.23 is a development release of the verified Dashboard and Bookings presentation with native ticket PDF sharing where supported.]]></item>
+            <item><![CDATA[Issue #169 remains incomplete. The desktop e-mail fallback with a PDF attachment and final native iPhone PDF-sharing acceptance are deferred to dev0.0.24.]]></item>
+            <item><![CDATA[Real iPhone Safari sticky/overscroll and native ticket PDF share checks remain pending until production deployment.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.22</version>
+        <security>
+            <item><![CDATA[Added a dedicated frontend-only CopyMyPage ticket check-in permission so venue staff can check in managed tickets without broad DPCalendar booking or state-management rights.]]></item>
+            <item><![CDATA[Replaced native QR-triggered GET mutations for managed tickets with a protected CopyMyPage flow using authenticated frontend access, POST-only mutation and Joomla CSRF protection.]]></item>
+            <item><![CDATA[Serialized ticket check-in with transactional row locking and server-side eligibility checks so duplicate or concurrent scans cannot apply the ticket-state or capacity transition more than once.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed concurrent ticket check-in so simultaneous scans resolve deterministically to one successful check-in and one already-checked-in result without duplicate capacity changes.]]></item>
+            <item><![CDATA[Fixed multi-tab check-in result collisions by isolating short-lived PRG result receipts per session, user, ticket UID hash and POST result identifier.]]></item>
+            <item><![CDATA[Fixed package build completeness so all manifest-declared package language files are included and verified before release archives are accepted.]]></item>
+            <item><![CDATA[Removed an obsolete global German component system-language copy that could hide current component-local ACL labels during configuration.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized ticket check-in interface strings and staff ACL labels across German, English, Spanish, French and Italian.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added a smartphone-first staff ticket check-in view with safe frontend login return, event, ticket-holder, ticket-type and seat context, explicit confirmation and clear success, repeat, rejection and failure states.]]></item>
+            <item><![CDATA[Added read-side ticket check-in projection to the customer booking model, including per-ticket checked-in state and booking-level checked-in and total ticket counts.]]></item>
+            <item><![CDATA[Added booking-first Dashboard ticket projection with one top-level entry per booking, nested events and tickets, batched seat lookup, stored totals and active/past classification.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Reworked the Dashboard navigation into the compact Overview, Bookings, Profile and Security structure with sticky horizontal navigation and conditional scroll controls.]]></item>
+            <item><![CDATA[Simplified the Dashboard Overview into grouped account-management and booking destinations while removing redundant profile details and future placeholder areas.]]></item>
+            <item><![CDATA[Updated the Bookings area to the current first-pass active/completed accordion presentation while deferring the final customer ticket redesign to dev0.0.23.]]></item>
+            <item><![CDATA[Kept DPCalendar authoritative for ticket PDF generation, QR identity, ticket state and native capacity semantics while CopyMyPage owns the scoped staff presentation and authorization boundary.]]></item>
+            <item><![CDATA[Aligned all CopyMyPage extension and package manifests with version 0.0.22 and verified the frozen Live/Repository source inventory byte-for-byte before release packaging.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed obsolete release artifacts including the versioned ticket-selection backup file and stale CSS source map with embedded local development paths.]]></item>
+            <item><![CDATA[Removed redundant Dashboard Overview profile details and future placeholder sections that are not part of the current booking-focused release.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[dev0.0.22 is a development release focused on the Dashboard booking model, a protected venue-staff QR check-in workflow and release packaging consistency.]]></item>
+            <item><![CDATA[The source freeze completed with all 811 mapped CopyMyPage-owned runtime source files identical between Live and Repository.]]></item>
+            <item><![CDATA[The real iPhone Camera/Safari acceptance of the staff check-in workflow remains pending until this release is deployed to a production-equivalent environment.]]></item>
+            <item><![CDATA[Final customer ticket styling and check-in badge work (#150), ticket PDF sharing (#169), Profile/Security secondary actions (#165), address presentation (#166) and additional customer-data guards (#167) are deferred to dev0.0.23.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#162 [dev0.0.22] Refine the Dashboard navigation]]></item>
+            <item><![CDATA[#163 [dev0.0.22] Build the booking-first customer ticket projection]]></item>
+            <item><![CDATA[#164 [dev0.0.22] Simplify the Dashboard Overview]]></item>
+            <item><![CDATA[Issue #168 [dev0.0.22] implements protected mobile staff ticket check-in and remains open only for final real-device iPhone/Camera/Safari acceptance.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.21</version>
+        <fix>
+            <item><![CDATA[Hardened shared button geometry for consistent link and button sizing in the iOS Safari cart drawer.]]></item>
+            <item><![CDATA[Prevented the iOS browser edge gesture from blocking backward swipes on the final ticket slide.]]></item>
+            <item><![CDATA[Based ticket progress on confirmed sales rather than active reservations while preserving real-time availability.]]></item>
+            <item><![CDATA[Kept every mobile ticket pagination bullet visible and interactive while preserving the compact visual hierarchy.]]></item>
+            <item><![CDATA[Kept the MFA accordion divider full-width throughout UIkit opening and closing animations without negative-margin clipping.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Changed the German zero-sales message from “Noch keine Tickets gekauft” to “Noch keine Tickets verkauft”.]]></item>
+        </language>
+        <change>
+            <item><![CDATA[Harmonized Customerdata helper and consent typography through the shared descriptive-text contract.]]></item>
+            <item><![CDATA[Extended the ticket-selection and seat-selection accordion dividers to the full card width.]]></item>
+            <item><![CDATA[Replaced the MFA accordion plus/minus indicator with the shared CopyMyPage Chevron and full-width divider contract.]]></item>
+            <item><![CDATA[Documented the shared UIkit accordion divider and Chevron design rule.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed the decorative sad-face icon from the empty basket state while retaining the reusable SVG asset.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[AGENTS.md and DESIGN.md are now versioned project documentation and remain outside the Joomla installation package.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.20</version>
+        <security>
+            <item><![CDATA[Added server-side protection for event-specific Hotline seats so manipulated requests cannot select seats reserved for Hotline sales.]]></item>
+            <item><![CDATA[Kept Hotline allocation changes atomic and fail-closed so booked, held or regularly blocked seats are not silently reclassified.]]></item>
+            <item><![CDATA[Restricted native DPCalendar customer-management routes for CopyMyPage-managed bookings while preserving authorized payment callbacks, ticket PDFs and QR/check-in flows.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed ticket quantity controls so one increment or decrement activation changes the requested quantity by exactly one.]]></item>
+            <item><![CDATA[Fixed excessive vertical spacing below the seat map on narrow smartphone portrait viewports while preserving zoom, pan and seat selection.]]></item>
+            <item><![CDATA[Aligned the Step-3 CAPTCHA with the Joomla/template localization path so the German solved state displays “Überprüft” instead of “Verified”.]]></item>
+            <item><![CDATA[Removed the redundant total from the payment-provider card while keeping the central order total authoritative.]]></item>
+            <item><![CDATA[Preserved bound query objects in the affected FOR UPDATE checkout paths and accepted valid same-second payment-attempt writes that report zero changed rows.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added localized booking email templates for German, English, Spanish, French and Italian.]]></item>
+            <item><![CDATA[Kept booking-step, CAPTCHA and payment presentation compatible with the supported CopyMyPage languages.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added a dedicated Tickets and bookings area to the authenticated CopyMyPage Dashboard with DPCalendar-backed ticket PDF downloads.]]></item>
+            <item><![CDATA[Added event-specific Hotline seat allocation with a dedicated public Hotline seat state that remains visible but unavailable for online booking.]]></item>
+            <item><![CDATA[Added optional allocations.hotline support to versioned seat-layout JSON files using stable table and seat identifiers, including whole-table and individual-seat allocation.]]></item>
+            <item><![CDATA[Added strict validation for Hotline JSON allocations, rejecting unknown seats, duplicates, overlaps and malformed allocation structures atomically.]]></item>
+            <item><![CDATA[Added CopyMyPage customer-facing overrides for DPCalendar order, cancel and abort states.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Simplified booking completion so customers see the relevant booking/payment outcome instead of native DPCalendar management details.]]></item>
+            <item><![CDATA[Harmonized major booking states across the five-step workflow with a shared message-panel structure and consistent navigation action placement.]]></item>
+            <item><![CDATA[Standardized all five booking-step icons on the same project-owned SVG/CSS-mask integration path.]]></item>
+            <item><![CDATA[Kept DPCalendar authoritative for bookings, payment status, ticket/PDF generation and QR/check-in while CopyMyPage owns the customer-facing presentation, seat inventory and scoped routing rules.]]></item>
+            <item><![CDATA[Materialized Hotline allocations through the existing authoritative seat-allocation domain service with atomic and idempotent updates and no duplicate availability reduction.]]></item>
+            <item><![CDATA[Aligned the component, template, system plugin and package manifests with version 0.0.20 and regenerated affected readable/minified asset pairs.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed native DPCalendar customer-management actions from the normal CopyMyPage booking journey without removing DPCalendar payment, ticket or check-in functionality.]]></item>
+            <item><![CDATA[Removed the nested card-in-card presentation from major booking completion/status messages.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on stabilizing the DPCalendar ticket workflow for practical event testing, improving customer ticket access, introducing event-specific Hotline seat allocation and refining the responsive booking interface.]]></item>
+            <item><![CDATA[The initial Hotline test layout contains 178 seats in total, including 70 Hotline seats and 108 seats available for online booking.]]></item>
+            <item><![CDATA[Before the release freeze, the complete mapped Live/Repository source inventory was verified with 805 of 805 file pairs SHA-256 identical.]]></item>
+            <item><![CDATA[Non-blocking Dashboard and maintenance work was moved to dev0.0.21, including the future Purchases area, user/contact profile synchronization, Dashboard design-token normalization and CSS source modularization.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#145 [dev0.0.20] Refine ticket completion, Dashboard ticket access and DPCalendar customer routing]]></item>
+            <item><![CDATA[#146 [dev0.0.20] Harmonize booking-flow message panels and navigation actions]]></item>
+            <item><![CDATA[#147 [dev0.0.20] Fix ticket quantity controls and prevent skipped increments]]></item>
+            <item><![CDATA[#148 [dev0.0.20] Add event-specific Hotline seat allocation and public seat state]]></item>
+            <item><![CDATA[#149 [dev0.0.20] Polish booking step navigation, CAPTCHA localization and payment presentation]]></item>
+            <item><![CDATA[#151 [dev0.0.20] Import Hotline seat allocations from event seat-plan JSON]]></item>
+            <item><![CDATA[#152 [dev0.0.20] Fix excessive portrait spacing below the seat map]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.19</version>
+        <security>
+            <item><![CDATA[Added transaction locking and revision checks to reject conflicting or outdated cart and seat changes.]]></item>
+            <item><![CDATA[Blocked reservations for events with missing, incomplete, or unready seating inventories.]]></item>
+            <item><![CDATA[Added server-side protection against native DPCalendar booking entry points that could bypass the CopyMyPage seating workflow.]]></item>
+            <item><![CDATA[Checkout uses CSRF protection and an HMAC-signed review snapshot. Accepted terms and payment details are retained in a versioned acceptance record.]]></item>
+            <item><![CDATA[Payment initiation uses a single-use, session-bound handoff. Callback guards and reconciliation distinguish abandoned bookings from transactions requiring manual review.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Unified event eligibility and availability between the landing-page module and ticket selection, accounting for temporary reservations without counting selected seats twice.]]></item>
+            <item><![CDATA[Synchronized cart changes and reservation expiry with availability displays, navigation controls, and the navbar cart indicator.]]></item>
+            <item><![CDATA[Reduced unnecessary seat-map DOM updates and preserved idempotent initialization when Joomla content is updated.]]></item>
+            <item><![CDATA[Replaced unconditional booking-success presentation with status-aware completion views. Only DPCalendar booking status 1, together with consistent booking and seat data, permits a successful completion message.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Runtime and administrator strings are available in German, English, Spanish, French, and Italian.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added mod_copymypage_tickets with DPCalendar event cards, current availability, pricing, desktop Swiper Coverflow, and mobile swipe navigation.]]></item>
+            <item><![CDATA[Added a five-step booking workflow covering ticket selection, seat selection, customer details, order review, and payment completion.]]></item>
+            <item><![CDATA[Added a session-bound shopping cart for multiple independent events, with configurable reservation duration and a default holding period of 15 minutes.]]></item>
+            <item><![CDATA[Added versioned seating layouts for up to 200 seats, including the 178-seat Gemeindesaal 2027 layout, interactive selection, seat suggestions, zoom, pan, and keyboard controls.]]></item>
+            <item><![CDATA[Added customer-data handling for guest checkout, existing Joomla accounts, and optional Joomla registration.]]></item>
+            <item><![CDATA[Added an order review with billing details, ticket and seat assignments, applicable terms, payment-provider selection, and separate paid and free checkout paths.]]></item>
+            <item><![CDATA[Added plg_task_copymypage for scheduled reconciliation of abandoned payment bookings, including configurable timeouts, batch limits, and dry-run support.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Checkout revalidates cart revision, prices, payment providers, terms, and seat assignments before creating one DPCalendar booking for the selected events.]]></item>
+            <item><![CDATA[Generated tickets are deterministically linked to the selected seats. Seats become booked during checkout commitment; this state alone does not indicate successful payment.]]></item>
+            <item><![CDATA[Profile addresses prefill new billing drafts once. Subsequent profile and order-address changes remain independent; passwords and CAPTCHA values are not stored in the billing draft.]]></item>
+            <item><![CDATA[Ticket assets use Joomla's Web Asset Manager and centralized configuration. Asset cache revisions remain independent of the package version.]]></item>
+            <item><![CDATA[Affected minified assets were regenerated from their readable sources.]]></item>
+            <item><![CDATA[The component schema and all 15 CopyMyPage extension and package manifests are aligned with 0.0.19.]]></item>
+            <item><![CDATA[The Tickets module and Task plugin were added to the package.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[No packaged extensions were removed.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[dev0.0.19 is a development release focused on DPCalendar-based ticket sales, shared event reservations, interactive seat selection, customer billing details, and a consistent five-step booking workflow.]]></item>
+            <item><![CDATA[DPCalendar remains responsible for native bookings, payment processing, tickets, and QR-code validation. Integration uses CopyMyPage services, plugins, and template overrides without modifying DPCalendar core files or official payment plugins.]]></item>
+            <item><![CDATA[Temporary cart reservations and seating inventories use CopyMyPage-owned tables. Read-only status requests do not extend reservation expiry.]]></item>
+            <item><![CDATA[An already open order review currently requires a reload after removing items through the cart drawer. Server-side revision and signature checks reject outdated submissions.]]></item>
+            <item><![CDATA[Final package installation checks, checkout rollback and concurrency scenarios, and remaining seating and backend validation are still pending.]]></item>
+            <item><![CDATA[PayPal Sandbox testing in the production environment, scheduler operation, account activation, email delivery, invoices, ticket downloads, seat labels, QR codes, and admission checks still require end-to-end acceptance.]]></item>
+            <item><![CDATA[The bundled German terms article is starter content requiring editorial completion and legal review.]]></item>
+            <item><![CDATA[Fixes and adjustments identified during production-environment testing are planned for dev0.0.20.]]></item>
+            <item><![CDATA[Related issues remain open for outstanding validation and release acceptance:]]></item>
+            <item><![CDATA[#140 [dev0.0.19] Integrate DPCalendar event data and booking entry points]]></item>
+            <item><![CDATA[#141 [dev0.0.19] Centralize ticket assets and implement the Swiper lifecycle]]></item>
+            <item><![CDATA[#142 [dev0.0.19] Implement the responsive ticket-card and pagination design]]></item>
+            <item><![CDATA[#143 [dev0.0.19] Embed the complete DPCalendar booking journey in CopyMyPage overrides]]></item>
+            <item><![CDATA[#144 [dev0.0.19] Synchronize, package and validate the complete ticket feature]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.18</version>
+        <security>
+            <item><![CDATA[Kept newly created anonymous contact-form submission records and their dedicated category unpublished by default so private workflow data does not enter Joomla Smart Search or become a public contact destination.]]></item>
+            <item><![CDATA[Guarded direct com_users account-route normalization so guests, POST requests, controller actions, remembered logins, forced password resets, foreign user targets and first-time or mandatory MFA flows remain under Joomla control.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Constrained plugin-provided authentication icons and aligned additional login actions with the full-width CopyMyPage secondary-button geometry and spacing.]]></item>
+            <item><![CDATA[Added the missing CopyMyPage presentation for direct Joomla Login-view access by authenticated users while preserving the existing direct navbar logout workflow.]]></item>
+            <item><![CDATA[Corrected Onepage metadata resolution so active-menu descriptions and Joomla Browser Page Titles take precedence over component and menu-title fallbacks as intended.]]></item>
+            <item><![CDATA[Prevented an internal menu title such as CopyMyPage from leaking into HTML, Open Graph and Twitter titles when a Browser Page Title is configured.]]></item>
+            <item><![CDATA[Stopped emitting generic CopyMyPage keywords on third-party sites by omitting the keywords meta tag unless a non-empty component value is explicitly configured.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized Onepage metadata option strings across German, English, Spanish, French and Italian.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Integrated plugin-provided additional authentication actions, including Passkeys, into the CopyMyPage button system while preserving provider classes, IDs, data attributes, event hooks, localized labels and icon markup.]]></item>
+            <item><![CDATA[Added CopyMyPage overrides for Joomla's Login-view dispatcher and authenticated logout confirmation with CSRF-protected controller submission and configured return routing.]]></item>
+            <item><![CDATA[Added guarded frontend redirects from eligible direct com_users Profile and MFA Methods displays to the corresponding CopyMyPage Dashboard Profile or Security layouts.]]></item>
+            <item><![CDATA[Added component-owned Onepage options for site-specific meta descriptions and keywords.]]></item>
+            <item><![CDATA[Added a structured internal marker to newly created contact-form submission contacts for reliable administrative identification.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Changed new contact-form submission contacts and newly created submission categories to default to unpublished while retaining Joomla's Contact model, validation and content events.]]></item>
+            <item><![CDATA[Changed Onepage meta-description precedence to the active menu's menu-meta_description, then the component meta_description and finally the localized fallback.]]></item>
+            <item><![CDATA[Changed Onepage base-title precedence to Joomla's merged page_title, then the active menu title and finally the localized fallback while preserving existing section-title composition.]]></item>
+            <item><![CDATA[Regenerated the affected minified stylesheet from the updated readable CSS source.]]></item>
+            <item><![CDATA[Aligned all CopyMyPage extension and package manifests with version 0.0.18.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[No packaged extensions were removed in this release.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on consistent Joomla authentication entry points, guarded Dashboard routing, privacy-safe contact handling and configurable site-specific Onepage metadata.]]></item>
+            <item><![CDATA[Existing contacts, categories and Finder index rows are not migrated automatically; affected records should be reviewed manually before rebuilding Smart Search.]]></item>
+            <item><![CDATA[The broader user/contact identity and reconciliation work remains tracked in #127.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#135 [dev0.0.18] Integrate Passkey and additional login buttons into the CopyMyPage button system]]></item>
+            <item><![CDATA[#136 [dev0.0.18] Add CopyMyPage login dispatcher and logout confirmation overrides]]></item>
+            <item><![CDATA[#137 [dev0.0.18] Redirect direct com_users account routes to the CopyMyPage Dashboard]]></item>
+            <item><![CDATA[#138 [dev0.0.18] Keep contact-form submissions private and out of Smart Search]]></item>
+            <item><![CDATA[#139 [dev0.0.18] Restore configurable Onepage metadata in component options]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.17</version>
+        <security>
+            <item><![CDATA[Revoked remaining persistent Remember Me credentials after an authorized administrator force-logs out a frontend user, preventing an immediate silent cookie login while keeping the handler permission-checked and idempotent.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Ensured that the Finger Paint hero font is available on the first uncached page render by registering the required preload through Joomla and centralizing public asset URL normalization.]]></item>
+            <item><![CDATA[Made Joomla Smart Search autocomplete selections submit the owning Finder form reliably while preserving Joomla's Awesomplete implementation and normal form fallback.]]></item>
+            <item><![CDATA[Restored consistent responsive Content Drawer headers, mobile separators, title visibility and compact control geometry across privacy, account, basket and component documents.]]></item>
+            <item><![CDATA[Harmonized contact-form checkbox sizing, validation colors and privacy-link typography without replacing the functional Joomla, UIkit or CAPTCHA hooks.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized Footer, focused authentication, Dashboard, Profile, Security, MFA, avatar, address, basket, Content Drawer and Smart Search strings across German, English, Spanish, French and Italian.]]></item>
+            <item><![CDATA[Localized the mobile account-menu title and the new error, account-security, profile-address and media-picker presentation instead of embedding user-facing labels in templates.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added the new mod_copymypage_footer module with a Joomla service provider, dispatcher/helper separation, validated footer-slot contract, installer handling and localized output.]]></item>
+            <item><![CDATA[Added lean template-owned 403, 404, 500 and fallback error layouts with localized messaging, optional footer rendering, production-safe output and Joomla-compatible debug backtraces.]]></item>
+            <item><![CDATA[Added a reusable same-origin Content Drawer built on UIkit Offcanvas with fragment extraction, sanitization, loading and error states, focus restoration, request cancellation and responsive bottom-sheet/right-panel presentation.]]></item>
+            <item><![CDATA[Added an optional Isotope 3.0.6 gallery-filter layout with dedicated Web Asset lifecycle integration, isolated initialization and support for multiple gallery instances.]]></item>
+            <item><![CDATA[Added focused Joomla 6 com_users overrides for login, registration, username reminder and password reset flows, including reduced authentication pages and Dashboard return routing.]]></item>
+            <item><![CDATA[Added an authenticated Dashboard with overview, projected customer profile editing, a separate Security workflow, password changes, Joomla MFA management and one hierarchical account-navigation source shared by all consumers.]]></item>
+            <item><![CDATA[Added the canonical #__copymypage_addresses store, localized region catalogs and current-user address projection with an idempotent migration path for previously managed profile addresses.]]></item>
+            <item><![CDATA[Added Joomla-native profile avatars through a system-managed Custom User Field, including initials fallback and a Drawer-integrated media picker/upload workflow.]]></item>
+            <item><![CDATA[Added a Basket MVC and Content Drawer foundation with defensive J2Commerce availability detection and reusable totals integration while retaining the normal inline checkout route.]]></item>
+            <item><![CDATA[Added CopyMyPage Smart Search overrides, navbar search entry points, autocomplete submission, team-card contact destinations and a thin Joomla article presentation override.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Reworked the former content-modal path into a compatibility entry point for the shared Content Drawer and extended fragment handling for privacy, avatar, basket and component documents.]]></item>
+            <item><![CDATA[Centralized reusable public-path and absolute-URL normalization used by templates and module integrations, reducing duplicate path handling.]]></item>
+            <item><![CDATA[Refined token-driven responsive styling for account pages, authentication, Finder, articles, drawers, forms, privacy links, hover/focus states and small-display navigation.]]></item>
+            <item><![CDATA[Added Footer to the CopyMyPage package and aligned all extension manifests with version 0.0.17.]]></item>
+            <item><![CDATA[Regenerated affected minified CSS and JavaScript assets from their readable source files and retained Joomla Web Asset Manager integration.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[No packaged extensions were removed in this release.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on authenticated account workflows, reusable drawer-based component presentation, Joomla-native profile data and media handling, gallery filtering and Smart Search integration.]]></item>
+            <item><![CDATA[The J2Commerce basket bridge remains an integration foundation and requires J2Commerce to be installed separately; checkout continues through the normal inline component flow.]]></item>
+            <item><![CDATA[Remaining contact creation and user/contact synchronization work continues in #127 for dev0.0.18.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#119 [dev0.0.17] Create the Footer Module]]></item>
+            <item><![CDATA[#120 [dev0.0.17] Refactor error.php with Lean Error Layouts]]></item>
+            <item><![CDATA[#121 [dev0.0.17] Modernize component.php with a Vaul-Inspired Content Drawer]]></item>
+            <item><![CDATA[#125 [dev0.0.17] Add an Isotope-based gallery filter layout]]></item>
+            <item><![CDATA[#126 [dev0.0.17] Add focused com_users authentication overrides]]></item>
+            <item><![CDATA[#128 [dev0.0.17] Add an authenticated user Dashboard and profile area]]></item>
+            <item><![CDATA[#130 [dev0.0.17] Split Dashboard profile into customer profile and security workflows]]></item>
+            <item><![CDATA[#131 [dev0.0.17] Add Joomla-native user avatars to the Dashboard profile]]></item>
+            <item><![CDATA[#132 [dev0.0.17] Revoke Remember Me tokens after an administrator forces a frontend logout]]></item>
+            <item><![CDATA[#133 [dev0.0.17] Integrate Joomla Smart Search with CopyMyPage overrides]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.16</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Replaced misleading generic contact-form validation feedback with focused server-side messages for rejected email addresses, subjects and message content.]]></item>
+            <item><![CDATA[Fixed the sender-copy checkbox value so selected requests reliably trigger delivery of the requested email copy.]]></item>
+            <item><![CDATA[Hardened Joomla Contact persistence against post-save extension errors by confirming whether a contact was stored before reporting a failure.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized Counts, Contact, validation, mail-template and administrator language strings across German, English, Spanish, French and Italian.]]></item>
+            <item><![CDATA[Added translated titles and descriptions for the CopyMyPage contact-copy template in Joomla's mail-template manager.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added the new mod_copymypage_counts module with four backend-managed counters, configurable labels, values, animation durations and UIkit icons.]]></item>
+            <item><![CDATA[Added PureCounter 1.5.0 integration through Joomla's Web Asset Manager and a dedicated PureCounterAssetItem lifecycle hook.]]></item>
+            <item><![CDATA[Added the new mod_copymypage_contact module with a responsive UIkit contact layout, map and contact details, Joomla validation, privacy consent, mail delivery and optional sender copies.]]></item>
+            <item><![CDATA[Added reusable same-origin content-modal support for displaying the configured Joomla privacy article in an internally scrollable UIkit dialog.]]></item>
+            <item><![CDATA[Added Joomla Contact creation with duplicate prevention, a dedicated CopyMyPage contact category and server-resolved privacy-article traceability.]]></item>
+            <item><![CDATA[Added the dedicated com_copymypage.contact.copy mail template with localized plain-text and HTML content plus component-owned install, update and uninstall SQL.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Extended the shared CopyMyPage dialog and form-validation assets for reusable content dialogs, localized system messages and the Contact workflow.]]></item>
+            <item><![CDATA[Added Contact and Counts to the CopyMyPage package subpackage manifest and updated all extension manifests to version 0.0.16.]]></item>
+            <item><![CDATA[Regenerated affected minified CSS and JavaScript assets from their readable source files.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[No removals in this release.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on the new Counts and Contact modules, privacy-aware contact handling, dedicated HTML sender-copy mail templates and clearer validation feedback.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#109 [dev0.0.16] neues Module Counter]]></item>
+            <item><![CDATA[#110 [dev0.0.16] neues Module Contact]]></item>
+            <item><![CDATA[#112 [dev0.0.16] Mail template für module contact]]></item>
+            <item><![CDATA[#115 [dev0.0.16] Fehlermeldung für email rules konkretisieren]]></item>
+            <item><![CDATA[#117 [dev0.0.16] Email Kopie kommt nicht an]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.15</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed the mobile menu backdrop blur in iOS Safari by aligning the mmenu-light overlay with the shared CopyMyPage dialog backdrop, including the WebKit-prefixed filter and synchronized fade-in behavior.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized navbar logo-layout labels and options across the supported package languages.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added responsive gallery start-image delivery with fallback, WebP and AVIF sources, width-based srcsets and browser sizing hints.]]></item>
+            <item><![CDATA[Added responsive Team images with optimized WebP and AVIF variants while preserving the configured source image as a compatible fallback.]]></item>
+            <item><![CDATA[Added a shared CopyMyPage ImageHelper and dependency-injection registration for centralized Joomla media-field normalization, image dimensions, public URLs and responsive variant discovery.]]></item>
+            <item><![CDATA[Added selectable navbar logo layouts for image-only and image-with-title rendering across desktop and mobile navigation contexts.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Updated UIkit frontend assets and Web Asset metadata from 3.25.16 to 3.25.19 after compatibility review.]]></item>
+            <item><![CDATA[Refactored Gallery and Team image handling to use the shared ImageHelper instead of maintaining separate normalization and responsive-image logic.]]></item>
+            <item><![CDATA[Updated navbar installation and update handling to migrate existing logo configuration to the new template-driven logo layout selection.]]></item>
+            <item><![CDATA[Updated the release version metadata across the CopyMyPage manifests and Web Asset definitions.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[No removals in this release.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on consistent mobile backdrop effects, responsive Gallery and Team images, shared image handling, UIkit maintenance and configurable navbar logo layouts.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#102 [dev0.0.15] Blur effect in ios safari]]></item>
+            <item><![CDATA[#103 [dev0.0.15] Format Startbilder für Galerie anpassen]]></item>
+            <item><![CDATA[#104 [dev0.0.15] Layout für Logos]]></item>
+            <item><![CDATA[#105 [dev0.0.15] Update auf neue UIKit Version]]></item>
+            <item><![CDATA[#106 [dev0.0.15] Teambilder optimieren]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.14</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Improved onepage scroll routing so browser state, section query parameters and in-page navigation remain better aligned while the user scrolls through the onepage layout.]]></item>
+            <item><![CDATA[Stabilized Back-to-Top behavior and related frontend configuration so the control cooperates more predictably with the updated section navigation flow.]]></item>
+            <item><![CDATA[Preserved gallery compatibility by keeping legacy sigplus fields as fallbacks after introducing dedicated CopyMyPage-owned gallery parameters.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized administrator and module language strings for CopyMyPage App fields, Team, Alert, Hero, Open Graph metadata and gallery start-image configuration across the supported package languages.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added the new mod_copymypage_team module and CopyMyPage contact-form settings for rendering selected contacts in the Team section.]]></item>
+            <item><![CDATA[Added the new mod_copymypage_alert module and package integration for the Alert slot.]]></item>
+            <item><![CDATA[Added configurable CSS token overriding so template design tokens can be managed from Joomla parameters instead of hardcoded frontend values.]]></item>
+            <item><![CDATA[Added configurable Open Graph and Twitter Card metadata fields to CopyMyPage modules and aligned the shared getOGTags() return contract across the module stack.]]></item>
+            <item><![CDATA[Added a CopyMyPage App tab to sigplus module editing with dedicated fields for the gallery start image, preview filter label, gallery-view headline and gallery-view subline.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Extended the Hero module with additional configuration and metadata support while keeping the existing Hero slideshow behavior compatible.]]></item>
+            <item><![CDATA[Harmonized CopyMyPage module CSS class conventions for more consistent frontend styling and module-specific template output.]]></item>
+            <item><![CDATA[Cleaned up template.css comments and kept the stylesheet source easier to scan before release packaging.]]></item>
+            <item><![CDATA[Updated gallery preview handling so Joomla media-field values and legacy sigplus filenames are normalized into stable frontend image paths.]]></item>
+            <item><![CDATA[Updated the release version metadata across the CopyMyPage manifests.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed CopyMyPage's primary reliance on repurposed sigplus fields for gallery preview and gallery-view UI data; those fields remain supported as legacy fallbacks only.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on Team and Alert module expansion, admin configuration ownership, design-token and Hero refinements, module Open Graph metadata and dedicated gallery start-image handling.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#91 [dev0.0.14] Module Team erstellen]]></item>
+            <item><![CDATA[#92 [dev0.0.14] Sprachdatei für Admin Bereich]]></item>
+            <item><![CDATA[#93 [dev0.0.14] Module css Klassen vereinheitlichen]]></item>
+            <item><![CDATA[#94 [dev0.0.14] Back-to-Top Button erweitern]]></item>
+            <item><![CDATA[#95 [dev0.0.14] Routing bei Onepage während des Scrollens optimieren]]></item>
+            <item><![CDATA[#96 [dev0.0.14] CSS Token Overriding]]></item>
+            <item><![CDATA[#97 [dev0.0.14] Kommentare in Template.css überprüfen]]></item>
+            <item><![CDATA[#98 [dev0.0.14] Module Hero erweitern]]></item>
+            <item><![CDATA[#99 [dev0.0.14] neuer Slot Alert]]></item>
+            <item><![CDATA[#100 [dev0.0.14] OGTags in Datenbank]]></item>
+            <item><![CDATA[#101 [dev0.0.14] Startbild für Galerie]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.13</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed onepage Open Graph metadata handling so section-specific share URLs can expose their own title, description, URL and image metadata server-side.]]></item>
+            <item><![CDATA[Fixed a navbar active-state regression where returning from the gallery view to a onepage section could highlight the wrong menu item.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[No language string changes in this font delivery, UIkit maintenance and metadata-focused release.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added WOFF2 versions for the currently referenced local frontend fonts while keeping the existing TTF files as fallback sources.]]></item>
+            <item><![CDATA[Added server-readable onepage section URLs through the section query parameter so social crawlers can resolve section-specific metadata.]]></item>
+            <item><![CDATA[Added shared onepage section definitions in the CopyMyPage helper for template rendering order and metadata slot collection.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Optimized local font delivery so modern browsers prefer WOFF2 sources, reducing the referenced local font payload by about 48 percent.]]></item>
+            <item><![CDATA[Updated UIkit frontend assets and related asset metadata from 3.25.11 to 3.25.16 after compatibility review and smoke testing.]]></item>
+            <item><![CDATA[Updated the frontend section-state flow so hash-based navigation and section query parameters resolve to the same active onepage section.]]></item>
+            <item><![CDATA[Refactored onepage metadata collection and section rendering to use the shared section definition instead of duplicated hardcoded lists.]]></item>
+            <item><![CDATA[Updated the release version metadata across the CopyMyPage manifests.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed duplicated onepage section definitions from the view/template metadata handling.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on local font delivery, UIkit maintenance, server-side onepage Open Graph metadata and section navigation stability.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#85 [dev0.0.13] Verbesserungen nach Pagespeed test]]></item>
+            <item><![CDATA[#86 [dev0.0.13] Uikit auf Version 3.25.16 aktualisieren]]></item>
+            <item><![CDATA[#89 [dev0.0.13] Fehler bei OG Tags]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.12</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Removed Joomla core.min.js from the render-blocking path by declaring the core asset in the CopyMyPage Web Asset registry with deferred loading.]]></item>
+            <item><![CDATA[Reduced initial mobile render pressure by lazy-loading the mobile menu stylesheet while keeping a noscript fallback for non-JavaScript environments.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[No language string changes in this performance-focused release.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added a dedicated CopyMyPage core Web Asset override without Joomla's automatic asset version query string.]]></item>
+            <item><![CDATA[Added reusable lazy-stylesheet activation in the CopyMyPage frontend runtime.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Kept UIkit as the shared frontend CSS foundation and focused this release on removing smaller avoidable render-blocking assets from the critical path.]]></item>
+            <item><![CDATA[Adjusted the frontend asset strategy so project-owned assets can better cooperate with Joomla's Web Asset Manager and external page-speed tooling.]]></item>
+            <item><![CDATA[Updated the release version metadata across the CopyMyPage manifests.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed the template-level core asset registration in favor of the dedicated CopyMyPage Web Asset registry entry.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on PageSpeed follow-up optimization for the initial mobile rendering path.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#84 [dev0.0.12] PageSpeed follow-up optimization]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.11</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed duplicated hero layout ownership by letting the dispatcher pass the resolved layout context to the helper.]]></item>
+            <item><![CDATA[Reduced the chance that mobile Lighthouse/PageSpeed runs measure a hero slideshow transition as part of the initial LCP candidate.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[No language string changes in this performance and architecture-focused release.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added a 1280px responsive image tier for Hero slideshow assets.]]></item>
+            <item><![CDATA[Added generated JPG, WebP and AVIF variants for the Hero slideshow and sample/Unsplash Hero images.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Updated the Hero dispatcher/helper collaboration so layout policy remains dispatcher-owned while helpers receive validated fallback layout context.]]></item>
+            <item><![CDATA[Updated the Hero slideshow template to consider 960, 1280 and 1920 image variants when building responsive srcset entries.]]></item>
+            <item><![CDATA[Adjusted the Hero slideshow autoplay interval to keep initial mobile rendering more stable for Lighthouse/PageSpeed analysis.]]></item>
+            <item><![CDATA[Updated the reusable mod_copymypage_bump blueprint and documentation to reflect dispatcher-owned layout policy and helper layout context.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed duplicated helper-level default layout constants where the dispatcher already owns the fallback layout decision.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on PageSpeed follow-up improvements, mobile Hero image delivery and cleaner Hero module layout ownership.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#83 [dev0.0.11] verbesserungen nach pagespeed test]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.10</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed package installation/update completeness by including mod_copymypage_gallery in the package manifest and by shipping a dedicated installer script for mod_copymypage_hero.]]></item>
+            <item><![CDATA[Fixed module warning handling and fallback behavior in the navbar flow so module-level notices are rendered more consistently.]]></item>
+            <item><![CDATA[Fixed Open Graph metadata generation so landing page and gallery view previews are built more reliably from the current page context.]]></item>
+            <item><![CDATA[Fixed localized user-menu language handling to avoid inconsistent labels across the module stack.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Updated and synchronized hero, gallery, dev-module and component language strings for module harmonization, user-menu handling and social-preview related texts across the supported package languages.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added landing-page Open Graph metadata support and shared metadata-building helpers for more complete social previews.]]></item>
+            <item><![CDATA[Added style-aware provider parameters across the module stack to support more uniform module configuration and rendering.]]></item>
+            <item><![CDATA[Added navbar slot support in CopyMyPageAssetItem to improve frontend asset coordination for navbar-driven layouts.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Harmonized the hero, gallery and navbar modules around a more consistent dispatcher/helper/template architecture.]]></item>
+            <item><![CDATA[Refactored the navbar module, including helper structure, templates and asset registration, to reduce duplicated logic and improve maintainability.]]></item>
+            <item><![CDATA[Refactored the hero module and hero_slideshow layout to align parameter handling, rendering flow and installer behavior with the updated module conventions.]]></item>
+            <item><![CDATA[Reworked Onepage and Gallery metadata generation into a shared trait-based flow so OG tag building is coordinated from the appropriate view layer.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed obsolete fallback template files and legacy helper remnants from the old navbar/hero structure after the module harmonization work.]]></item>
+            <item><![CDATA[Removed duplicated navbar-related helper code from com_copymypage where the responsibility now lives in the dedicated navbar module layer.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on module harmonization, package/install consistency and improved social preview metadata.]]></item>
+            <item><![CDATA[The milestone also included internal release-tooling work for version bump automation.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#56 [dev0.0.10] sprache im user menu überprüfen]]></item>
+            <item><![CDATA[#71 [dev0.0.10] OG-Tags für landing page]]></item>
+            <item><![CDATA[#72 [dev0.0.10] module gallery in paket manifest einbinden]]></item>
+            <item><![CDATA[#73 [dev0.0.10] leere script.php für modul hero implementieren]]></item>
+            <item><![CDATA[#75 [dev0.0.10] anpassung warning logik im module navbar]]></item>
+            <item><![CDATA[#76 [dev0.0.10] module provider um style parameter erweitern]]></item>
+            <item><![CDATA[#77 [dev0.0.10] module bump version erstellen]]></item>
+            <item><![CDATA[#78 [dev0.0.10] harmonisierung der module]]></item>
+            <item><![CDATA[#79 [dev0.0.10] refactoring module navbar]]></item>
+            <item><![CDATA[#80 [dev0.0.10] refactoring module hero]]></item>
+            <item><![CDATA[#81 [dev0.0.10] OG-Tags building für gallery view harmonisieren]]></item>
+            <item><![CDATA[#82 [dev0.0.10] navbar_slots in copymypageassetitem.php]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.9</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed the mobile gallery issue where preview cards could disappear after using the filter buttons.]]></item>
+            <item><![CDATA[Fixed gallery detail grid rendering when Sigplus captions and labels are active so image tiles continue to fill the square layout correctly.]]></item>
+            <item><![CDATA[Replaced the hardcoded preloader lookup with selector-based resolution and dedicated error handling to reduce DOM coupling in the frontend runtime.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized the new preloader-related JavaScript language string across the supported package languages.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added the new site module mod_copymypage_gallery with Sigplus-powered gallery discovery, filterable preview cards and warning-aware rendering.]]></item>
+            <item><![CDATA[Added dedicated gallery detail pages in com_copymypage, including Sigplus integration, a Back to Onepage flow and improved image metadata handling via labels.txt.]]></item>
+            <item><![CDATA[Added Open Graph and Twitter/X metadata for gallery detail pages, together with template-level Open Graph defaults.]]></item>
+            <item><![CDATA[Added a more modular Joomla Core-like frontend runtime structure, including focused CopyMyPage feature scripts and a dedicated MmenuLightAssetItem bootstrap path.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Refined the gallery detail template into an Instagram-inspired square grid with four columns on desktop, tighter spacing and preserved lightbox behavior.]]></item>
+            <item><![CDATA[Reworked frontend meta handling so template-level OG defaults and gallery-specific social tags are now set from the appropriate PHP layers.]]></item>
+            <item><![CDATA[Refactored copymypage.js into a namespace-based runtime with smaller focused modules, cleaner asset responsibilities and Joomla.getOptions()-based bootstrapping.]]></item>
+            <item><![CDATA[Aligned frontend runtime architecture and JavaScript organization with the long-term OOP/modularity direction defined for CopyMyPage.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed the temporary gallery placeholder / Hello World flow from the gallery module implementation.]]></item>
+            <item><![CDATA[Removed duplicated inline runtime parameter passing by letting the main CopyMyPage runtime consume Joomla script options as its primary configuration source.]]></item>
+            <item><![CDATA[Removed remaining hardcoded preloader lookup assumptions from the main frontend runtime path.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Development release focused on the new gallery stack, improved social metadata and a more maintainable frontend runtime foundation.]]></item>
+            <item><![CDATA[The previously reported wrong active menu state after returning from gallery to onepage could not be reproduced in the verified Back to Onepage flow.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#52 [dev0.0.9] js dateien organisieren / oop]]></item>
+            <item><![CDATA[#62 [dev0.0.9] preloaderID in datenbank]]></item>
+            <item><![CDATA[#63 [dev0.0.9] erstellung module gallery]]></item>
+            <item><![CDATA[#66 [dev0.0.9] erkanntes aber nicht reproduzierbares fehlverhalten bei menu item auf onepage]]></item>
+            <item><![CDATA[#67 [dev0.0.9] vorschaubilder verschwinden nach betätigung der filter buttons]]></item>
+            <item><![CDATA[#68 [dev0.0.9] refactoring copymypage.js]]></item>
+            <item><![CDATA[#69 [dev0.0.9] default.php template der gallery view optimieren]]></item>
+            <item><![CDATA[#70 [dev0.0.9] Open Graph (OG) tags implementieren]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.8</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Reduced perceived mobile load time by hiding the preloader as soon as the DOM is ready instead of waiting for the full window load event.]]></item>
+            <item><![CDATA[Corrected responsive hero image delivery for Joomla subdirectory installations so optimized slide variants are requested from the expected asset path.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[No language string changes in this performance-focused release.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added responsive hero slideshow image variants in AVIF, WebP and JPG to support more efficient mobile asset delivery.]]></item>
+            <item><![CDATA[Added automatic SVG logo preference in the navbar when a matching vector logo is available.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Refined preloader styling and timing to reduce rendering overhead without changing the established loading experience.]]></item>
+            <item><![CDATA[Optimized local font delivery by replacing the heavy Mona Sans variable loading path with a smaller static font set and by making decorative font loading less aggressive.]]></item>
+            <item><![CDATA[Updated the hero slideshow template to serve responsive image sources through picture/srcset while preserving the existing slideshow behavior and content logic.]]></item>
+            <item><![CDATA[Extended Apache cache guidance for modern image and font formats to improve repeat-visit asset delivery in deployment environments.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed the dedicated preload of the first hero slide from the earlier rendering path so responsive image delivery can take over more efficiently.]]></item>
+            <item><![CDATA[Removed unnecessary early font pressure from the template entry path to keep the mobile critical rendering path lighter.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Performance-focused release for Lighthouse follow-up optimization with special attention to mobile frontend delivery.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#61 [dev0.0.8] lighthouse verbesserungen / testing]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.7</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed the unstable active desktop menu state when entering the onepage view directly via the logo so Home remains the expected active entry.]]></item>
+            <item><![CDATA[Fixed the update-process error "CopyMyPage menu setup failed: Failed to store the hidden Home menu item."]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[No language string changes in this release.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added another round of Lighthouse-driven frontend review and testing to support targeted follow-up optimization work.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Refined frontend assets by reducing logo payload, compressing the first hero slide more aggressively, and optimizing the mburger/index JavaScript delivery.]]></item>
+            <item><![CDATA[Continued performance-focused tuning for mobile and desktop rendering based on Lighthouse findings from the previous optimization cycle.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[No removals in this release.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Stability and performance-focused release for navigation, update flow, and Lighthouse follow-up improvements.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#58 Fixed active menu behavior when entering via the logo]]></item>
+            <item><![CDATA[#59 Lighthouse improvements and testing follow-up]]></item>
+            <item><![CDATA[#60 Fixed error during the update process]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.6</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Reduced hero slideshow layout shifts by reserving viewport height in CSS and providing explicit image dimensions in the hero module output.]]></item>
+            <item><![CDATA[Improved initial rendering by prioritizing the first hero slide and lazy-loading the remaining slides with deferred image delivery.]]></item>
+            <item><![CDATA[Prevented unnecessary system message asset loading on pages without Joomla messages, reducing avoidable frontend overhead.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[No language string changes in this performance-focused release.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added minified versions of the project-owned CopyMyPage frontend CSS and JavaScript assets for leaner transfer sizes.]]></item>
+            <item><![CDATA[Added explicit width, height and fetch priority metadata for hero slideshow images to support more stable and predictable rendering.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Updated the CopyMyPage web asset registry to serve minified project assets in the default frontend path.]]></item>
+            <item><![CDATA[Optimized the hero slideshow markup and template styling for improved image delivery, viewport stability and lower Lighthouse CLS risk.]]></item>
+            <item><![CDATA[Refined frontend asset loading so message-related enhancements and form validation remain available contextually instead of being loaded globally by default.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed the global loading of the CopyMyPage form validation asset from the default frontend asset chain.]]></item>
+            <item><![CDATA[Removed unconditional message enhancement asset loading from requests that do not render Joomla system messages.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Performance-focused release for Lighthouse optimization.]]></item>
+            <item><![CDATA[Apache cache and compression rules are maintained as separate deployment configuration outside the package update flow.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#33 Lighthouse optimization for frontend delivery]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.5</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed mobile header rendering on narrow viewports for a more stable responsive top area.]]></item>
+            <item><![CDATA[Resolved visual and behavioral issues around navbar dropdowns, logo rendering and system message/dialog presentation.]]></item>
+            <item><![CDATA[Stabilized runtime behavior for navbar-related UI interactions such as user menu positioning and onepage navigation feedback.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Updated and synchronized language strings for refined navbar configuration and the new hero module foundation across the supported package languages.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added a configurable preloader system with multiple built-in variants and optional custom branding support.]]></item>
+            <item><![CDATA[Introduced mburger support, scrollspy-based onepage navbar behavior and improved multi-column handling for nested navigation structures.]]></item>
+            <item><![CDATA[Added the new site module mod_copymypage_hero as the future-proof foundation for the hero area, with hero_slideshow as the first layout variant.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Refined navbar behavior, styling, transparent/top-state handling, active-link behavior, mobile toggle integration and dropdown interaction.]]></item>
+            <item><![CDATA[Reworked the former slideshow-specific hero logic into a broader hero-module direction and aligned the slide data structure for easier future extension.]]></item>
+            <item><![CDATA[Improved template styling by integrating font handling, merging development/debug styles into template.css and cleaning up shared module CSS structure.]]></item>
+            <item><![CDATA[Reviewed and documented the current helper/registry architecture around navbar-related services and kept the split for now as an intentional interim design.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed Bootstrap from the active frontend asset setup and deleted the obsolete Bootstrap navbar layout variant.]]></item>
+            <item><![CDATA[Removed the unused sticky parameter from the navbar module configuration.]]></item>
+            <item><![CDATA[Removed mixed unit entry expectations from selected navbar backend fields so numeric values are now handled consistently.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage - Your website. Just copy it.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#32 Bootstrap framework zurücksetzen]]></item>
+            <item><![CDATA[#34 Navbar Helper Klassen Logik überprüfen]]></item>
+            <item><![CDATA[#36 Check UIkit Totop Button]]></item>
+            <item><![CDATA[#37 Navbar transparent machen]]></item>
+            <item><![CDATA[#40 Sticky Paramter noch notwendig?]]></item>
+            <item><![CDATA[#41 Rückgabe in SlideshowHelper ändern]]></item>
+            <item><![CDATA[#42 verschiedene Styleelemente einbauen bzw. anpassen]]></item>
+            <item><![CDATA[#43 mburger implementieren]]></item>
+            <item><![CDATA[#44 Logo im Microsoft Edge anpassen]]></item>
+            <item><![CDATA[#45 Schriftart hinzufügen]]></item>
+            <item><![CDATA[#46 mod_copymypage_dev.css in template.css integrieren]]></item>
+            <item><![CDATA[#47 navbar links und scrollspy]]></item>
+            <item><![CDATA[#48 datenbank parameter im module navbar konsolidieren]]></item>
+            <item><![CDATA[#49 nested submenus (in navbar) in mehreren columns auflösen]]></item>
+            <item><![CDATA[#50 dropdown position für user menu hinterlegen]]></item>
+            <item><![CDATA[#51 anpassung styling und logik der system message und dialog]]></item>
+            <item><![CDATA[#53 darstellung des headers in der mobilen ansicht fixen]]></item>
+            <item><![CDATA[#55 preloader implementieren]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.4</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Improved install/update reliability by automatically enabling required system-side plugin functionality.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Added and synchronized language strings for the new Slideshow and Navbar modules across all five package languages (de-DE, en-GB, es-ES, fr-FR, it-IT).]]></item>
+            <item><![CDATA[Added language strings for new navigation/UI parameter fields (template + modules) across all five package languages.]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Added the new site module mod_copymypage_slideshow (UIkit-based slideshow section).]]></item>
+            <item><![CDATA[Added the new site module mod_copymypage_navbar with a responsive UIkit navbar foundation.]]></item>
+            <item><![CDATA[Implemented off-canvas navigation foundations for mobile to support a modern drawer-based menu experience.]]></item>
+            <item><![CDATA[Introduced DB-backed parameters for navigation/UI configuration (template + modules) as the base for scalable customization.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Updated UIkit to a newer upstream version for the CopyMyPage frontend stack.]]></item>
+            <item><![CDATA[Refined module/template wiring to consume normalized, DB-backed config values for consistent rendering across layouts.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Reduced reliance on temporary, development-only hardcoded defaults where DB-backed parameters are now available.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage – Your website. Just copy it.]]></item>
+            <item><![CDATA[Issues closed for this release:]]></item>
+            <item><![CDATA[#28 [dev0.0.4] Module Slideshow erstellen]]></item>
+            <item><![CDATA[#29 [dev0.0.4] Module Navbar erstellen]]></item>
+            <item><![CDATA[#30 [dev0.0.4] Off-canvas erstellen]]></item>
+            <item><![CDATA[#31 [dev0.0.4] Plugin systemseitig aktiv setzen]]></item>
+            <item><![CDATA[#35 [dev0.0.4] Update UIkit auf aktuelle Version]]></item>
+            <item><![CDATA[#38 [dev0.0.4] Parameter in Datenbank ablegen]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.3</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Fixed the helper registry registration so it can be reliably resolved from the global DI container via Factory::getContainer() without “resource not registered” errors.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Extended offline template language strings (heading, message, meta title/description, page title) across all five package languages.]]></item>
+            <item><![CDATA[Added language strings for the system plugin plg_system_copymypage and for JavaScript error messages used by the CopyMyPage back-to-top logic (de-DE, en-GB, es-ES, fr-FR, it-IT).]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Introduced the system plugin plg_system_copymypage to bootstrap the global CopyMyPage helper registry during onAfterInitialise.]]></item>
+            <item><![CDATA[Registered the CopyMyPage helper registry as a shared service in the Joomla application DI container so helpers can be resolved from any extension.]]></item>
+            <item><![CDATA[Implemented a reusable back-to-top button feature via CopyMyPageAssetItem and the CopyMyPage JavaScript class, including parameter mapping and localized error handling.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Refined the offline template offline.php to send a proper HTTP 503 + Retry-After header, set SEO-friendly meta title/description and stabilize the logo layout for better Lighthouse scores.]]></item>
+            <item><![CDATA[Polished template.css styling for the back-to-top button with improved visibility transitions, hover/focus states and responsive behavior.]]></item>
+            <item><![CDATA[Aligned the helper architecture so that DI-driven helpers are now managed exclusively via the central helper registry instead of component-local containers.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[Removed the previous bootComponent-based helper registry approach that relied on the component child container.]]></item>
+            <item><![CDATA[Cleaned up temporary debug logging in the new system plugin after verifying correct event and registry wiring.]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage – Your website. Just copy it.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.2</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[No bugfixes in this development snapshot.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Deutsch]]></item>
+            <item><![CDATA[English]]></item>
+            <item><![CDATA[Español]]></item>
+            <item><![CDATA[Français]]></item>
+            <item><![CDATA[Italiano]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[Registered the CopyMyPage component in the Joomla DI container via a dedicated service provider.]]></item>
+            <item><![CDATA[Implemented a flexible DisplayController for com_copymypage with default_view=onepage as the foundation for dynamic frontend rendering.]]></item>
+            <item><![CDATA[Created the Onepage HTMLView as the primary frontend view integrating the onepage layout and runtime language strings.]]></item>
+            <item><![CDATA[Added the developer module mod_copymypage_dev to inspect module parameters and experiment with layouts.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[Extended the frontend template tpl_copymypage with a onepage section layout and WebAsset configuration via joomla.asset.json (Bootstrap / UIKit presets).]]></item>
+            <item><![CDATA[Aligned component, template and module wiring with Joomla 6 DI and view/model conventions to prepare for future extensions.]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[—]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage – Your website. Just copy it.]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_copymypage</element>
+        <type>package</type>
+        <version>0.0.1</version>
+        <security>
+            <item><![CDATA[No known security issues.]]></item>
+        </security>
+        <fix>
+            <item><![CDATA[Initial version, no bugfixes.]]></item>
+        </fix>
+        <language>
+            <item><![CDATA[Deutsch]]></item>
+            <item><![CDATA[English]]></item>
+            <item><![CDATA[Español]]></item>
+            <item><![CDATA[Français]]></item>
+            <item><![CDATA[Italiano]]></item>
+        </language>
+        <addition>
+            <item><![CDATA[First release of the CopyMyPage package.]]></item>
+            <item><![CDATA[Initial package structure with subpackages folder for extension ZIPs.]]></item>
+        </addition>
+        <change>
+            <item><![CDATA[—]]></item>
+        </change>
+        <remove>
+            <item><![CDATA[—]]></item>
+        </remove>
+        <note>
+            <item><![CDATA[CopyMyPage – Your website. Just copy it.]]></item>
+        </note>
+    </changelog>
+</changelogs>
