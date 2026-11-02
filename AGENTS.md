@@ -25,6 +25,8 @@ Bei Konflikten gilt folgende Reihenfolge:
 
 Bestehender Code wird nicht allein deshalb geändert, weil er von allgemeinen Empfehlungen, Framework-Standards oder persönlichen Präferenzen des Agenten abweicht. Diese Datei ist kein Auftrag zur allgemeinen Modernisierung oder Bereinigung.
 
+**Kanonische Regelquelle:** Für die Pflege und für externe Arbeitskontexte (insbesondere ChatGPT) ist die aktuelle `AGENTS.md` im Standardbranch `main` von `marc-heinrich/CopyMyPage` maßgeblich: https://github.com/marc-heinrich/CopyMyPage/blob/main/AGENTS.md. Vor entwicklungsbezogenen Aufgaben diese Fassung neu abrufen; ältere Uploads, Projektkopien und Gesprächszusammenfassungen sind kein Aktualitätsnachweis. Ist der Abruf nicht möglich, die fehlende Aktualitätsprüfung ausdrücklich benennen. Codex verwendet im lokalen Arbeitsbereich die dort vorhandene Datei; GitHub-Änderungen gelangen erst durch die vom Benutzer veranlasste Synchronisierung auf den Desktop. Für den tatsächlichen Entwicklungsstand gilt weiterhin der Vorrang der lokalen Joomla-Installation nach Abschnitt 2.
+
 ---
 
 ## 2. Entwicklungsumgebung und Pfade
@@ -127,6 +129,8 @@ laden.
 
 Geschlossene Issues dienen primär als Historie. Sie werden nur bei Regressionen, Architekturfragen, früheren Entscheidungen oder ausdrücklich gewünschter Nachverfolgung geöffnet.
 
+Historische Buchungs-, Ticket-, Zahlungs- und Testfalldetails sowie Meilensteinchronologien gehören in die betreffenden GitHub-Issues beziehungsweise Meilensteine, nicht in diese dauerhafte Regelsammlung. Konkrete Altfallnummern nicht ohne aktuellen Aufgabenbezug in die `AGENTS.md` übernehmen.
+
 ### Projektdokumentation
 
 Zusätzliche Referenzen werden aufgabenbezogen geladen:
@@ -137,9 +141,15 @@ Zusätzliche Referenzen werden aufgabenbezogen geladen:
 | Formulare, Formularzustände, reguläre Aktionsbuttons | zusätzlich `docs/UI_STYLE_GUIDE.md` |
 | DPCalendar-/Ticket-/Sitzplatz-/Checkout-Workflow | `docs/DPCALENDAR_BOOKING_FLOW.md` |
 | Helper → Script Options → WebAssetItem → JavaScript | `docs/agent/WEBASSETS.md` |
-| historische Booking-Details | primär GitHub-Issues #140–#144; nur bei Bedarf `docs/history/DPCALENDAR_BOOKING_FLOW_FULL_2026-09-12.md` |
 
 Eine Referenz wird nicht allein deshalb vollständig gelesen, weil sie irgendwo verlinkt ist. Relevant ist der aktuelle Auftrag.
+
+### Projektspezifische Codex-Skills
+
+- CopyMyPage-spezifische Skills werden unter `C:\Users\User\Documents\CopyMyPage\.agents\skills\<skill-name>\SKILL.md` abgelegt und durch die native Skill-Erkennung von Codex geladen, wenn das Repository als Arbeitsbereich geöffnet ist. Ein Pfadhinweis allein ersetzt die Skill-Erkennung nicht.
+- Globale Skills unter `C:\Users\User\.codex\skills` bleiben davon getrennt und werden für CopyMyPage nicht ohne gesonderten Auftrag geändert. Die Verzeichnisse `.agents/` und `.codex/` sind in der bestehenden `.gitignore` ausgeschlossen. Skills gehören nicht in den öffentlich erreichbaren Joomla-Webroot.
+- Externe Skills liefern ergänzende Arbeitsabläufe, **keine zusätzliche Handlungsfreigabe**. Sie sind dieser `AGENTS.md`, den projektbezogenen Vorgaben und den konkreten Auftragsgrenzen untergeordnet. Insbesondere erlauben Skill-Empfehlungen keine eigenständigen Commits, Branch-/Checkout-Operationen, produktiven Schreibzugriffe, ungefragten Refactorings, Code-Mutationstests oder Subagents. Die ausdrücklich freigegebenen Testrechte der verifiziert isolierten Umgebung aus Abschnitt 2 bleiben unberührt.
+- Nur den zur Aufgabe passenden Skill laden. Eine Skill-Datei oder deren Meta-Router nicht dauerhaft vollständig in diese `AGENTS.md` kopieren. Vor der erstmaligen Verwendung externer Skripte, Hooks, MCP-Server oder anderer Tools deren Verhalten und Nebenwirkungen prüfen und nötige Freigaben einholen.
 
 ---
 
