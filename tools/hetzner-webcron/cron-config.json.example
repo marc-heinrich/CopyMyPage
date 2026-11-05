@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "enabled": false,
+  "joomla_root": "/ABSOLUTER/PFAD/ZU/JOOMLA",
+  "webcron_url": "https://example.invalid/de/component/ajax/",
+  "tasks": {
+    "native_cleanup": 5,
+    "seat_release": 6,
+    "system_tasks": "all_due"
+  },
+  "runtime": {
+    "cycle_budget_seconds": 210,
+    "max_general_tasks": 6,
+    "general_timeout_seconds": 45,
+    "payment_timeout_seconds": 90,
+    "connect_timeout_seconds": 10,
+    "hard_timeout_seconds": 240,
+    "kill_grace_seconds": 5
+  },
+  "binaries": {
+    "curl": "/usr/bin/curl",
+    "flock": "/usr/bin/flock",
+    "timeout": "/usr/bin/timeout"
+  },
+  "payment_recovery": {
+    "enabled": false
+  }
+}

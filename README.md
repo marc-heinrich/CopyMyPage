@@ -36,3 +36,10 @@ Current example:
 - `deployment/apache/.htaccess`
 
 This file is intended to be uploaded manually to the Joomla web root during deployment.
+
+## Hetzner Web-Cron
+
+The standalone cron runner, portable configuration template, placeholder key and
+operating instructions are available in [tools/hetzner-webcron/](tools/hetzner-webcron/).
+Install these files in a private directory outside the Joomla web root. The real
+key, installation settings and runtime files are excluded from version control.
