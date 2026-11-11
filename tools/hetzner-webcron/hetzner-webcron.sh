@@ -42,6 +42,8 @@ rc=$?
 set -e
 case "$rc" in
     0) result='success';;
+    # Internal runner signal; an offline site is a regular suspension for cron.
+    10) result='site_offline'; rc=0;;
     20) result='payment_failure';;
     21) result='general_failure';;
     22) result='uncertain_or_guard_failure';;

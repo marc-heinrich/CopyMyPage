@@ -98,12 +98,22 @@ function tableName(string $prefix, string $table): string {
     return '`'.$prefix.$table.'`';
 }
 
-function database(): mysqli {
-    require_once config()['joomla_root'] . '/configuration.php';
-    $c = new JConfig();
+function siteConfig(?string $root = null): JConfig {
+    $file = ($root ?? config()['joomla_root']).'/configuration.php';
+    if (!is_file($file) || !is_readable($file)) throw new RuntimeException('site_config');
+    try { require_once $file; $c = new JConfig(); }
+    catch (Throwable $e) { throw new RuntimeException('site_config'); }
+    foreach (['dbprefix','db','dbtype','host','user','password'] as $name) {
+        if (!isset($c->$name) || !is_string($c->$name)) throw new RuntimeException('site_config');
+    }
     tableName($c->dbprefix, 'extensions');
-    if (empty($c->db) || $c->offline || !in_array($c->dbtype, ['mysqli','mysql'], true)
+    if (!in_array($c->offline ?? null, [false,true,0,1,'0','1'], true)
+        || empty($c->db) || !in_array($c->dbtype, ['mysqli','mysql'], true)
         || !empty($c->dbencryption)) throw new RuntimeException('site_config');
+    return $c;
+}
+function database(): mysqli {
+    $c = siteConfig();
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     $db = mysqli_init();
     $db->options(MYSQLI_OPT_CONNECT_TIMEOUT, 5);
@@ -177,6 +187,7 @@ function snapshot(bool $operational = true): array {
         if ($operational && !$ready) throw new RuntimeException('scheduler_config');
         $tasks = rows($db, "SELECT id,type,state,cli_exclusive,created_by,params,execution_rules,cron_rules,last_execution,next_execution,last_exit_code,locked,times_executed,times_failed FROM $tasksTable ORDER BY id LIMIT 129");
         $result = taskInventory($tasks, time(), config()['payment_recovery']['enabled'], config()['tasks']);
+        $result['site_offline'] = (bool)(new JConfig())->offline;
         $result['scheduler'] = ['ready'=>$ready, 'lazy_enabled'=>(int)($config['lazy_scheduler']['enabled'] ?? 1),
             'webcron_enabled'=>(int)($config['webcron']['enabled'] ?? 0), 'key_matches'=>hash_equals((string)($config['webcron']['key'] ?? ''), $key),
             'task_logging'=>(int)($config['task_logging'] ?? 1), 'plugins'=>$plugins];
@@ -316,6 +327,9 @@ function runCycle(callable $snap, callable $request, callable $emit, callable $c
         if ($hasPending()) throw new RuntimeException('pending_request');
         $before=$snap();
         if ($before['locked'] !== 0) throw new RuntimeException('native_lock');
+        // Guard checks above take priority. Only the initial configuration snapshot
+        // can suspend a cycle; post-request evidence must still be assessed normally.
+        if ($before['site_offline']) { $status='site_offline'; $code=10; return $code; }
         $payment = $before['payment_id'];
         $emit(['event'=>'recovery_policy','result'=>$payment===null?'excluded':'explicitly_enabled','task_id'=>$payment]);
         if ($payment !== null && $before['tasks'][$payment]['next_execution'] !== null
@@ -356,6 +370,7 @@ function preflight(): array {
     return ['utc'=>gmdate('c'),'php'=>PHP_VERSION,'enabled'=>config()['enabled'], 'config_sha256'=>config()['_sha256'],
         'payment_recovery_enabled'=>config()['payment_recovery']['enabled'], 'task_bindings'=>config()['tasks'], 'fix_sha256'=>$hash,
         'source_guards'=>count(sourceGuards())+count($guards),'pending_request'=>pendingExists(CMP_BASE.'/pending-request.json'),
+        'site_offline'=>$s['site_offline'],
         'scheduler'=>$s];
 }
 function recoveryPreflight(): array {

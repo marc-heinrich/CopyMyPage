@@ -1,9 +1,11 @@
 # CopyMyPage: zentraler Hetzner-Web-Cron
 
-Dieser Ordner enthält den am 05.11.2026 auf `copymypage.de` technisch
-abgenommenen und in die kontrollierte produktive Testphase übernommenen Runner
-aus Issue #185. Shell- und PHP-Datei entsprechen bytegenau diesem geprüften
-Serverstand. Die Konfiguration und der Schlüssel liegen hier als Vorlagen vor.
+Dieser Ordner enthält den auf dem am 05.11.2026 auf `copymypage.de` technisch
+abgenommenen Runner aus Issue #185 aufbauenden Webcron. Die Joomla-Offline-Erkennung
+wurde am 11.11.2026 lokal ergänzt und mit isolierten Fixtures geprüft; diese
+Erweiterung ist noch nicht auf Hetzner abgenommen. Der dort eingerichtete Cronjob
+ist derzeit bewusst deaktiviert. Konfiguration und Schlüssel liegen hier als
+Vorlagen vor.
 
 Der Cron gehört außerhalb des öffentlich erreichbaren Joomla-Webroots auf den
 Server. Er wird separat eingerichtet und ist keine installierbare
@@ -113,6 +115,121 @@ laufende Prozesse vollständig auslaufen lassen. Unklare HTTP-Ergebnisse und
 native Sperren vor einer Wiederaufnahme klären. Danach Runner deaktivieren und
 Joomla kontrolliert zurückstellen; keine parallele Verarbeitung zulassen.
 
+## Joomla-Offline-Modus
+
+Ursache des bisherigen Fehlers: `database()` behandelte ein gesetztes
+`JConfig::$offline` pauschal als `site_config`. Jetzt wird die tatsächliche
+`configuration.php` gelesen und validiert. Für `offline` sind ausschließlich
+`false`, `true`, `0`, `1`, `'0'` und `'1'` zulässig. Fehlende, syntaktisch defekte
+oder unvollständige Konfigurationen bleiben technische Fehler; ein HTTP 503 ist
+kein Offline-Nachweis.
+
+Nach Quellcode-Qualifikation und Prüfung der bestehenden Pending-Sperre wird der
+Scheduler-Zustand wie bisher lesend ermittelt. Konfigurationsfehler, native Sperren
+und andere Schutzverletzungen haben Vorrang. Zeigt dieser Anfangszustand Joomla
+offline, endet der Zyklus vor der Task-Verarbeitung: kein HTTPS-Aufruf, kein neuer
+Cursor und keine neue `pending-request.json`, auch bei freigegebener Recovery.
+Eine vorhandene Pending-Datei bleibt unverändert und führt weiterhin zu
+`pending_request` mit Runner- und Wrapper-Exitcode `22`.
+
+Für die eindeutige Übergabe ohne zusätzliche Zustandsdatei verwendet der PHP-Runner
+intern Exitcode `10` für `site_offline`. `cycle_end.exit` enthält diesen tatsächlichen
+Runner-Code. Der Shell-Wrapper setzt ihn auf den regulären externen Exitcode `0`
+um und protokolliert ebenfalls `site_offline`. Monitoring muss diesen internen
+Code als reguläre Aussetzung behandeln; alle bisherigen Exitcodes bleiben gleich.
+
+Beispielhafte JSON-Zeilen (Zeit, Run-ID und Dauer sind illustrative Werte):
+
+```json
+{"utc":"2026-11-11T12:00:00Z","run":"20261111T120000Z-1234-abcdef","event":"cycle_end","result":"success","exit":0,"general_completed":1,"general_errors":0,"remaining_due":0,"duration_s":0.8}
+{"utc":"2026-11-11T12:05:00Z","run":"20261111T120500Z-1235-fedcba","event":"cycle_end","result":"site_offline","exit":10,"general_completed":0,"general_errors":0,"remaining_due":null,"duration_s":0.02}
+{"utc":"2026-11-11T12:05:00Z","event":"wrapper_end","result":"site_offline","exit":0,"lock_acquired":1,"duration_s":0}
+```
+
+`preflight` ergänzt das bestehende JSON um das boolesche Feld `site_offline`.
+Auch `scheduler.site_offline` zeigt den aus der Konfiguration gelesenen Zustand;
+Scheduler-Inventar, `scheduler.scheduler.ready` und `pending_request` bleiben
+sichtbar. Offline allein lässt Preflight erfolgreich enden. Fehlerhafte Quellen
+oder Konfigurationen werden weiterhin als Fehler ausgegeben. Preflight schreibt
+keine Zustandsdateien und löst keine Tasks aus.
+
+Jeder neue Cronprozess liest die Joomla-Konfiguration erneut. Online läuft der
+nächste reguläre Zyklus ohne Sonderfreigabe oder neue Zustandsdatei wie bisher.
+Der Zustand ist eine Momentaufnahme am Zyklusanfang. Wird Joomla erst während
+eines laufenden Zyklus offline geschaltet, bleibt ein bereits begonnener Aufruf
+der bisherigen HTTP- und nativen Erfolgskontrolle unterworfen: `https_uncertain`
+oder `history_mismatch` werden niemals nachträglich zu `site_offline` umgedeutet.
+Unklare Ergebnisse behalten die Pending-Sperre; es gibt keine automatische
+Wiederholung. Für eine Wartungsumschaltung den Cron zuerst deaktivieren und einen
+laufenden Zyklus auslaufen lassen.
+
+## Lokale Regressionstests der Offline-Erweiterung
+
+Die historischen, unten genannten Testskripte waren im Repository nicht enthalten.
+Die neue Suite liegt unter `tests/` und benötigt keine echte Joomla-Installation,
+keine Datenbankverbindung und keinen Netzwerkzugriff:
+
+```sh
+php tests/offline-test.php
+bash -n hetzner-webcron.sh
+bash -n tests/wrapper-test.sh
+bash tests/wrapper-test.sh
+```
+
+Die PHP-Suite prüft echte Konfigurationsdateien in frischen Unterprozessen,
+`runCycle()`, Pending-Dateien, native Historienbewertung und Hash-Prüfung mit
+synthetischen Daten. Für `snapshot()` und `preflight()` ersetzt eine temporäre
+Runner-Kopie ausschließlich die Umgebungsgrenzen `config()`, `database()` und
+`qualifySources()` sowie den qualifizierten Fixture-Hash. SQL-Auswahl und
+Scheduler-/Offline-Prüfungen bleiben unverändert. Ein `mysqli`-Testdouble liefert
+die synthetischen Zeilen ohne Verbindung; daher wird die PHP-Erweiterung `mysqli`
+auch für diese Suite benötigt. Keine produktiven Hashes werden angepasst.
+
+Abgedeckt sind Online → Offline → Online, keine Task-/Pending-Erzeugung offline,
+vorrangige Pending- und native Sperren, HTTP 503 nach Requeststart, weiterhin
+sichtbarer `history_mismatch`, fehlende/defekte Konfiguration, Quellcodefehler
+und lesender Preflight einschließlich Offline plus Pending. Temporäre Dateien
+liegen ausschließlich in einem neuen Verzeichnis im System-Temp und werden
+nach dem Test entfernt.
+
+Die Wrapper-Suite führt den tatsächlichen Wrapper mit simuliertem PHP, `flock`
+und `timeout` aus. Sie prüft Offline → extern `0`, unveränderte Fehlercodes,
+Lock-Deskriptor/Argumente, UTC-Protokoll, Konfigurationsfehler vor dem Start und
+ausbleibenden Runner-Start bei belegter Sperre. Das ersetzt keinen Linux-Test
+der Kernel-Sperre, Dateirechte, Deskriptor-Vererbung oder des harten Zeitlimits.
+
+Lokaler Stand vom 11.11.2026: PHP 8.4.0, Git Bash 5.2.37; PHP-Lint für alle drei
+PHP-Dateien, PHP-Fixture-Suite und zehn Wrapper-Fälle erfolgreich. ShellCheck und
+ein nutzbares Linux/WSL waren nicht verfügbar. Native PHP-Dateisperren wurden
+lokal geprüft; die erneute Linux-Abnahme bleibt vor Inbetriebnahme erforderlich.
+
+## Kontrollierte Übernahme auf copymypage.de
+
+Erst nach gesonderter Freigabe; bis dahin bleibt der Hetzner-Job deaktiviert:
+
+1. Laufende Prozesse ausschließen. Aktuelle Betriebsdateien sichern und mit den
+   lokalen Änderungen vergleichen. Vorhandene Pending-Sperren fachlich klären;
+   Lock-, Cursor-, Log-, Konfigurations- und Schlüsseldateien erhalten.
+2. In einer privaten, isolierten Linux-Fixture die Suite und echte Prüfungen für
+   Rechte, exklusive Konkurrenz, FD-Vererbung und Hard-Timeout durchführen.
+   Kein Provider-/SMTP-I/O und keine produktiven Task-Aufrufe für diese Tests.
+3. Nur `scheduler-central.php` und `hetzner-webcron.sh` ins vorhandene private
+   Cron-Verzeichnis übernehmen; LF, Eigentümer und Betriebsrechte nach obigem
+   Vertrag prüfen. Keine Joomla-/DPCalendar-Dateien oder Quellcode-Hashes ändern.
+4. Bei weiterhin deaktiviertem Job PHP-Lint, `bash -n`, `config-check` und den
+   lesenden `preflight` ausführen. `site_offline`, Scheduler-Bereitschaft,
+   Quellcode-Qualifikation und `pending_request` kontrollieren. Bei Fehlern stoppen.
+5. Monitoring auf den internen Offline-Code `10` und externen Wrapper-Code `0`
+   abstimmen. Einen gesondert freigegebenen Offline-Lauf über den Wrapper abnehmen:
+   keine Taskstarts, unveränderte Historie/Cursor, keine neue Pending-Datei,
+   passende `cycle_end`-/`wrapper_end`-Zeilen.
+6. Joomla kontrolliert online schalten. Erst nach Freigabe einen einzelnen
+   Online-Lauf mit nativer Erfolgskontrolle abnehmen und anschließend den
+   bestehenden Hetzner-Job kontrolliert reaktivieren. Keine parallelen Trigger.
+
+Diese Schritte wurden im Rahmen der lokalen Implementierung nicht ausgeführt.
+`fernbreitenbacher-carneval.de` ist nicht betroffen.
+
 ## Abnahmestand und Betrieb
 
 Vor der Aufnahme ins Repository bereits nachgewiesen:
@@ -141,7 +258,8 @@ automatische Logrotation sind in diesem Stand nicht eingerichtet. Bei
 unverändertem Fünf-Minuten-Takt sind etwa 9–11 MB zusätzliches Protokoll pro Monat
 zu erwarten. Archivierung und Leeren mit dem laufenden Cron abstimmen.
 
-SHA-256 der unverändert übernommenen Programmdateien:
+SHA-256 des historischen Serverstands vor der Offline-Erweiterung (nicht die
+aktuellen Programmdateien):
 
 ```text
 f6028091b84471b3001348c1281ce2367bc33d60ab748d17d8e8de1ca4609d0e  hetzner-webcron.sh
