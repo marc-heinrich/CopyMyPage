@@ -1,10 +1,15 @@
 # Private installation settings and credentials; commit the .example files only.
 /cron-config.json
+/operations-config.json
 /webcron.key
+/monitoring.url
 
 # Runtime state must stay with its installation.
 /joomla-webcron.lock
+/operations.lock
 /general-cursor
 /pending-request.json
-/webcron-executions.log*
+/cron-health.json
+/webcron-executions*.log*
 /.central-*
+/.operations-*

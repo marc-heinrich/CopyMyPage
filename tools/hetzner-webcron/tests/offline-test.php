@@ -131,6 +131,18 @@ try {
     }
     $r=cycle(state(),$pending,static function(&$s): void { $s['site_offline']=true; checkResponse(22,'503',''); });
     ended($r,22,'https_uncertain'); check(count($r['requests']) === 1 && pendingExists($pending), '503 no retry, durable pending'); unlink($pending);
+    foreach ([[28,'000','', 'https_uncertain'],[22,'403','', 'http_auth'],[0,'200','broken', 'json_invalid'],[0,'200','{"success":false}', 'endpoint_rejected']] as [$rc,$http,$body,$reason]) {
+        $r=cycle(state(),$pending,static function(&$s) use($rc,$http,$body): void { checkResponse($rc,$http,$body); });
+        ended($r,22,$reason); check(count($r['requests'])===1 && pendingExists($pending),'uncertain request preserves intent');
+        $next=cycle(state(),$pending); ended($next,22,'pending_request'); check($next['requests']===[],'no blind repeat'); unlink($pending);
+    }
+    $r=cycle(state(),$pending,static function(&$s): void {
+        $s['tasks'][7]['times_executed']++; $s['tasks'][7]['times_failed']++; $s['tasks'][7]['last_exit_code']=5;
+        $s['tasks'][7]['last_execution']=gmdate('Y-m-d H:i:s',$s['now']);
+        $s['logs']=[['id'=>1,'jobid'=>7,'exitcode'=>5,'lastdate'=>gmdate('Y-m-d H:i:s',$s['now'])]];
+        $s['max_log']=1; $s['due']=[];
+    });
+    $failure=ended($r,21,'general_failure'); check($failure['general_errors']===1 && !pendingExists($pending),'known native failure is visible without ambiguous intent');
     $r=cycle(state(),$pending,static function(&$s): void {
         $s['site_offline']=true; $s['max_log']=1;
         $s['logs']=[['id'=>1,'jobid'=>7,'exitcode'=>0,'lastdate'=>gmdate('Y-m-d H:i:s',$s['now'])]];
@@ -153,6 +165,7 @@ try {
     $source=str_replace("const CMP_FIX = '".CMP_FIX."';", "const CMP_FIX = '".$hash."';", $source, $replacements);
     check($replacements === 1, 'synthetic qualification hash');
     file_put_contents($temp.'/runner.php',$source);
+    copy(dirname(__DIR__).'/cron-operations.php',$temp.'/cron-operations.php');
     copy(__DIR__.'/preflight-fixture.php',$temp.'/preflight-fixture.php');
     file_put_contents($temp.'/webcron.key','synthetic');
     file_put_contents($temp.'/cron-config.json','synthetic config');

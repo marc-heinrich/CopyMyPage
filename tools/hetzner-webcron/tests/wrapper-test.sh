@@ -18,10 +18,20 @@ export CMP_CRON_PHP="$fixture/fake-php"
 # Source checkouts may have CRLF on Windows. Run the identical shell statements.
 sed 's/\r$//' "$source_dir/hetzner-webcron.sh" > "$fixture/hetzner-webcron.sh"
 : > "$fixture/scheduler-central.php"
+: > "$fixture/cron-operations.php"
 
 cat > "$fixture/fake-php" <<'PHP_STUB'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "$1" == "$TEST_DIR/cron-operations.php" ]]; then
+    case "$2" in
+        start) : >&9; exit "${TEST_START_RC:-0}" ;;
+        finish)
+            printf '{"utc":"%s","event":"wrapper_end","result":"%s","exit":%s,"lock_acquired":%s,"duration_s":%s}\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$3" "$4" "$5" "$6" >> "$TEST_DIR/webcron-executions.log"
+            exit "${TEST_FINISH_RC:-0}" ;;
+        *) exit 99 ;;
+    esac
+fi
 [[ $# == 2 && "$1" == "$TEST_DIR/scheduler-central.php" ]] || exit 99
 case "$2" in
     config-shell)
@@ -105,8 +115,24 @@ TEST_CONFIG_FAIL=1 "$BASH" "$fixture/hetzner-webcron.sh" > "$fixture/stdout" 2> 
 config_rc=$?
 set -e
 [[ "$config_rc" == 2 ]] || fail "config failure exit $config_rc, expected 2"
-[[ ! -e "$fixture/joomla-webcron.lock" && ! -e "$fixture/flock.calls" && ! -e "$fixture/run.calls" && ! -e "$fixture/timeout.calls" && ! -e "$fixture/webcron-executions.log" ]] || fail 'config failure created state or started execution'
+[[ ! -e "$fixture/joomla-webcron.lock" && ! -e "$fixture/flock.calls" && ! -e "$fixture/run.calls" && ! -e "$fixture/timeout.calls" ]] || fail 'config failure started execution'
+[[ "$(cat "$fixture/webcron-executions.log")" == *'"result":"config_error","exit":2,'* ]] || fail 'config failure missing operational evidence'
 [[ "$(cat "$fixture/stderr")" == '{"event":"fatal","result":"config_schema"}' ]] || fail 'configuration diagnostic lost'
 checks=$((checks+1))
 printf 'PASS: configuration failure stops before lock/runner\n'
+for mode in start finish; do
+    rm -f -- "$fixture/run.calls"
+    set +e
+    if [[ "$mode" == start ]]; then
+        TEST_RUN_RC=0 TEST_START_RC=23 "$BASH" "$fixture/hetzner-webcron.sh" > "$fixture/stdout" 2> "$fixture/stderr"
+    else
+        TEST_RUN_RC=0 TEST_FINISH_RC=23 "$BASH" "$fixture/hetzner-webcron.sh" > "$fixture/stdout" 2> "$fixture/stderr"
+    fi
+    rc=$?
+    set -e
+    [[ "$rc" == 23 ]] || fail "$mode operations failure not visible"
+    if [[ "$mode" == start ]]; then [[ ! -e "$fixture/run.calls" ]] || fail 'runner started after failed operations start'; fi
+    checks=$((checks+1))
+    printf 'PASS: operations %s failure => 23\n' "$mode"
+done
 printf '%s wrapper cases passed; PHP, timeout and flock are simulated.\n' "$checks"

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 // Private CLI evidence/dispatcher. Database access is READ ONLY; all tasks use Joomla HTTPS.
 const CMP_BASE = __DIR__;
+require_once __DIR__.'/cron-operations.php';
 const CMP_PAYMENT = 'copymypage.reconcile_payments';
 const CMP_NATIVE = 'plg_task_dpcalendar_booking_deletions';
 const CMP_CARTS = 'copymypage.release_reservations';
@@ -13,7 +14,15 @@ function exactKeys(array $value, array $keys): void {
     if ($actual !== $keys) throw new RuntimeException('config_schema');
 }
 function validateConfig(array $c): array {
-    exactKeys($c, ['schema_version','enabled','joomla_root','webcron_url','tasks','runtime','binaries','payment_recovery']);
+    // Older configurations are accepted, with native deletion now fail-closed.
+    $c['native_cleanup'] ??= ['enabled'=>false,'approved_definition_sha256'=>null];
+    exactKeys($c, ['schema_version','enabled','joomla_root','webcron_url','tasks','runtime','binaries','payment_recovery','native_cleanup']);
+    if (!is_array($c['native_cleanup'])) throw new RuntimeException('cleanup_policy');
+    exactKeys($c['native_cleanup'], ['enabled','approved_definition_sha256']);
+    $policy = $c['native_cleanup'];
+    if (!is_bool($policy['enabled']) || ($policy['approved_definition_sha256'] !== null
+        && (!is_string($policy['approved_definition_sha256']) || !preg_match('/^[a-f0-9]{64}$/D',$policy['approved_definition_sha256'])))
+        || ($policy['enabled'] && $policy['approved_definition_sha256'] === null)) throw new RuntimeException('cleanup_policy');
     if ($c['schema_version'] !== 1 || !is_bool($c['enabled']) || !is_array($c['runtime'])
         || !is_array($c['binaries']) || !is_array($c['payment_recovery'])) throw new RuntimeException('config_schema');
     exactKeys($c['runtime'], ['cycle_budget_seconds','max_general_tasks','general_timeout_seconds','payment_timeout_seconds',
@@ -129,7 +138,7 @@ function dueTimestamp(string $value): int {
     if (!$date || $date->format('Y-m-d H:i:s') !== $value) throw new RuntimeException('task_schedule');
     return $date->getTimestamp();
 }
-function taskInventory(array $tasks, int $now, bool $paymentEnabled, ?array $bindings = null): array {
+function taskInventory(array $tasks, int $now, bool $paymentEnabled, ?array $bindings = null, ?array $cleanupPolicy = null): array {
     if (count($tasks) > 128) throw new RuntimeException('task_limit');
     $result = ['now'=>$now, 'tasks'=>[], 'due'=>[], 'locked'=>0, 'logs'=>[],
         'roles'=>['native_cleanup'=>[], 'seat_release'=>[], 'payment_recovery'=>[]], 'payment_id'=>null];
@@ -149,6 +158,14 @@ function taskInventory(array $tasks, int $now, bool $paymentEnabled, ?array $bin
             $result['payment_id'] = $id;
         }
         $task['definition_hash'] = hash('sha256', $task['created_by'].'|'.$task['params'].'|'.$task['execution_rules'].'|'.$task['cron_rules']);
+        if ($task['type'] === CMP_NATIVE) {
+            $params = json_decode($task['params'],true,512,JSON_THROW_ON_ERROR);
+            $task['deletion_criteria'] = array_intersect_key($params, array_flip(['deletions_date','deletions_date_type','deletions_states']));
+            if ($cleanupPolicy !== null) {
+                if (!$cleanupPolicy['enabled']) $active = false;
+                elseif (!hash_equals((string)$cleanupPolicy['approved_definition_sha256'], $task['definition_hash'])) throw new RuntimeException('cleanup_policy');
+            }
+        }
         unset($task['params'], $task['execution_rules'], $task['cron_rules']);
         $result['tasks'][$id] = $task;
         if ($active && $task['next_execution'] !== null) {
@@ -186,7 +203,8 @@ function snapshot(bool $operational = true): array {
             && count($plugins) === 3 && !array_filter($plugins, fn($p)=>(int)$p['enabled'] !== 1);
         if ($operational && !$ready) throw new RuntimeException('scheduler_config');
         $tasks = rows($db, "SELECT id,type,state,cli_exclusive,created_by,params,execution_rules,cron_rules,last_execution,next_execution,last_exit_code,locked,times_executed,times_failed FROM $tasksTable ORDER BY id LIMIT 129");
-        $result = taskInventory($tasks, time(), config()['payment_recovery']['enabled'], config()['tasks']);
+        $result = taskInventory($tasks, time(), config()['payment_recovery']['enabled'], config()['tasks'],
+            config()['native_cleanup'] ?? ['enabled'=>false,'approved_definition_sha256'=>null]);
         $result['site_offline'] = (bool)(new JConfig())->offline;
         $result['scheduler'] = ['ready'=>$ready, 'lazy_enabled'=>(int)($config['lazy_scheduler']['enabled'] ?? 1),
             'webcron_enabled'=>(int)($config['webcron']['enabled'] ?? 0), 'key_matches'=>hash_equals((string)($config['webcron']['key'] ?? ''), $key),
@@ -269,7 +287,7 @@ function safeReason(Throwable $e): string {
         'response_storage','transport_unavailable','http_auth','https_uncertain','json_invalid','endpoint_rejected','cursor_storage','qualified_source',
         'config_schema','config_path','config_url','config_budget','config_missing','config_binary','config_changed','config_disabled',
         'private_permissions','key_invalid','unix_required','pending_request','pending_storage','duplicate_cleanup_task','task_schedule',
-        'wrapper_required','log_unavailable','config_tasks','task_binding'];
+        'wrapper_required','log_unavailable','config_tasks','task_binding','cleanup_policy'];
     return in_array($e->getMessage(),$allowed,true) ? $e->getMessage() : 'audit_unavailable';
 }
 function sourceGuards(): array {
@@ -283,14 +301,23 @@ function sourceGuards(): array {
         'plugins/system/copymypage/src/Extension/CopyMyPage.php'=>'c18cf0de3a7929281545dea492655bb95d1df400150f7a55d0e15de205d7a4f2',
         'components/com_copymypage/src/Service/NativeCleanupTask.php'=>'76da8d57f7c02599198e81742d27fc620b623573b9545f37e81dc7330be4b2ab',
         'components/com_copymypage/src/Service/NativeCleanupMVCFactoryProvider.php'=>'73ad524dfb4b2f58e10751a2429f6cc6f7742360abc6772ee360a62c2c1c13b9',
-        'components/com_copymypage/src/Service/ReservationCleanupService.php'=>'ad0dc9592b4c0a6ed74d00e0810fab2f046e20581c2a9fbf6dd806860db9da33',
+        // Both exact revisions reviewed: #189 only removes the ignored minutes
+        // normalisation and changes its caller to named arguments (02.11.2026).
+        'components/com_copymypage/src/Service/ReservationCleanupService.php'=>[
+            'ad0dc9592b4c0a6ed74d00e0810fab2f046e20581c2a9fbf6dd806860db9da33',
+            'a3b6b66624a32e44e8ba84c68f186b6d9177311f501ca38a85d8eb64238a99eb'],
         'plugins/task/dpcalendar/src/Extension/DPCalendar.php'=>'e4b26fbbf23fcac743e56aa28c9679e014011e14f34542250ac13338f3d1fa14',
-        'plugins/task/copymypage/src/Extension/CopyMyPage.php'=>'82647e77af05bbf3f4cedd170ca89a2d746e4b07e1d163a37dd14e829981e8e9',
+        'plugins/task/copymypage/src/Extension/CopyMyPage.php'=>[
+            '82647e77af05bbf3f4cedd170ca89a2d746e4b07e1d163a37dd14e829981e8e9',
+            'd636123d9fbde5bd7f8c3fd7a98cdb97ddee7e9c83da56114d2d1d91e55e5a8e'],
     ];
     return $files;
 }
 function verifySourceFiles(string $root, array $files): void {
-    foreach($files as $path=>$hash) if(!hash_equals($hash,(string)@hash_file('sha256',$root.'/'.$path))) throw new RuntimeException('qualified_source');
+    foreach($files as $path=>$hashes) {
+        $actual=(string)@hash_file('sha256',$root.'/'.$path);
+        if (!in_array($actual,(array)$hashes,true)) throw new RuntimeException('qualified_source');
+    }
 }
 function qualifySources(?string $root = null): void {
     $root ??= config()['joomla_root'];
@@ -369,6 +396,7 @@ function preflight(): array {
     $s = snapshot(false);
     return ['utc'=>gmdate('c'),'php'=>PHP_VERSION,'enabled'=>config()['enabled'], 'config_sha256'=>config()['_sha256'],
         'payment_recovery_enabled'=>config()['payment_recovery']['enabled'], 'task_bindings'=>config()['tasks'], 'fix_sha256'=>$hash,
+        'native_cleanup_policy'=>config()['native_cleanup'] ?? ['enabled'=>false,'approved_definition_sha256'=>null],
         'source_guards'=>count(sourceGuards())+count($guards),'pending_request'=>pendingExists(CMP_BASE.'/pending-request.json'),
         'site_offline'=>$s['site_offline'],
         'scheduler'=>$s];
@@ -425,11 +453,12 @@ try {
         || !flock($lock, LOCK_EX|LOCK_NB)) throw new RuntimeException('wrapper_required');
     $canLog = true;
     qualifySources();
-    $run=gmdate('Ymd\THis\Z').'-'.getmypid().'-'.bin2hex(random_bytes(3));
+    $run=(string)getenv('CMP_CRON_RUN_ID');
+    if (!preg_match('/^[A-Za-z0-9-]{1,80}$/D',$run)) throw new RuntimeException('wrapper_required');
     $emit=static function(array $row) use($run):void {
         $line=json_encode(['utc'=>gmdate('Y-m-d\TH:i:s\Z'),'run'=>$run]+$row,JSON_THROW_ON_ERROR|JSON_UNESCAPED_SLASHES)."\n";
-        privatePath(CMP_BASE.'/webcron-executions.log', false, true);
-        if (file_put_contents(CMP_BASE.'/webcron-executions.log',$line,FILE_APPEND|LOCK_EX)!==strlen($line)) throw new RuntimeException('log_unavailable');
+        try { opsEvent(CMP_BASE, json_decode($line,true,512,JSON_THROW_ON_ERROR)); }
+        catch (Throwable $e) { throw new RuntimeException('log_unavailable'); }
         echo $line;
     };
     $cursorFile=CMP_BASE.'/general-cursor'; $raw=is_file($cursorFile)?file_get_contents($cursorFile):'0';
@@ -448,8 +477,7 @@ try {
     // Invalid config/preflight must never create private state or expose exception details.
     $line=json_encode(['utc'=>gmdate('c'),'event'=>'fatal','result'=>safeReason($e)])."\n";
     if ($canLog) {
-        try { privatePath(CMP_BASE.'/webcron-executions.log', false, true);
-            file_put_contents(CMP_BASE.'/webcron-executions.log',$line,FILE_APPEND|LOCK_EX);
+        try { opsEvent(CMP_BASE,json_decode($line,true,512,JSON_THROW_ON_ERROR));
         } catch(Throwable $ignored) { /* stdout remains the independent cron evidence */ }
     }
     echo $line; exit(22);

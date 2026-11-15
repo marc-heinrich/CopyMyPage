@@ -1,11 +1,16 @@
 # CopyMyPage: zentraler Hetzner-Web-Cron
 
-Dieser Ordner enthält den auf dem am 05.11.2026 auf `copymypage.de` technisch
-abgenommenen Runner aus Issue #185 aufbauenden Webcron. Die Joomla-Offline-Erkennung
-wurde am 11.11.2026 lokal ergänzt und mit isolierten Fixtures geprüft; diese
-Erweiterung ist noch nicht auf Hetzner abgenommen. Der dort eingerichtete Cronjob
-ist derzeit bewusst deaktiviert. Konfiguration und Schlüssel liegen hier als
-Vorlagen vor.
+Private Betriebsprogramme für den regulären Joomla-Webcron: gemeinsame Sperre,
+begrenzte Task-Verarbeitung über HTTPS, native Erfolgskontrolle, Überwachung
+und Logrotation. Die Quellprogramme und allgemeinen Vorlagen gehören ins
+Repository; echte Konfigurationen, Zustandsdateien und installationsbezogene
+Bestandsaufnahmen bleiben außerhalb der Versionierung.
+
+Abnahmen, Betriebsstände und historische Nachweise werden in den jeweiligen
+GitHub-Issues und Meilensteinen geführt:
+[Cron-Architektur #185](https://github.com/marc-heinrich/CopyMyPage/issues/185),
+[native Buchungslöschung #189](https://github.com/marc-heinrich/CopyMyPage/issues/189).
+Diese Anleitung ist keine Produktivfreigabe.
 
 Der Cron gehört außerhalb des öffentlich erreichbaren Joomla-Webroots auf den
 Server. Er wird separat eingerichtet und ist keine installierbare
@@ -18,7 +23,9 @@ dessen Unterverzeichnisse das Release-Skript als Erweiterungen verpackt.
 | --- | --- | --- |
 | `hetzner-webcron.sh` | gleicher Name | Gemeinsame Sperre, Zeitlimit, Start des PHP-Runners. |
 | `scheduler-central.php` | gleicher Name | Konfiguration, Task-Erkennung, HTTPS-Aufruf und native Erfolgskontrolle. |
+| `cron-operations.php` | gleicher Name | Gemeinsam gesperrtes Log, Rotation, lokaler Zustand und optionaler externer Alarmanschluss. |
 | `cron-config.json.example` | `cron-config.json` | Installationsabhängige Einstellungen; Vorlage ist deaktiviert. |
+| `operations-config.json.example` | `operations-config.json` | Größen-/Aufbewahrungsgrenzen und zunächst deaktiviertes Monitoring. |
 | `webcron.key.example` | `webcron.key` | Platzhalter für den geheimen Joomla-Web-Cron-Schlüssel. |
 
 `webcron.key` enthält ausschließlich den Wert des Joomla-Web-Cron-Schlüssels:
@@ -35,6 +42,14 @@ versioniert:
 - `webcron-executions.log`: angehängte JSON-Protokollzeilen mit UTC-Zeit.
 - `pending-request.json`: dauerhafte Sperre bei unklarem Ausführungsergebnis.
 - `.central-*`: vorübergehende Antwort- und Cursor-Dateien.
+- `operations.lock`: gemeinsame Sperre aller Log-/Zustandsschreiber und Rotation.
+- `cron-health.json`: atomar ersetzte lokale Betriebsübersicht, kein Retry-Auftrag.
+- `webcron-executions.YYYYMMDDTHHMMSSZ-<zufall>.log`: rotierte Segmente.
+- `.operations-*`: vorübergehende Zustandsdateien.
+
+Bei freigegebenem externem Monitoring zusätzlich `monitoring.url` lokal auf dem
+Zielserver anlegen (0600): eigene HTTPS-UUID-Ping-URL eines unabhängigen
+Healthchecks-kompatiblen Wächters. Sie enthält niemals den Joomla-Schlüssel.
 
 Eine vorhandene `pending-request.json` niemals allein für einen erneuten Versuch
 entfernen. Zuerst das tatsächliche Ergebnis anhand von Joomla-Scheduler-Historie,
@@ -60,10 +75,16 @@ nicht gelöscht oder durch eine neue Datei ersetzt werden.
 - `runtime` und `binaries`: geprüfte Zeitbudgets und vorhandene Linux-Programme.
 - `payment_recovery.enabled`: bleibt `false`. Eine Aktivierung benötigt eine
   gesonderte fachliche und technische Abnahme.
+- `native_cleanup.enabled`: standardmäßig `false`, auch bei alten Konfigurationen
+  ohne diesen Abschnitt. Die native Routine wird dann aus der Queue ausgeschlossen.
+  Eine gesonderte fachliche Freigabe benötigt zusätzlich den exakt geprüften
+  `approved_definition_sha256` aus Preflight. Änderungen an Ersteller, Parametern
+  oder Zeitplan sperren die Freigabe wieder. Dies ersetzt keine PayPal-Endprüfung.
+  Bereits bestehende Lazy-/CLI-/Webcron-Trigger werden dadurch nicht umgestellt.
 
-Die IDs `5` und `6` sind der geprüfte Stand von `copymypage.de`, keine universellen
-IDs. Auf jeder anderen Installation IDs, Routinen, Intervalle, Ersteller und
-Berechtigungen erneut prüfen. Die Konfiguration verändert keine Joomla-Tasks.
+Die IDs in der Vorlage sind Beispiele. Auf jeder Installation IDs, Routinen,
+Intervalle, Ersteller und Berechtigungen erneut prüfen. Die Konfiguration
+verändert keine Joomla-Tasks.
 
 Die Übertragbarkeit gilt für entsprechend qualifizierte CopyMyPage-Installationen.
 Die Implementierung prüft feste Quellcode-Hashes von Joomla, DPCalendar und
@@ -77,12 +98,43 @@ Vorausgesetzt werden Linux, Bash, PHP CLI mit `mysqli`, `proc_open`, `flock` und
 Joomla 6.2.0, DPCalendar 10.12.4 und CopyMyPage 0.0.27. Windows/Git Bash ersetzt
 keine Prüfung der Linux-Rechte und Sperrweitergabe.
 
+## Überwachung und Logrotation
+
+Alle neuen Logschreiber und die Rotation verwenden `operations.lock`. Die
+aktuelle Datei wird erst unter dieser Sperre geöffnet. Umbenennen ersetzt
+Copytruncate; unvollständige letzte Datensätze werden unverändert archiviert.
+Keine zweite Rotation oder ein FTP-Leeren derselben Datei einrichten.
+
+`operations-config.json` begrenzt standardmäßig Segmente auf 4 MiB, Archive auf
+zwölf Dateien und deren Alter auf höchstens 30 Tage. Die Größen-/Anzahlgrenze
+kann die Aufbewahrung verkürzen; vorhandene übergroße Altlogs werden einmal
+ungekürzt archiviert. Joomla-Logs werden durch diesen Helfer nicht rotiert.
+
+`php cron-operations.php check` prüft die Operations-Konfiguration lesend.
+`php cron-operations.php health` liest den Betriebszustand ohne Schreibzugriff:
+Exit 0 bedeutet gesund, Exit 1 einen ungesunden Zustand. Fehlende Abschlüsse,
+Task-/Wrapperfehler, überlange Läufe, Backlog, Pending-Sperren und Probleme der
+Alarmzustellung werden sichtbar. Fehler des Betriebshelfers nach einem sonst
+richtigen Abschluss sind als Wrapper-Exit 23 erkennbar.
+
+Für einen unabhängigen Healthchecks-kompatiblen Wächter `monitor_enabled`
+bewusst aktivieren und die eigene HTTPS-UUID-Ping-URL in `monitoring.url`
+hinterlegen (0600). Nur ein nachweislich fehlerfreier Abschluss meldet Erfolg;
+Fehler melden `/fail`. Es werden keine Start-Pings, Joomla-Schlüssel, Tasklogs
+oder Kundendaten versendet. Die geheime URL wird über stdin an curl übergeben,
+ohne Redirects und mit maximal fünf Sekunden HTTP-Laufzeit.
+
+Der externe Dienst und sein erreichbarer Alarmkanal müssen separat eingerichtet
+und abgenommen werden. Lokales `health` allein erkennt einen vollständigen
+Hostausfall nicht von außen. Die bekannte Joomla-Offline-Aussetzung erhält den
+regulären Heartbeat; Wartungsdauer separat beobachten.
+
 ## Kontrollierte Einrichtung auf einer weiteren Installation
 
 1. Isolierte Tests und Quellcode-Qualifikation der Zielinstallation durchführen.
    Den bestehenden Scheduler bis zur erfolgreichen Abnahme erhalten.
 2. Ein eigenes privates Verzeichnis außerhalb des Joomla-Webroots verwenden:
-   Verzeichnisrechte `0700`, vier Betriebsdateien `0600`, gleicher Eigentümer wie
+   Verzeichnisrechte `0700`, sechs Betriebsdateien `0600`, gleicher Eigentümer wie
    der Cron-Prozess, keine Symlinks. Der Aufruf erfolgt über `/bin/bash`.
 3. Beide Vorlagen unter den Betriebsnamen bereitstellen und lokal auf dem
    Zielserver ausfüllen. `enabled` bleibt zunächst `false`; Recovery bleibt aus.
@@ -163,108 +215,45 @@ Unklare Ergebnisse behalten die Pending-Sperre; es gibt keine automatische
 Wiederholung. Für eine Wartungsumschaltung den Cron zuerst deaktivieren und einen
 laufenden Zyklus auslaufen lassen.
 
-## Lokale Regressionstests der Offline-Erweiterung
+## Wiederverwendbare Tests
 
-Die historischen, unten genannten Testskripte waren im Repository nicht enthalten.
-Die neue Suite liegt unter `tests/` und benötigt keine echte Joomla-Installation,
-keine Datenbankverbindung und keinen Netzwerkzugriff:
+`tests/` enthält Testquellcode und eine abhängige synthetische Fixture, keine
+aufbewahrten Testergebnisse. Die Programme erzeugen ihre Arbeitsdateien in neuen
+System-Temp-Verzeichnissen und entfernen sie nach Gebrauch. Es werden keine echte
+Joomla-Installation, Datenbankverbindung, Provider- oder SMTP-Zugriffe benötigt.
+Die PHP-Suites brauchen auch für das Testdouble die Erweiterung `mysqli`.
+
+| Datei | Prüfzweck |
+| --- | --- |
+| `tests/offline-test.php` | Konfiguration, Offline-/Online-Wechsel, native Historie, Fehler und verweigerte Wiederholungen. |
+| `tests/preflight-fixture.php` | Abhängige Fixture mit synthetischen mysqli-Zeilen für den lesenden Preflight; nur über offline-test.php starten. |
+| `tests/operations-test.php` | Alarmprotokoll mit simuliertem Transport, Betriebszustand, Löschfreigabe, Aufbewahrung und echte konkurrierende Dateischreiber. |
+| `tests/wrapper-test.sh` | Tatsächlicher Wrapper mit simuliertem PHP, flock und timeout; Exitcodes und Aufrufprotokoll. |
+| `tests/linux-test.sh` | Linux-Rechte, echte Kernel-Sperre, Deskriptorvererbung, Konkurrenz und Timeout; synthetischer Runner ohne HTTP. |
+
+Aus diesem Verzeichnis ausführen:
 
 ```sh
 php tests/offline-test.php
+php tests/operations-test.php
 bash -n hetzner-webcron.sh
 bash -n tests/wrapper-test.sh
+bash -n tests/linux-test.sh
 bash tests/wrapper-test.sh
 ```
 
-Die PHP-Suite prüft echte Konfigurationsdateien in frischen Unterprozessen,
-`runCycle()`, Pending-Dateien, native Historienbewertung und Hash-Prüfung mit
-synthetischen Daten. Für `snapshot()` und `preflight()` ersetzt eine temporäre
-Runner-Kopie ausschließlich die Umgebungsgrenzen `config()`, `database()` und
-`qualifySources()` sowie den qualifizierten Fixture-Hash. SQL-Auswahl und
-Scheduler-/Offline-Prüfungen bleiben unverändert. Ein `mysqli`-Testdouble liefert
-die synthetischen Zeilen ohne Verbindung; daher wird die PHP-Erweiterung `mysqli`
-auch für diese Suite benötigt. Keine produktiven Hashes werden angepasst.
+Die Preflight-Suite ersetzt in einer temporären Runner-Kopie ausschließlich
+Umgebungsgrenzen und qualifiziert synthetische Quellen; produktive Hashes werden
+nicht verändert. Die Operations-Suite simuliert die Alarmzustellung und prüft
+keinen echten externen Alarmkanal.
 
-Abgedeckt sind Online → Offline → Online, keine Task-/Pending-Erzeugung offline,
-vorrangige Pending- und native Sperren, HTTP 503 nach Requeststart, weiterhin
-sichtbarer `history_mismatch`, fehlende/defekte Konfiguration, Quellcodefehler
-und lesender Preflight einschließlich Offline plus Pending. Temporäre Dateien
-liegen ausschließlich in einem neuen Verzeichnis im System-Temp und werden
-nach dem Test entfernt.
+Auf einem freigegebenen isolierten Linux-System zusätzlich ausführen:
 
-Die Wrapper-Suite führt den tatsächlichen Wrapper mit simuliertem PHP, `flock`
-und `timeout` aus. Sie prüft Offline → extern `0`, unveränderte Fehlercodes,
-Lock-Deskriptor/Argumente, UTC-Protokoll, Konfigurationsfehler vor dem Start und
-ausbleibenden Runner-Start bei belegter Sperre. Das ersetzt keinen Linux-Test
-der Kernel-Sperre, Dateirechte, Deskriptor-Vererbung oder des harten Zeitlimits.
-
-Lokaler Stand vom 11.11.2026: PHP 8.4.0, Git Bash 5.2.37; PHP-Lint für alle drei
-PHP-Dateien, PHP-Fixture-Suite und zehn Wrapper-Fälle erfolgreich. ShellCheck und
-ein nutzbares Linux/WSL waren nicht verfügbar. Native PHP-Dateisperren wurden
-lokal geprüft; die erneute Linux-Abnahme bleibt vor Inbetriebnahme erforderlich.
-
-## Kontrollierte Übernahme auf copymypage.de
-
-Erst nach gesonderter Freigabe; bis dahin bleibt der Hetzner-Job deaktiviert:
-
-1. Laufende Prozesse ausschließen. Aktuelle Betriebsdateien sichern und mit den
-   lokalen Änderungen vergleichen. Vorhandene Pending-Sperren fachlich klären;
-   Lock-, Cursor-, Log-, Konfigurations- und Schlüsseldateien erhalten.
-2. In einer privaten, isolierten Linux-Fixture die Suite und echte Prüfungen für
-   Rechte, exklusive Konkurrenz, FD-Vererbung und Hard-Timeout durchführen.
-   Kein Provider-/SMTP-I/O und keine produktiven Task-Aufrufe für diese Tests.
-3. Nur `scheduler-central.php` und `hetzner-webcron.sh` ins vorhandene private
-   Cron-Verzeichnis übernehmen; LF, Eigentümer und Betriebsrechte nach obigem
-   Vertrag prüfen. Keine Joomla-/DPCalendar-Dateien oder Quellcode-Hashes ändern.
-4. Bei weiterhin deaktiviertem Job PHP-Lint, `bash -n`, `config-check` und den
-   lesenden `preflight` ausführen. `site_offline`, Scheduler-Bereitschaft,
-   Quellcode-Qualifikation und `pending_request` kontrollieren. Bei Fehlern stoppen.
-5. Monitoring auf den internen Offline-Code `10` und externen Wrapper-Code `0`
-   abstimmen. Einen gesondert freigegebenen Offline-Lauf über den Wrapper abnehmen:
-   keine Taskstarts, unveränderte Historie/Cursor, keine neue Pending-Datei,
-   passende `cycle_end`-/`wrapper_end`-Zeilen.
-6. Joomla kontrolliert online schalten. Erst nach Freigabe einen einzelnen
-   Online-Lauf mit nativer Erfolgskontrolle abnehmen und anschließend den
-   bestehenden Hetzner-Job kontrolliert reaktivieren. Keine parallelen Trigger.
-
-Diese Schritte wurden im Rahmen der lokalen Implementierung nicht ausgeführt.
-`fernbreitenbacher-carneval.de` ist nicht betroffen.
-
-## Abnahmestand und Betrieb
-
-Vor der Aufnahme ins Repository bereits nachgewiesen:
-
-- 118 synthetische PHP-Prüfungen und 11 Shell-Wrapper-Prüfungen.
-- 6 echte Linux-Prüfungen für Rechte, Sperrweitergabe, Konkurrenz, Timeout und
-  dauerhafte Pending-Sperre in einer separaten Test-Fixture.
-- 27 echte Joomla-/MySQL-/HTTP-Prüfungen in der isolierten lokalen Testinstallation
-  mit synthetischen Buchungen und simulierten Payment-/SMTP-Grenzen.
-- Ein manueller und drei automatische öffentliche Hauptläufe mit fünf nativen
-  Erfolgsnachweisen für Tasks #5 und #6; Recovery blieb deaktiviert.
-
-Diese historischen Nachweise ersetzen keine Abnahme einer anderen Installation.
-Die spätere natürliche Ausführung der täglichen und monatlichen Systemtasks
-war beim Abschluss der Umschaltung noch als Monitoring-Schritt offen.
-
-Bei Fünf-Minuten-Polling kann eine Fünf-Minuten-Aufgabe knapp noch nicht fällig
-sein und erst im nächsten Slot laufen. Für Task #6 wurde dadurch ein Abstand
-von zehn Minuten beobachtet. Ein garantiertes Fünf-Minuten-Ausführungsintervall
-ist mit diesem Stand nicht zugesichert.
-
-`cycle_end`, `wrapper_end`, Fehler, ausbleibende Läufe, `remaining_due`, native
-Task-Historie und eine eventuell vorhandene Pending-Sperre überwachen. Nach
-Updates die Quellcode-Qualifikation erneut prüfen. Ein externer Alarmkanal und
-automatische Logrotation sind in diesem Stand nicht eingerichtet. Bei
-unverändertem Fünf-Minuten-Takt sind etwa 9–11 MB zusätzliches Protokoll pro Monat
-zu erwarten. Archivierung und Leeren mit dem laufenden Cron abstimmen.
-
-SHA-256 des historischen Serverstands vor der Offline-Erweiterung (nicht die
-aktuellen Programmdateien):
-
-```text
-f6028091b84471b3001348c1281ce2367bc33d60ab748d17d8e8de1ca4609d0e  hetzner-webcron.sh
-6091bce0e6aefb5a6bc6e9b55e206a01553c3fba946c3517a530208956a049af  scheduler-central.php
+```sh
+bash tests/linux-test.sh
 ```
 
-Referenzen: [Issue #185](https://github.com/marc-heinrich/CopyMyPage/issues/185),
-[verbindliche Projektregeln](../../AGENTS.md).
+Windows/Git Bash und der simulierte Wrapper-Test ersetzen diese Linux-Abnahme
+nicht. Erfolgreiche Fixtures ersetzen keinen freigegebenen echten Joomla-Webcronlauf
+mit Prüfung der nativen Historie und fachlichen Bindungen. Die Testprogramme werden
+nicht in das produktive Betriebsverzeichnis hochgeladen.

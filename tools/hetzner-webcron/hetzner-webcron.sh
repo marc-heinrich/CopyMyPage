@@ -6,15 +6,23 @@ BASE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 LOCK_FILE="${BASE_DIR}/joomla-webcron.lock"
 # Bootstrap interpreter only; installation/runtime values come from JSON via PHP.
 PHP_BIN="${CMP_CRON_PHP:-/usr/bin/php}"
+export CMP_CRON_RUN_ID="$(date -u '+%Y%m%dT%H%M%SZ')-$$-${RANDOM}"
 started_seconds=$SECONDS
 result='config_error'
 acquired=0
 finish() {
     local rc=$?
-    printf '{"utc":"%s","event":"wrapper_end","result":"%s","exit":%s,"lock_acquired":%s,"duration_s":%s}\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$result" "$rc" "$acquired" "$((SECONDS-started_seconds))" >> "$BASE_DIR/webcron-executions.log"
+    trap - EXIT
+    if ! "$PHP_BIN" "$BASE_DIR/cron-operations.php" finish "$result" "$rc" "$acquired" "$((SECONDS-started_seconds))"; then
+        # Preserve an existing task/guard error; monitoring/storage failure after
+        # a successful cycle must be visible to konsoleH as well.
+        [[ "$rc" != 0 ]] || rc=23
+    fi
+    exit "$rc"
 }
 [[ -d "$BASE_DIR" && -w "$BASE_DIR" ]] || exit 2
-[[ -x "$PHP_BIN" && -r "$BASE_DIR/scheduler-central.php" ]] || exit 2
+[[ -x "$PHP_BIN" && -r "$BASE_DIR/scheduler-central.php" && -r "$BASE_DIR/cron-operations.php" ]] || exit 2
+trap finish EXIT
 # Fixed line protocol: no JSON is interpreted as shell source. Check parser status
 # before mapfile (process substitution alone would hide a failed PHP validator).
 if ! config_lines="$("$PHP_BIN" "$BASE_DIR/scheduler-central.php" config-shell)"; then
@@ -30,10 +38,11 @@ grace_seconds="${config_values[3]}"
 export CMP_CRON_CONFIG_SHA256="${config_values[4]}"
 [[ "$FLOCK_BIN" == /* && -x "$FLOCK_BIN" && "$TIMEOUT_BIN" == /* && -x "$TIMEOUT_BIN" ]] || exit 2
 [[ "$hard_seconds" =~ ^[0-9]{1,3}$ && "$grace_seconds" =~ ^[0-9]{1,3}$ && "$CMP_CRON_CONFIG_SHA256" =~ ^[a-f0-9]{64}$ ]] || exit 2
-trap finish EXIT
 exec 9>>"$LOCK_FILE"
 if ! "$FLOCK_BIN" -n 9; then result='lock_busy';exit 75;fi
 acquired=1
+result='operations_error'
+"$PHP_BIN" "$BASE_DIR/cron-operations.php" start
 result='runner_error'
 # Validated hard stop plus grace is at most 270s, below the five-minute slot.
 set +e

@@ -24,5 +24,9 @@
   },
   "payment_recovery": {
     "enabled": false
+  },
+  "native_cleanup": {
+    "enabled": false,
+    "approved_definition_sha256": null
   }
 }

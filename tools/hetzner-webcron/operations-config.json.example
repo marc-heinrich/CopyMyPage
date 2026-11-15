@@ -1,0 +1,7 @@
+{
+  "max_bytes": 4194304,
+  "archives": 12,
+  "retention_days": 30,
+  "stale_seconds": 900,
+  "monitor_enabled": false
+}
