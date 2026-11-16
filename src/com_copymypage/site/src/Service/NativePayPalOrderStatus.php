@@ -13,6 +13,30 @@ final class NativePayPalOrderStatus
     {
     }
 
+    /**
+     * Not a terminal provider exclusion. The caller must hold the native booking
+     * lock, exclude every prior capture attempt and atomically close the local
+     * capture entry points by completing native deletion before releasing it.
+     */
+    public function verifyUncapturedWalletOrder(object $booking): array
+    {
+        $orderId = (string) $booking->transaction_id;
+        [$order, $accountHash, $responseHash, $environment] = $this->readOrder($booking, $orderId, false, 3);
+        $unit = $this->boundUnit($booking, $order, $orderId);
+        if (!\in_array($order['status'] ?? null, ['CREATED', 'PAYER_ACTION_REQUIRED', 'VOIDED'], true)
+            || !\is_array($order['payment_source'] ?? null) || array_keys($order['payment_source']) !== ['paypal']
+            || !\is_array($order['payment_source']['paypal'])
+            || !\is_string($unit['payee']['merchant_id'] ?? null)
+            || !preg_match('/^[A-Z0-9]{8,64}$/D', $unit['payee']['merchant_id'])
+            || (isset($order['processing_instruction']) && $order['processing_instruction'] !== 'NO_INSTRUCTION')
+            || (array_key_exists('payments', $unit) && (!\is_array($unit['payments']) || $unit['payments'] !== []))) {
+            throw new \DomainException('PayPal wallet order is not verified uncaptured.');
+        }
+        return ['status' => $order['status'], 'environment' => $environment,
+            'orderHash' => hash('sha256', $orderId), 'accountHash' => $accountHash,
+            'responseHash' => $responseHash, 'checkedAt' => gmdate('Y-m-d H:i:s')];
+    }
+
     public function verifyExclusion(object $booking, string $orderId, string $merchantId): array
     {
         if (!preg_match('/^[A-Z0-9]{8,64}$/D', $merchantId)) {
@@ -62,30 +86,33 @@ final class NativePayPalOrderStatus
     }
 
     /** Internal response only; callers must validate the booking/purchase-unit association. */
-    private function readOrder(object $booking, string $orderId): array
+    private function readOrder(object $booking, string $orderId, bool $sandboxOnly = true, int $timeout = 20): array
     {
         if (!preg_match('/^[A-Z0-9]{1,36}$/D', $orderId)
             || !hash_equals((string) $booking->transaction_id, $orderId)) {
             throw new \DomainException('Explicit PayPal order/merchant binding is required.');
         }
         $instance = $this->providers->getInstance((string) $booking->payment_provider);
-        // This local implementation is deliberately limited to authorised Sandbox inspection.
-        if (!$instance || (string) ($instance['sandbox'] ?? '') !== '1'
+        // Administrative inspection/exclusion stays Sandbox-only. Automatic
+        // cleanup uses the exact installed native instance, including live mode.
+        if (!$instance || ($sandboxOnly && (string) ($instance['sandbox'] ?? '') !== '1')
+            || !\in_array($instance['sandbox'] ?? null, [false, true, 0, 1, '0', '1'], true)
             || !\is_string($instance['rest_client_id'] ?? null) || !\is_string($instance['rest_secret'] ?? null)
             || trim($instance['rest_client_id']) === '' || trim($instance['rest_secret']) === '') {
-            throw new \DomainException('Verified native Sandbox configuration is required.');
+            throw new \DomainException('Verified native PayPal configuration is required.');
         }
         $clientId = trim($instance['rest_client_id']);
         $secret = trim($instance['rest_secret']);
-        $curlOptions = [CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2, CURLOPT_CONNECTTIMEOUT => 10];
+        $environment = (bool) $instance['sandbox'] ? 'sandbox' : 'live';
+        $curlOptions = [CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2, CURLOPT_CONNECTTIMEOUT => min(10, $timeout)];
         if (PHP_OS_FAMILY === 'Windows' && \defined('CURLSSLOPT_NATIVE_CA')) {
             $curlOptions[CURLOPT_SSL_OPTIONS] = CURLSSLOPT_NATIVE_CA;
         }
         $http = $this->http ?? (new HttpFactory())->getHttp([
-            'timeout' => 20, 'follow_location' => false,
+            'timeout' => $timeout, 'follow_location' => false,
             'transport.curl' => $curlOptions,
         ], ['curl']);
-        $base = 'https://api-m.sandbox.paypal.com';
+        $base = $environment === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
         try {
             $tokenResponse = $http->post($base . '/v1/oauth2/token', 'grant_type=client_credentials', [
                 'Authorization' => 'Basic ' . base64_encode($clientId . ':' . $secret),
@@ -107,8 +134,8 @@ final class NativePayPalOrderStatus
             // Transport exceptions may contain request headers. Never retain them as previous exceptions.
             throw new \DomainException('PayPal status could not be verified; reservation retained.');
         }
-        return [$order, hash('sha256', (string) $booking->payment_provider . "\0sandbox\0" . $clientId),
-            hash('sha256', $responseBody)];
+        return [$order, hash('sha256', (string) $booking->payment_provider . "\0" . $environment . "\0" . $clientId),
+            hash('sha256', $responseBody), $environment];
     }
 
     private function boundUnit(object $booking, array $order, string $orderId): array

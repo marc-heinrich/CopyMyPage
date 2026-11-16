@@ -5,6 +5,7 @@ namespace Joomla\Component\CopyMyPage\Site\Service;
 use Joomla\CMS\Factory;
 use Joomla\Component\Scheduler\Administrator\Event\ExecuteTaskEvent;
 use Joomla\Component\Scheduler\Administrator\Scheduler\Scheduler;
+use Joomla\Component\Scheduler\Administrator\Task\Status;
 use Joomla\Registry\Registry;
 
 /** Supplies the stored task owner's real ACL identity to the unchanged native routine. */
@@ -28,7 +29,19 @@ class NativeCleanupTask extends \DigitalPeak\Plugin\Task\DPCalendar\Extension\DP
         if ((int) $user->id !== (int) $task->created_by || !Scheduler::isAuthorizedToRun($task, $user)) {
             throw new \DomainException('The native cleanup task owner is no longer authorised to run the task.');
         }
-        return Factory::getContainer()->get(ReservationCleanupService::class)->withNativeTaskUser(
-            $user, fn(): int => parent::deleteBookings($event));
+        $cleanup = Factory::getContainer()->get(ReservationCleanupService::class);
+        try {
+            $exit = $cleanup->withNativeTaskUser($user, fn(): int => parent::deleteBookings($event), $task);
+        } catch (\Throwable) {
+            // Vendor/SQL exceptions may contain data. Never include them or a
+            // previous exception in the scheduler's notification/output channel.
+            $this->logTask('CMP native_cleanup_error: booking operation rolled back; manual review required. '
+                . json_encode($cleanup->getNativeTaskReport(), JSON_THROW_ON_ERROR), 'error');
+            return Status::KNOCKOUT;
+        }
+        $report = $cleanup->getNativeTaskReport();
+        $this->logTask('CMP native_cleanup_summary: ' . json_encode($report, JSON_THROW_ON_ERROR),
+            $report['held'] > 0 ? 'warning' : 'info');
+        return $exit;
     }
 }

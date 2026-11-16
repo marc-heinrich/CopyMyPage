@@ -2,7 +2,8 @@
 /**
  * Issue #189: real MySQL/InnoDB connections and separate PHP request workers.
  * Run with PHP 8.4 CLI:
- * php -d xdebug.mode=off -d zend.exception_ignore_args=1 -d allow_url_fopen=0 -d disable_functions=curl_exec,curl_multi_exec,fsockopen,pfsockopen,stream_socket_client,mail native-reservation-mysql.php
+ * php -d xdebug.mode=off -d zend.exception_ignore_args=1 -d allow_url_fopen=0 -d disable_functions=curl_exec,curl_multi_exec,fsockopen,pfsockopen,stream_socket_client,mail test/com_copymypage/native-reservation-mysql.php
+ * CopyMyPage classes come from this repository; installed Joomla/DPCalendar supply dependencies.
  * Uses only joomla6_test's restricted DB account and randomly prefixed synthetic tables.
  * Never executes a regular Joomla web application, real sessions, mail or scheduler plugins.
  * Seat selection uses an unexecuted SiteApplication with an in-memory session only.
@@ -23,14 +24,18 @@ foreach (['curl_exec', 'curl_multi_exec', 'fsockopen', 'pfsockopen', 'stream_soc
 if (ini_get('allow_url_fopen')) { throw new RuntimeException('URL streams must be disabled.'); }
 define('_JEXEC', 1);
 define('JDEBUG', false);
-define('JPATH_BASE', dirname(__DIR__, 3));
+$joomlaRoot = realpath(getenv('CMP_TEST_JOOMLA_ROOT') ?: 'C:/wamp/www/joomla6');
+if ($joomlaRoot === false || !is_file($joomlaRoot . '/includes/defines.php')) {
+    throw new RuntimeException('Installed Joomla dependencies are unavailable. Set CMP_TEST_JOOMLA_ROOT.');
+}
+define('JPATH_BASE', $joomlaRoot);
 require JPATH_BASE . '/includes/defines.php';
 $loader = require JPATH_LIBRARIES . '/vendor/autoload.php';
 require JPATH_ADMINISTRATOR . '/components/com_dpcalendar/vendor/autoload.php';
 foreach ([
     'Joomla\\CMS\\' => JPATH_LIBRARIES . '/src',
-    'Joomla\\Component\\CopyMyPage\\Site\\' => dirname(__DIR__) . '/src',
-    'Joomla\\Plugin\\System\\CopyMyPage\\' => JPATH_PLUGINS . '/system/copymypage/src',
+    'Joomla\\Component\\CopyMyPage\\Site\\' => dirname(__DIR__, 2) . '/src/com_copymypage/site/src',
+    'Joomla\\Plugin\\System\\CopyMyPage\\' => dirname(__DIR__, 2) . '/src/plg_system_copymypage/src',
     'DigitalPeak\\Component\\DPCalendar\\Administrator\\' => JPATH_ADMINISTRATOR . '/components/com_dpcalendar/src',
     'DigitalPeak\\Plugin\\DPCalendarPay\\PayPal\\' => JPATH_PLUGINS . '/dpcalendarpay/paypal/src',
     'Joomla\\Component\\Actionlogs\\Administrator\\' => JPATH_ADMINISTRATOR . '/components/com_actionlogs/src',

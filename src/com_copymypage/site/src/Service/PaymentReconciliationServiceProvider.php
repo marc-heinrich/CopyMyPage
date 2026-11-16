@@ -51,7 +51,7 @@ final class PaymentReconciliationServiceProvider implements ServiceProviderInter
                 static fn(Container $c): ReservationCleanupService => new ReservationCleanupService(
                     $c->get(DatabaseInterface::class), $c->get(BookingIntegrityService::class),
                     $c->get(NativePayPalProviderRegistry::class), $c->get(NativeReservationService::class),
-                    $c->get(PaymentReconciliationService::class)), true);
+                    $c->get(PaymentReconciliationService::class), $c->get(NativePayPalOrderStatus::class)), true);
         }
         if ($container->has(PaymentReconciliationService::class)) {
             return;

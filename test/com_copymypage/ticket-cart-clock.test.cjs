@@ -1,4 +1,4 @@
-// Run with node --test components/com_copymypage/tests/ticket-cart-clock.test.cjs.
+// Run from the repository with node --test test/com_copymypage/ticket-cart-clock.test.cjs.
 // No dependencies or real reservations: execute both shipped runtimes with a controlled clock/DOM.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -72,7 +72,7 @@ function setup(asset, {skew = 0, seconds = 900, elapsed = 0} = {}) {
         Element, HTMLTimeElement: Time, HTMLAnchorElement: Anchor,
         HTMLInputElement: class extends Element {}, HTMLFormElement: class extends Element {},
         HTMLButtonElement: class extends Element {}});
-    const code = fs.readFileSync(path.resolve(__dirname, '../../../media/com_copymypage/js', asset), 'utf8');
+    const code = fs.readFileSync(path.resolve(__dirname, '../../src/com_copymypage/media/js', asset), 'utf8');
     vm.runInContext(code, context);
     window.CopyMyPageTicketCart.init(document);
     return {window, document, config, root, expiry, indicator, summary, action, messages, intervals, timeouts,

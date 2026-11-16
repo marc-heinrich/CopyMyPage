@@ -1,7 +1,7 @@
 <?php
 /**
  * Issue #190 regression: PHP CLI, installed Joomla/DPCalendar classes, SQLite :memory: only.
- * Run: php -d allow_url_fopen=0 -d disable_functions=curl_exec,curl_multi_exec,fsockopen,pfsockopen,stream_socket_client,mail components/com_copymypage/tests/booking-callback-bootstrap.php
+ * Run from the repository: php -d allow_url_fopen=0 -d disable_functions=curl_exec,curl_multi_exec,fsockopen,pfsockopen,stream_socket_client,mail test/com_copymypage/booking-callback-bootstrap.php
  * Never loads configuration.php, provider plugins, real sessions, or a Joomla database.
  * The native booking model is a fixture; native pay() stops at the provider boundary.
  * SQLite omits FOR UPDATE, so this test makes no claim about MySQL locking/concurrency.
@@ -14,14 +14,18 @@ if (PHP_SAPI !== 'cli') {
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED);
 define('_JEXEC', 1);
 define('JDEBUG', false);
-define('JPATH_BASE', dirname(__DIR__, 3));
+$joomlaRoot = realpath(getenv('CMP_TEST_JOOMLA_ROOT') ?: 'C:/wamp/www/joomla6');
+if ($joomlaRoot === false || !is_file($joomlaRoot . '/includes/defines.php')) {
+    throw new RuntimeException('Installed Joomla dependencies are unavailable. Set CMP_TEST_JOOMLA_ROOT.');
+}
+define('JPATH_BASE', $joomlaRoot);
 require JPATH_BASE . '/includes/defines.php';
 $loader = require JPATH_LIBRARIES . '/vendor/autoload.php';
 foreach ([
     'Joomla\\CMS\\' => JPATH_LIBRARIES . '/src',
     'DigitalPeak\\Component\\DPCalendar\\Site\\' => JPATH_SITE . '/components/com_dpcalendar/src',
-    'Joomla\\Component\\CopyMyPage\\Site\\' => dirname(__DIR__) . '/src',
-    'Joomla\\Plugin\\System\\CopyMyPage\\' => JPATH_PLUGINS . '/system/copymypage/src',
+    'Joomla\\Component\\CopyMyPage\\Site\\' => dirname(__DIR__, 2) . '/src/com_copymypage/site/src',
+    'Joomla\\Plugin\\System\\CopyMyPage\\' => dirname(__DIR__, 2) . '/src/plg_system_copymypage/src',
 ] as $namespace => $path) {
     $loader->addPsr4($namespace, $path);
 }

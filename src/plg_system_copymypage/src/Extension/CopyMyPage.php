@@ -1975,7 +1975,10 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
     {
         $booking = $event->getArgument(0, $event->getArgument('booking'));
         if (\is_object($booking)) {
-            Factory::getContainer()->get(NativeReservationService::class)->assertCallback((int) ($booking->id ?? 0), false, $booking);
+            $data = $event->getArgument(1, $event->getArgument('data'));
+            Factory::getContainer()->get(NativeReservationService::class)->assertCallback(
+                (int) ($booking->id ?? 0), false, $booking, !\is_array($data) || !empty($data['PayerID'])
+            );
         }
     }
 

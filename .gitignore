@@ -20,6 +20,15 @@ dist/
 tmp/
 cache/
 
+# Versioned test sources and synthetic fixtures live in /test/.
+# Keep local configuration and generated test output untracked.
+/test/.env
+/test/.env.*
+/test/config.local.php
+/test/artifacts/
+/test/coverage/
+/test/results/
+
 # Local agent instructions / documentation
 docs/
 deployment/

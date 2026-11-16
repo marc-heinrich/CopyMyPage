@@ -53,8 +53,8 @@ namespace {
     use Joomla\Component\CopyMyPage\Site\Service\TicketReservationService;
     use Joomla\Component\CopyMyPage\Site\Service\SeatSelectionService;
 
-    require __DIR__ . '/../src/Service/TicketCartContextService.php';
-    require __DIR__ . '/../src/Service/TicketReservationService.php';
+    require dirname(__DIR__, 2) . '/src/com_copymypage/site/src/Service/TicketCartContextService.php';
+    require dirname(__DIR__, 2) . '/src/com_copymypage/site/src/Service/TicketReservationService.php';
 
     final class TestQuery
     {
@@ -135,12 +135,12 @@ namespace {
         foreach ([900, 1, 0, -1] as $remaining) {
             $pdo = new PDO('sqlite::memory:');
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $pdo->exec('CREATE TABLE test_copymypage_ticket_carts (id INTEGER, token_hash TEXT, status INTEGER, revision INTEGER, expires_at TEXT, modified TEXT)');
+            $pdo->exec('CREATE TABLE test_copymypage_ticket_carts (id INTEGER, token_hash TEXT, status INTEGER, revision INTEGER, booking_id INTEGER, expires_at TEXT, modified TEXT)');
             $pdo->exec('CREATE TABLE test_copymypage_ticket_cart_items (cart_id INTEGER)');
             $pdo->exec('CREATE TABLE test_copymypage_ticket_customers (cart_id INTEGER)');
             $token = str_repeat('a', 64);
             $expiry = gmdate('Y-m-d H:i:s', $GLOBALS['cmpTestNow'] + $remaining);
-            $insert = $pdo->prepare('INSERT INTO test_copymypage_ticket_carts VALUES (1, ?, 0, 7, ?, ?)');
+            $insert = $pdo->prepare('INSERT INTO test_copymypage_ticket_carts VALUES (1, ?, 0, 7, NULL, ?, ?)');
             $insert->execute([hash('sha256', $token), $expiry, $expiry]);
             $pdo->exec('INSERT INTO test_copymypage_ticket_cart_items VALUES (1)');
             $session = new TestSession();

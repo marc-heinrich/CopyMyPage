@@ -59,8 +59,15 @@ final class NativeReservationService
         if (!$this->hasSchema()) {
             throw new \RuntimeException('Native reservation schema is unavailable.');
         }
-        $this->db->transactionStart();
+        $lock = $this->bookingLockName($bookingId);
+        // A reentrant start must not commit the deletion's transaction or reach
+        // the vendor after its financial checks have already succeeded.
+        if (isset($this->administrativeLocks[$lock]) || isset($this->callbackLocks[$lock])) {
+            throw new \DomainException('Native reservation payment/release is busy.');
+        }
+        $lock = $this->acquireBookingLock($bookingId);
         try {
+            $this->db->transactionStart();
             $state = $this->integrity->inspect($bookingId, true);
             $booking = $state['booking'];
             $cart = $state['cart'];
@@ -88,6 +95,8 @@ final class NativeReservationService
         } catch (\Throwable $exception) {
             $this->db->transactionRollback();
             throw $exception;
+        } finally {
+            $this->releaseBookingLock($lock);
         }
     }
 
@@ -114,7 +123,7 @@ final class NativeReservationService
     }
 
     /** All native cancel callbacks hold. A local cancellation is not a payment exclusion proof. */
-    public function assertCallback(int $bookingId, bool $cancel, ?object $providerBooking = null): void
+    public function assertCallback(int $bookingId, bool $cancel, ?object $providerBooking = null, bool $mayCapture = true): void
     {
         if (!$this->protectsBooking($bookingId)) {
             return;
@@ -146,10 +155,15 @@ final class NativeReservationService
                     }
                 }
             }
-            $this->db->setQuery('UPDATE #__copymypage_ticket_carts SET native_payment_phase = '
-                . self::CALLBACK_STARTED_OR_UNKNOWN . ', modified = UTC_TIMESTAMP() WHERE id = ' . (int) $cart->id
-                . ' AND status = 1 AND native_payment_phase = ' . (int) $cart->native_payment_phase)->execute();
-            $this->assertChanged(1);
+            // The original PayPal plugin only GETs the order without PayerID.
+            // Retain the request lock for that read/redirect, but do not turn a
+            // known un-captured start into a permanently ambiguous capture.
+            if ($mayCapture) {
+                $this->db->setQuery('UPDATE #__copymypage_ticket_carts SET native_payment_phase = '
+                    . self::CALLBACK_STARTED_OR_UNKNOWN . ', modified = UTC_TIMESTAMP() WHERE id = ' . (int) $cart->id
+                    . ' AND status = 1 AND native_payment_phase = ' . (int) $cart->native_payment_phase)->execute();
+                $this->assertChanged(1);
+            }
             $this->db->transactionCommit();
             $this->callbackLocks[$lock] = ($this->callbackLocks[$lock] ?? 0) + 1;
             $retained = true;

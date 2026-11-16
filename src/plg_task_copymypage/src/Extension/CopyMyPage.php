@@ -89,10 +89,9 @@ final class CopyMyPage extends CMSPlugin implements SubscriberInterface
                 throw new \RuntimeException('Reservation cleanup is unavailable.');
             }
             $report = $this->reservations->run(
-                (int) ($params->timeout_minutes ?? 60),
-                (int) ($params->batch_size ?? 50),
-                (int) ($params->dry_run ?? 1) !== 0,
-                (int) ($params->max_seconds ?? 20)
+                batchSize: (int) ($params->batch_size ?? 50),
+                dryRun: (int) ($params->dry_run ?? 1) !== 0,
+                maxSeconds: (int) ($params->max_seconds ?? 20)
             );
             $this->logTask('CopyMyPage reservations: ' . json_encode($report, JSON_THROW_ON_ERROR),
                 $report['errors'] > 0 ? 'error' : ($report['held'] > 0 ? 'warning' : 'info'));

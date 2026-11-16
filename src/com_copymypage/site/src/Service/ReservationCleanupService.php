@@ -14,22 +14,30 @@ final class ReservationCleanupService
     private const NATIVE_DELETE_LOG = 'DPCalendar deleted booking tickets {booking_id}; CopyMyPage released their seats.';
     private array $nativeDeletions = [];
     private ?User $nativeTaskUser = null;
+    private ?array $nativeTaskSelection = null;
+    private float $nativeStatusDeadline = 0;
+    private array $nativeTaskReport = ['scanned' => 0, 'deleted' => 0, 'held' => 0, 'errors' => 0, 'reasons' => []];
     public function __construct(
         private readonly DatabaseInterface $db,
         private readonly BookingIntegrityService $integrity,
         private readonly NativePayPalProviderRegistry $providers,
         private readonly NativeReservationService $nativeReservations,
-        private readonly PaymentReconciliationService $reconciliation
+        private readonly PaymentReconciliationService $reconciliation,
+        private readonly ?NativePayPalOrderStatus $nativeOrderStatus = null
     ) {
     }
 
+    /**
+     * Clean expired carts without a native booking; the stored expires_at is authoritative.
+     *
+     * @param int $minutes Ignored legacy argument retained for positional and named callers.
+     */
     public function run(int $minutes = 60, int $batchSize = 50, bool $dryRun = true, int $maxSeconds = 20): array
     {
         $report = ['scanned' => 0, 'released' => 0, 'wouldRelease' => 0, 'held' => 0,
             'errors' => 0, 'busy' => false, 'dryRun' => $dryRun, 'decisions' => []];
         $batchSize = max(1, min(500, $batchSize));
         $maxSeconds = max(5, min(60, $maxSeconds));
-        $minutes = max(15, min(1440, $minutes));
         $deadline = microtime(true) + $maxSeconds;
         if (!$this->nativeReservations->hasSchema()) {
             throw new \RuntimeException('Native reservation schema is unavailable.');
@@ -368,18 +376,139 @@ final class ReservationCleanupService
         return $this->nativeTaskUser;
     }
 
-    public function withNativeTaskUser(User $user, callable $run): int
+    public function withNativeTaskUser(User $user, callable $run, ?object $task = null): int
     {
         if ($this->nativeTaskUser !== null || (int) $user->id < 1 || (int) $user->block !== 0
             || !$user->authorise('core.delete', 'com_dpcalendar')
             || !$user->authorise('dpcalendar.admin.book', 'com_dpcalendar')) {
             throw new \DomainException('Native cleanup requires an active user with DPCalendar booking and delete permissions.');
         }
+        $this->nativeTaskReport = ['scanned' => 0, 'deleted' => 0, 'held' => 0, 'errors' => 0, 'reasons' => []];
+        $this->nativeTaskSelection = $task === null ? null : $this->nativeTaskSelection($task);
+        $this->nativeStatusDeadline = microtime(true) + 10;
         $this->nativeTaskUser = $user;
         try {
             return $run();
         } finally {
             $this->nativeTaskUser = null;
+            $this->nativeTaskSelection = null;
+            $this->nativeStatusDeadline = 0;
+        }
+    }
+
+    public function getNativeTaskReport(): array
+    {
+        return $this->nativeTaskReport;
+    }
+
+    /** Freeze the original native criteria; a later clock tick cannot widen them. */
+    private function nativeTaskSelection(object $task): array
+    {
+        $params = json_decode((string) $task->params, true, 512, JSON_THROW_ON_ERROR);
+        $date = $params['deletions_date'] ?? null;
+        $dateType = (int) ($params['deletions_date_type'] ?? 1);
+        $states = $params['deletions_states'] ?? null;
+        if (!\is_string($date) || trim($date) === '' || !\in_array($dateType, [1, 2, 3], true)
+            || !\is_array($states) || $states === []) {
+            throw new \DomainException('Native automatic cleanup requires explicit date and state criteria.');
+        }
+        foreach ($states as $state) {
+            if (!\is_int($state) && (!\is_string($state) || !preg_match('/^-?[0-9]+$/D', $state))) {
+                throw new \DomainException('Invalid native automatic cleanup state criteria.');
+            }
+        }
+        return ['id' => (int) $task->id, 'record' => (array) $task, 'states' => array_map('intval', $states),
+            'date_type' => $dateType,
+            'cutoff' => \DigitalPeak\Component\DPCalendar\Administrator\Helper\DPCalendarHelper::getDate($date)->toSql()];
+    }
+
+    /** Called with the common named lock and current cart/event/booking row locks. */
+    private function assertNativeTaskDeletion(?object $booking, ?object $cart): array
+    {
+        $selection = $this->nativeTaskSelection;
+        if ($selection === null) { throw new ReservationCleanupReviewException('cleanup_criteria_missing'); }
+        $task = $this->db->setQuery('SELECT id,type,state,created_by,locked,params FROM #__scheduler_tasks WHERE id = '
+            . $selection['id'] . ' FOR UPDATE')->loadObject();
+        if (!$task || (array) $task !== $selection['record']) {
+            throw new ReservationCleanupReviewException('cleanup_task_changed');
+        }
+        if (!$booking || !$cart || (int) $booking->state !== 3 || !\in_array(3, $selection['states'], true)) {
+            throw new ReservationCleanupReviewException('booking_not_unpaid');
+        }
+        // Neither age nor empty payment fields upgrade a legacy/ambiguous capture.
+        $started = (int) $cart->native_payment_phase === NativeReservationService::STARTED_OR_UNKNOWN;
+        if (!$started && (int) $cart->native_payment_phase !== NativeReservationService::NOT_STARTED) {
+            throw new ReservationCleanupReviewException('payment_started_or_unknown');
+        }
+        if (!NativePayPalProviderRegistry::isReference((string) $booking->payment_provider)
+            || !$this->providers->isAvailable((string) $booking->payment_provider)
+            || (float) $booking->price <= 0 || $this->nativeReservations->hasLedger((int) $booking->id)) {
+            throw new ReservationCleanupReviewException('payment_binding_requires_review');
+        }
+        if ($started && (trim((string) $booking->token) === '' || trim((string) $booking->transaction_id) === '')) {
+            throw new ReservationCleanupReviewException('payment_start_incomplete');
+        }
+        $evidenceFields = ['payer_id', 'payer_email', 'raw_data', 'txn_type', 'txn_currency'];
+        if (!$started) { $evidenceFields = array_merge(['token', 'transaction_id'], $evidenceFields); }
+        foreach ($evidenceFields as $field) {
+            if (trim((string) ($booking->$field ?? '')) !== '') {
+                throw new ReservationCleanupReviewException('payment_evidence_present');
+            }
+        }
+        foreach (['gross_amount', 'net_amount', 'payment_fee'] as $field) {
+            if ((float) ($booking->$field ?? 0) !== 0.0) {
+                throw new ReservationCleanupReviewException('payment_evidence_present');
+            }
+        }
+        if ($selection['date_type'] === 1) {
+            $matches = (int) $this->db->setQuery('SELECT COUNT(*) FROM #__dpcalendar_bookings WHERE id = '
+                . (int) $booking->id . ' AND book_date < ' . $this->db->quote($selection['cutoff']))->loadResult() === 1;
+        } else {
+            $column = $selection['date_type'] === 2 ? 'start_date' : 'end_date';
+            $matches = (int) $this->db->setQuery('SELECT COUNT(*) FROM #__dpcalendar_tickets t'
+                . ' INNER JOIN #__dpcalendar_events e ON e.id = t.event_id WHERE t.booking_id = ' . (int) $booking->id
+                . ' AND e.' . $column . ' < ' . $this->db->quote($selection['cutoff']))->loadResult() > 0;
+        }
+        if (!$matches) { throw new ReservationCleanupReviewException('cleanup_criteria_changed'); }
+        if (!$this->integrity->inspect((int) $booking->id, true)['valid']) {
+            throw new ReservationCleanupReviewException('native_integrity_requires_review');
+        }
+        if (!$started) { return ['basis' => 'not_started']; }
+        if ($this->nativeOrderStatus === null || microtime(true) >= $this->nativeStatusDeadline) {
+            throw new ReservationCleanupReviewException('provider_check_budget');
+        }
+        try {
+            $proof = $this->nativeOrderStatus->verifyUncapturedWalletOrder($booking);
+        } catch (\DomainException) {
+            throw new ReservationCleanupReviewException('provider_payment_requires_review');
+        }
+        // Keep this lock and transaction through native deletion and its durable
+        // tombstone. A late approval must never reach the vendor capture listener.
+        return ['basis' => 'uncaptured_wallet_order_capture_gate_closed', 'providerCheck' => $proof];
+    }
+
+    private function holdNativeTaskDeletion(int $bookingId, string $reason): bool
+    {
+        ++$this->nativeTaskReport['held'];
+        $this->nativeTaskReport['reasons'][$reason] = ($this->nativeTaskReport['reasons'][$reason] ?? 0) + 1;
+        $this->logNativeTaskDecision($bookingId, $reason, false);
+        // A deliberately retained booking is not a vendor deletion failure.
+        return true;
+    }
+
+    /** Use the existing reservation log, including when Joomla's global logging is off. */
+    private function logNativeTaskDecision(int $bookingId, string $reason, bool $error): void
+    {
+        try {
+            Log::addLogger([
+                'text_file' => 'copymypage-reservations.php',
+                'text_entry_format' => "{DATETIME}\t{PRIORITY}\t{CATEGORY}\t{MESSAGE}",
+            ], Log::WARNING | Log::ERROR, ['com_copymypage.reservations']);
+            Log::add('CMP native_cleanup_' . ($error ? 'error' : 'held') . ': ' . json_encode([
+                'booking_id' => $bookingId, 'reason' => $reason,
+            ], JSON_THROW_ON_ERROR), $error ? Log::ERROR : Log::WARNING, 'com_copymypage.reservations');
+        } catch (\Throwable) {
+            // Logging failure never authorises deletion. Task counters still expose the decision.
         }
     }
 
@@ -404,7 +533,9 @@ final class ReservationCleanupService
     }
 
     /**
-     * DPCalendar alone decides deletion eligibility. This is NOT a PayPal exclusion proof.
+     * DPCalendar selects candidates; automatic deletion additionally requires a
+     * fresh proof of no payment/capture under the common lock. Manual native
+     * deletions keep their existing permission/transaction contract.
      * The supplied operation is the unchanged parent BookingModel/TicketModel::delete().
      */
     public function deleteNative(string $kind, int $id, callable $nativeDelete, User $actor): bool
@@ -412,13 +543,17 @@ final class ReservationCleanupService
         if (!\in_array($kind, ['booking', 'ticket'], true) || $id < 1) { throw new \InvalidArgumentException(); }
         $bookingId = $kind === 'booking' ? $id : (int) $this->db->setQuery(
             'SELECT booking_id FROM #__dpcalendar_tickets WHERE id = ' . $id)->loadResult();
-        if ($bookingId < 1 || !$this->nativeReservations->protectsBooking($bookingId)) { return (bool) $nativeDelete(); }
         if ($this->permitsNativeDeletion($bookingId)) { return (bool) $nativeDelete(); }
-        return $this->nativeReservations->withBookingLock($bookingId, function () use ($bookingId, $kind, $id, $nativeDelete, $actor): bool {
+        $automatic = $this->nativeTaskUser !== null;
+        if (!$automatic && ($bookingId < 1 || !$this->nativeReservations->protectsBooking($bookingId))) { return (bool) $nativeDelete(); }
+        if ($automatic) { ++$this->nativeTaskReport['scanned']; }
+        try {
+        return $this->nativeReservations->withBookingLock($bookingId, function () use ($bookingId, $kind, $id, $nativeDelete, $actor, $automatic): bool {
             if (!$this->nativeReservations->hasSchema()) { throw new \DomainException('Native reservation schema unavailable.'); }
             $tables = array_map(fn(string $t): string => $this->db->quote($this->db->getPrefix() . $t),
                 ['dpcalendar_bookings','dpcalendar_tickets','dpcalendar_events','copymypage_ticket_carts',
                     'copymypage_ticket_cart_items','copymypage_event_seats','copymypage_event_seating','action_logs']);
+            if ($automatic) { $tables[] = $this->db->quote($this->db->getPrefix() . 'scheduler_tasks'); }
             if ((int) $this->db->setQuery('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()'
                 . ' AND TABLE_NAME IN (' . implode(',', $tables) . ") AND ENGINE='InnoDB'")->loadResult() !== \count($tables)) {
                 throw new \DomainException('Native cleanup requires transactional tables.');
@@ -436,7 +571,10 @@ final class ReservationCleanupService
                 $this->nativeCleanupSavepoint($connection, $bookingId, false);
                 $carts = $this->db->setQuery('SELECT * FROM #__copymypage_ticket_carts WHERE booking_id = '
                     . $bookingId . ' ORDER BY id FOR UPDATE')->loadObjectList();
-                if (\count($carts) !== 1) { throw new \DomainException('Native deletion cart binding is ambiguous.'); }
+                if (\count($carts) !== 1) {
+                    if ($automatic) { throw new ReservationCleanupReviewException('native_cart_binding_requires_review'); }
+                    throw new \DomainException('Native deletion cart binding is ambiguous.');
+                }
                 $cart = $carts[0]; $cartId = (int) $cart->id;
                 $eventIds = $this->lockEvents($cartId);
                 $booking = $this->db->setQuery('SELECT * FROM #__dpcalendar_bookings WHERE id = ' . $bookingId . ' FOR UPDATE')->loadObject();
@@ -444,6 +582,7 @@ final class ReservationCleanupService
                     . $bookingId . ' ORDER BY id FOR UPDATE')->loadObjectList('id');
                 $seats = $this->db->setQuery('SELECT * FROM #__copymypage_event_seats WHERE cart_id = '
                     . $cartId . ' ORDER BY event_id,id FOR UPDATE')->loadObjectList();
+                $paymentProof = $automatic ? $this->assertNativeTaskDeletion($booking, $cart) : null;
                 if (!$booking) {
                     if ($tickets !== [] || $seats !== [] || (int) $cart->status !== 3
                         || (int) $cart->native_payment_phase !== NativeReservationService::NATIVE_TICKETS_DELETED
@@ -512,7 +651,9 @@ final class ReservationCleanupService
                         'seatIds'=>implode(',',$seatIds),'provider'=>$booking->payment_provider,'orderId'=>$booking->transaction_id,
                         'tokenHash'=>hash('sha256',(string)$booking->token),'uid'=>$booking->uid,'bookDate'=>$booking->book_date,
                         'originalState'=>(int)$booking->state,'amount'=>(string)$booking->price,'currency'=>$booking->currency,
-                        'decision'=>'dpcalendar_native_delete','paymentExclusionProven'=>false],JSON_THROW_ON_ERROR),
+                        'decision'=>'dpcalendar_native_delete','paymentExclusionProven'=>$automatic,
+                        'paymentExclusionBasis'=>$paymentProof['basis'] ?? null,
+                        'providerCheck'=>$paymentProof['providerCheck'] ?? null],JSON_THROW_ON_ERROR),
                     'log_date'=>gmdate('Y-m-d H:i:s'),'extension'=>'com_copymypage','user_id'=>(int)$actor->id,
                     'item_id'=>$bookingId,'ip_address'=>'COM_ACTIONLOGS_DISABLED'];
                 $this->db->insertObject('#__action_logs',$audit); $this->assertChanged(1);
@@ -521,11 +662,26 @@ final class ReservationCleanupService
                 }
                 $this->nativeCleanupSavepoint($connection, $bookingId, true);
                 $this->db->transactionCommit(true);
+                if ($automatic) { ++$this->nativeTaskReport['deleted']; }
                 return true;
             } catch (\Throwable $error) {
                 $this->db->transactionRollback(true); throw $error;
             } finally { unset($this->nativeDeletions[$bookingId]); }
         });
+        } catch (ReservationCleanupReviewException $error) {
+            if (!$automatic) { throw $error; }
+            return $this->holdNativeTaskDeletion($bookingId, $error->reason);
+        } catch (\Throwable $error) {
+            if ($automatic && $error instanceof \DomainException && \in_array($error->getMessage(), ['Native reservation payment/release is busy.',
+                'Native payment callback is still active in this request.'], true)) {
+                return $this->holdNativeTaskDeletion($bookingId, 'booking_busy');
+            }
+            if ($automatic) {
+                ++$this->nativeTaskReport['errors'];
+                $this->logNativeTaskDecision($bookingId, 'native_deletion_failed', true);
+            }
+            throw $error;
+        }
     }
 
     /** MySQL savepoint statements cannot use MySQLi's prepared-statement protocol. */

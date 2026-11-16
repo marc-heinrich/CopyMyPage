@@ -47,6 +47,8 @@ Existiert dieselbe Datei in Live-Instanz und Repository, ist für Entwicklungsar
 
 Reine Projekt- und Agentendokumentation wie `AGENTS.md`, `DESIGN.md` und Dateien unter `docs/` wird an ihrem tatsächlichen Repository-Standort bearbeitet. Dafür ist kein Live→Repo-Sync erforderlich. Die Live-Vorrangregel gilt nur für Entwicklungsartefakte, die sowohl in der Live-Instanz als auch im Repository vorhanden sind.
 
+Versionierte Testquellen und synthetische Fixtures werden direkt unter `test/` im Repository gepflegt. Für diese Testdateien ist der Repository-Stand maßgeblich; installierte oder lokal archivierte Testkopien werden nicht automatisch zurücksynchronisiert. Für den getesteten Produktivcode bleibt die autoritative Joomla-Entwicklungsinstallation maßgeblich.
+
 ### Isolierte Testumgebung: `C:\wamp\www\joomla6_test`
 
 `joomla6_test` ist ein **nicht autoritatives, veränderbares Testlabor** für Codex und andere ausdrücklich beauftragte Agenten. Ein Auftrag zur Durchführung von Tests oder zur Erprobung einer Lösung in dieser Umgebung erlaubt dort selbstständige Testaufbauten, gezielte Codeänderungen, Debugging, Installations-/Versionsversuche, Datenbankmigrationen sowie schreibende und auch destruktive Regressionstests. Dafür ist innerhalb des beauftragten Test-Scopes **keine weitere Einzelgenehmigung** nötig. Synthetische Testdaten, temporäre Dateien, Testkonfigurationen und Testdatenbankeinträge dürfen dabei angelegt, überschrieben oder entfernt werden.
@@ -141,8 +143,17 @@ Zusätzliche Referenzen werden aufgabenbezogen geladen:
 | Formulare, Formularzustände, reguläre Aktionsbuttons | zusätzlich `docs/UI_STYLE_GUIDE.md` |
 | DPCalendar-/Ticket-/Sitzplatz-/Checkout-Workflow | `docs/DPCALENDAR_BOOKING_FLOW.md` |
 | Helper → Script Options → WebAssetItem → JavaScript | `docs/agent/WEBASSETS.md` |
+| Tests, Regressionen und Meilensteinabnahmen | `test/README.md`, danach nur die benötigten Testdateien und Meilensteinindizes |
 
 Eine Referenz wird nicht allein deshalb vollständig gelesen, weil sie irgendwo verlinkt ist. Relevant ist der aktuelle Auftrag.
+
+### Versionierte Testablage
+
+- Einstieg ist `test/README.md`. Fachliche Tests liegen beispielsweise unter `test/com_copymypage/`, synthetische Eingabedaten unter `test/fixtures/`.
+- `test/milestones/<version>.md` verknüpft die relevanten Tests mit dem GitHub-Meilenstein und den zugehörigen Issues. Wiederverwendbare Tests werden an ihrem fachlichen Pfad weitergepflegt und aus mehreren Meilensteinindizes referenziert.
+- Pro Test beziehungsweise Testgruppe Zweck, Voraussetzungen, Startbefehl, erwartetes Ergebnis und Grenzen dokumentieren. Gemessene Ergebnisse mit Datum, Versionen und tatsächlicher Testumgebung kennzeichnen; historische Abnahmen nicht als aktuelle Testergebnisse ausgeben.
+- `test/` liegt außerhalb von `src` und gehört nicht in installierbare Erweiterungen oder Release-ZIPs. Testquellen und synthetische Fixtures dürfen versioniert werden; lokale Konfigurationen, Zugangsdaten und generierte Ergebnisse bleiben ausgeschlossen.
+- Bei Pfadänderungen prüfen, ob CopyMyPage-Code aus dem Repository oder einer Installation geladen wird. Joomla-/DPCalendar-Abhängigkeiten und die Datenumgebung ausdrücklich benennen. Für schreibende Testläufe gelten unverändert die Freigabe- und Isolationsbedingungen aus Abschnitt 2 und 4.
 
 ### Projektspezifische Codex-Skills
 
