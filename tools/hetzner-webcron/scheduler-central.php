@@ -298,14 +298,12 @@ function sourceGuards(): array {
         'administrator/components/com_scheduler/src/Scheduler/Scheduler.php'=>'7d03483d6c359c8d3bd70af5871a245408065a0bcaadeff27214d584b15e1d25',
         'administrator/components/com_scheduler/src/Model/TaskModel.php'=>'87ebacd75339c9a2cf74679931855b1080cbded2539abd78a11aadcec2faa751',
         'administrator/components/com_scheduler/src/Task/Task.php'=>'867d6b636bde31abae178cd05c771e3482ca7b63af2b13a2ebd20c3948ede52d',
-        'plugins/system/copymypage/src/Extension/CopyMyPage.php'=>'c18cf0de3a7929281545dea492655bb95d1df400150f7a55d0e15de205d7a4f2',
-        'components/com_copymypage/src/Service/NativeCleanupTask.php'=>'76da8d57f7c02599198e81742d27fc620b623573b9545f37e81dc7330be4b2ab',
+        'plugins/system/copymypage/src/Extension/CopyMyPage.php'=>'887bcd665d844a8a67805251dd2039a68bfb051d2cccea2dc3a675945f53f64d',
+        'components/com_copymypage/src/Service/NativeCleanupTask.php'=>'063c64b2160291c5d98aab216c2c1290ff677d56170b2cd75e71de073ec13ef8',
         'components/com_copymypage/src/Service/NativeCleanupMVCFactoryProvider.php'=>'73ad524dfb4b2f58e10751a2429f6cc6f7742360abc6772ee360a62c2c1c13b9',
-        // Both exact revisions reviewed: #189 only removes the ignored minutes
-        // normalisation and changes its caller to named arguments (02.11.2026).
-        'components/com_copymypage/src/Service/ReservationCleanupService.php'=>[
-            'ad0dc9592b4c0a6ed74d00e0810fab2f046e20581c2a9fbf6dd806860db9da33',
-            'a3b6b66624a32e44e8ba84c68f186b6d9177311f501ca38a85d8eb64238a99eb'],
+        // CopyMyPage dev0.0.28 cleanup/callback sources requalified locally on 2026-11-17.
+        // Hetzner qualification still requires the installed sources and task configuration.
+        'components/com_copymypage/src/Service/ReservationCleanupService.php'=>'56630c1f6ffdbd7ec207da13724e2e3813cfa8b00b72cfbc1a6beca9b09fbbe2',
         'plugins/task/dpcalendar/src/Extension/DPCalendar.php'=>'e4b26fbbf23fcac743e56aa28c9679e014011e14f34542250ac13338f3d1fa14',
         'plugins/task/copymypage/src/Extension/CopyMyPage.php'=>[
             '82647e77af05bbf3f4cedd170ca89a2d746e4b07e1d163a37dd14e829981e8e9',
