@@ -8,6 +8,7 @@ Dieser Index beschreibt den für dev0.0.28 übernommenen Testbestand. Er enthäl
 
 | Testdatei | Zweck und erwartetes Ergebnis | Umgebung / Grenze |
 | --- | --- | --- |
+| [action-log-provider-check.php](../com_copymypage/action-log-provider-check.php) | Issue #192: kompatible Action-Log-Feldtypen, vollständiger Prüfbeleg und sichere Joomla-Ausgabe in beiden Modi | Installierter Cleanup-Kandidat und Joomla-Helper; synthetischer Audit-Payload, keine DB; Transaktionsprüfung im nativen Cleanup-Treiber |
 | [booking-callback-bootstrap.php](../com_copymypage/booking-callback-bootstrap.php) | Callback-Bootstrap und Sitz-/Buchungszuordnung; bestehende Guards greifen vor dem Providerzugriff | Repository-Code, installierte Joomla-/DPCalendar-Klassen, SQLite `:memory:`; simulierte Buchungsmodelle und Locks |
 | [native-reservation-mysql.php](../com_copymypage/native-reservation-mysql.php) | Persistente Zahlungsphasen, Callback-/Cleanup-Sperren und Konkurrenz zwischen Requests schützen unklare Zahlungen | Synthetische MySQL-Tabellen, echte Verbindungen und PHP-Testworker; Provider-HTTP simuliert |
 | [reservation-cleanup-mysql.php](../com_copymypage/reservation-cleanup-mysql.php) | Gespeicherte Cart-Ablaufzeit ist maßgeblich; native Buchungen und unklare Bindungen bleiben geschützt; Fehler rollen Änderungen vollständig zurück | Isolierte MySQL-Testdatenbank; kein regulärer Joomla-/Provider-/Mailablauf |
@@ -46,3 +47,24 @@ Quellen: lokaler Repository-Arbeitsstand für dev0.0.28 nach Anpassung der Testp
 | CLI-Startoptionen des nativen Cleanup-Treibers | Zwei Kombinationen in unterschiedlicher Reihenfolge bestanden | Optionslisten aus der Testdatei geprüft; Suite und Datenbank nicht gestartet |
 
 Die MySQL-Suiten wurden bei dieser Ablageänderung nicht ausgeführt. Damit liegt noch keine neue MySQL-Abnahme der angepassten Repository-Einstiege vor. Ebenso wurden keine Browser-, echten Zahlungs-, Mail- oder öffentlichen Schedulerabläufe ausgeführt.
+
+## Issue #192: geprüft am 18.11.2026
+
+Geprüfter Produktivcode: `C:/wamp/www/joomla6/components/com_copymypage/src/Service/ReservationCleanupService.php`, SHA-256 `f2d396953687e9e9c67dab3f982027097e3ddb131923ebb89433a694c21e2ac4`. Die Datei enthält ausschließlich den freigegebenen Fix zur JSON-String-Serialisierung von `providerCheck`. Repository-`src/` und die installierte Testkopie wurden nicht synchronisiert; `--cleanup-candidate` lädt ausdrücklich die korrigierte Live-Klasse. Die übrigen CopyMyPage-Klassen kommen aus Repository-`src/`, die nativen Plugins aus `joomla6`, Joomla-/DPCalendar-Komponentenklassen aus `joomla6_test`.
+
+**Testumgebung:** PHP 8.4.0, Joomla 6.2.0, DPCalendar 10.12.4, MySQL 9.1.0. Vor dem Schreiben wurden das Fehlen von Reparse Points einschließlich der Elternpfade, die getrennten Datenbanken und DB-Benutzer sowie ausschließlich auf `joomla_db_test` begrenzte Schreibrechte geprüft. Test-Temp-/Log-/Cache-/Uploadpfade sind innerhalb von `joomla6_test`, Joomla-Sessions verwenden die getrennte Datenbank; die CLI-Fixtures verwenden Sessions und Logger im Arbeitsspeicher. Der PHP-Sessionpfad wurde pro Integrationsprozess auf das Test-Tempverzeichnis begrenzt. Mailversand ist aus, reguläre Test-Scheduler-Aufgaben sind inaktiv, und es wurden keine dazugehörigen Windows-Tasks gefunden. Die Tests erzeugen ausschließlich neue zufällig präfixierte synthetische Tabellen; vorhandene Joomla-Daten werden nicht als Testdaten verändert.
+
+| Prüfung | Gemessenes Ergebnis | Grenze |
+| --- | --- | --- |
+| Action-Log-Payload und Joomla-Ausgabe | 11/11 Fälle bestanden | Tatsächlicher Audit-Block des Kandidaten; ohne Datenbank, Sprachplugin-Ermittlung ausgelassen |
+| Gegenprobe mit unverändertem Repository-Kandidaten | Erwartet mit Exitcode 1 zurückgewiesen | Keine Quellcode-Mutation; strukturierter Top-Level-Wert erkannt |
+| Vollständige native Cleanup-/Checkout-/Scheduler-Integration, `mysqli` | 493 Assertions bestanden, Exitcode 0 | Echte native Modelle, Scheduler und MySQL-Verbindungen; synthetische Tabellen |
+| Vollständige native Integration, PDO MySQL (`mysql`) | 493 Assertions bestanden, Exitcode 0 | Gleicher korrigierter Kandidat und dieselben fachlichen Fälle |
+| PHP-Lint | 4/4 geänderte PHP-Dateien bestanden | Produktivdatei und drei Testdateien |
+| Diff-Review | Nur freigegebener Produktiv-Eingriff; übriger Live-Dateiinhalt unverändert | Ergänzungen ausschließlich unter `test/` |
+
+Die nativen Läufe prüfen zusätzlich die tatsächlich gespeicherten Prüfbelege mit dem unveränderten Joomla-Helper in beiden Ausgabemodi. Alle sechs Provider-Prüffelder bleiben erhalten. Strukturierte und skalare synthetische Prüfbelege sind durch zweifaches JSON-Dekodieren vollständig rekonstruierbar; `null` und fehlende Werte bleiben `null`, Sonderzeichen bleiben erhalten und HTML wird escaped. Ungültiges UTF-8 löst im inneren Serializer eine `JsonException` aus. Ein zusätzlicher echter Audit-Serialisierungsfehler nach nativer Löschung rollt Buchung, Tickets, Sitze, Cart, Inventar und Audit vollständig zurück.
+
+Zahlungs-/Capture-Sperren, sichere gegenüber zurückgehaltenen Löschungen, späte Callbacks, Sitzfreigabe, Idempotenz, Konkurrenzsperren und verschachtelte Transaktionen bestehen die vorhandene Matrix. Live-/Sandbox-Endpunkte und Provider-Transaktionen sind vollständig simuliert; externe Netzwerk-/Mailfunktionen und URL-Streams waren technisch gesperrt. Kein Browser-, Hetzner-, echter Provider- oder Mail-Abnahmelauf. Das Hetzner-Deployment, die gesonderte Korrektur der Alt-Einträge 535/567/599 und die anschließende Dashboard-/Listen-/CSV-Abnahme bleiben offen.
+
+Nach Abschluss aller Läufe wurde der Restbestand synthetischer `cmp189n_*`-Tabellen lesend geprüft: **0**. Die Tabellen wurden auch bei den zuvor abgebrochenen Assertions durch den vorhandenen `finally`-Block entfernt.

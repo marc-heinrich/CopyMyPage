@@ -111,6 +111,20 @@ function checkoutRelease189(): void {
     verifyN189((int)$db->setQuery('SELECT COUNT(*) FROM #__dpcalendar_tickets')->loadResult()===0,'Native tickets retained.');
     verifyN189((int)$db->setQuery('SELECT COUNT(*) FROM #__copymypage_event_seats WHERE status=0 AND cart_id IS NULL AND ticket_id IS NULL')->loadResult()===15,'Seats not released.');
     verifyN189((int)$db->setQuery('SELECT status FROM #__copymypage_ticket_carts')->loadResult()===3 && (int)$db->setQuery('SELECT native_payment_phase FROM #__copymypage_ticket_carts')->loadResult()===6,'Cart not closed.');
+    $audits192=$db->setQuery('SELECT * FROM #__action_logs')->loadObjectList();
+    verifyN189(count($audits192)===1,'Expected one native cleanup audit.');
+    $message192=checkActionLog192($audits192[0]);
+    if($message192['providerCheck']!==null){
+        $proof192=json_decode($message192['providerCheck'],true,512,JSON_THROW_ON_ERROR);
+        $keys192=array_keys($proof192);sort($keys192);
+        $providerParams192=json_decode($db->setQuery("SELECT params FROM #__extensions WHERE element='paypal'")->loadResult(),true,512,JSON_THROW_ON_ERROR);
+        $expectedEnvironment192=$providerParams192['providers'][0]['sandbox'] ? 'sandbox' : 'live';
+        verifyN189($keys192===['accountHash','checkedAt','environment','orderHash','responseHash','status']
+            && $proof192['environment']===$expectedEnvironment192 && $proof192['orderHash']===hash('sha256','SYNTHETICORDER189')
+            && in_array($proof192['status'],['CREATED','PAYER_ACTION_REQUIRED','VOIDED'],true),
+            'Native audit lost provider evidence: keys='.implode(',',$keys192).'; status='.($proof192['status']??'missing')
+                .'; environment='.($proof192['environment']??'missing').'; order binding='.(int)(($proof192['orderHash']??null)===hash('sha256','SYNTHETICORDER189')));
+    }
     $after=snapshotN189(false);verifyN189(schedulerRunN189() && snapshotN189(false)===$after,'Repeat altered business data.');
 }
 function checkoutSchedulerMatrix189(): void {

@@ -5,6 +5,7 @@
  * CopyMyPage classes come from this repository; data always stays in the test DB.
  * --source-root=C:/wamp/www/joomla6[_test] selects installed native plugins (default: joomla6).
  * --checkout-only limits the run; --runner=.../scheduler-central.php also simulates the existing central runner.
+ * --cleanup-candidate=.../ReservationCleanupService.php tests that installed class instead of repository src/.
  * Concurrency uses two real connections without launching helper processes.
  */
 if (PHP_SAPI !== 'cli') { exit(1); }
@@ -22,7 +23,8 @@ define('JPATH_BASE','C:/wamp/www/joomla6_test');
 require JPATH_BASE.'/includes/defines.php';
 $loader=require JPATH_LIBRARIES.'/vendor/autoload.php';
 require JPATH_ADMINISTRATOR.'/components/com_dpcalendar/vendor/autoload.php';
-$sourceRoot189=getopt('', ['source-root:', 'driver:', 'baseline', 'checkout-only', 'runner:'])['source-root'] ?? 'C:/wamp/www/joomla6';
+$candidateOptions189=getopt('', ['source-root:', 'driver:', 'baseline', 'checkout-only', 'runner:', 'cleanup-candidate:']);
+$sourceRoot189=$candidateOptions189['source-root'] ?? 'C:/wamp/www/joomla6';
 $sourceRoot189=realpath($sourceRoot189);
 if(!in_array(strtolower(str_replace('\\','/',(string)$sourceRoot189)),['c:/wamp/www/joomla6','c:/wamp/www/joomla6_test'],true)){
     throw new RuntimeException('Unexpected installed source root.');
@@ -41,6 +43,17 @@ use Joomla\CMS\Factory;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Component\CopyMyPage\Site\Service\ReservationCleanupService;
 use Joomla\Component\CopyMyPage\Site\Service\NativeReservationService;
+
+$cleanupCandidate189=realpath($candidateOptions189['cleanup-candidate'] ?? dirname(__DIR__,2).'/src/com_copymypage/site/src/Service/ReservationCleanupService.php');
+if(isset($candidateOptions189['cleanup-candidate']) && !in_array(strtolower(str_replace('\\','/',(string)$cleanupCandidate189)),[
+    'c:/wamp/www/joomla6/components/com_copymypage/src/service/reservationcleanupservice.php',
+    'c:/wamp/www/joomla6_test/components/com_copymypage/src/service/reservationcleanupservice.php'],true)){
+    throw new RuntimeException('Unexpected installed cleanup candidate.');
+}
+if(!$cleanupCandidate189){throw new RuntimeException('Cleanup candidate is missing.');}
+require_once $cleanupCandidate189;
+echo 'CLEANUP CANDIDATE ',(new ReflectionClass(ReservationCleanupService::class))->getFileName(),'; SHA256 ',hash_file('sha256',$cleanupCandidate189),PHP_EOL;
+require_once __DIR__.'/action-log-provider-check.php';
 
 function verifyN189(bool $value,string $message): void { if(!$value){throw new RuntimeException($message);} $GLOBALS['assertionsN189']=($GLOBALS['assertionsN189']??0)+1; }
 
@@ -177,7 +190,7 @@ function nativeApp189(Joomla\Database\DatabaseInterface $db, bool $realAcl = fal
 
 require JPATH_BASE.'/configuration.php';$cfg=new JConfig();
 verifyN189($cfg->db==='joomla_db_test' && in_array($cfg->host,['localhost','127.0.0.1','::1'],true),'Unexpected test DB.');
-$options=getopt('', ['source-root:', 'driver:', 'baseline', 'checkout-only', 'runner:']);
+$options=getopt('', ['source-root:', 'driver:', 'baseline', 'checkout-only', 'runner:', 'cleanup-candidate:']);
 $driver=$options['driver'] ?? 'mysqli';
 verifyN189(in_array($driver,['mysqli','mysql'],true),'Unsupported test driver.');
 $driverClass=$driver==='mysql' ? Joomla\Database\Mysql\MysqlDriver::class : Joomla\Database\Mysqli\MysqliDriver::class;
@@ -694,5 +707,18 @@ try {
     echo "PASS real seat row-lock timeout fully rolls back; retry succeeds after lock release\n";
     safeDeletionMatrixN189();
     checkoutSchedulerMatrix189();
+    // Invalid UTF-8 reaches the real audit serializer after native deletion. Only synthetic tables change.
+    [$app,$factory,$container,$actor]=nativeApp189($db);fixtureN189();
+    $db->setQuery('ALTER TABLE #__dpcalendar_bookings MODIFY uid VARBINARY(255) NOT NULL')->execute();
+    $db->setQuery('UPDATE #__dpcalendar_bookings SET uid=0xB131 WHERE id=19001')->execute();
+    $binarySnapshot192=static function() use($db,$tables):string {
+        $rows=[];foreach($tables as $table){$rows[$table]=$db->setQuery('SELECT * FROM #__'.$table)->loadAssocList();}
+        return serialize($rows);
+    };
+    $before192=$binarySnapshot192();$serializationFailed192=false;
+    try{$ids=[19001];$factory->createModel('Booking','Administrator',['ignore_request'=>true])->delete($ids);}
+    catch(JsonException $error){$serializationFailed192=$error->getCode()===JSON_ERROR_UTF8;}
+    verifyN189($serializationFailed192 && $binarySnapshot192()===$before192,'Audit serialization failure committed native deletion or released seats.');
+    echo "PASS Issue 192: real audit JsonException rolls booking, tickets, seats, cart, inventory and audit back together\n";
     echo "RESULT native qualification: ",$GLOBALS['assertionsN189']," assertions passed; real task/ACL/DB; vendor HTTP simulated; external provider/mail calls: 0\n";
 } finally { foreach(array_reverse($created) as $table){$db->getConnection()->query('DROP TABLE IF EXISTS `'.$prefix.$table.'`');} }
