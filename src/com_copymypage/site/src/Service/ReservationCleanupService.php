@@ -653,7 +653,9 @@ final class ReservationCleanupService
                         'originalState'=>(int)$booking->state,'amount'=>(string)$booking->price,'currency'=>$booking->currency,
                         'decision'=>'dpcalendar_native_delete','paymentExclusionProven'=>$automatic,
                         'paymentExclusionBasis'=>$paymentProof['basis'] ?? null,
-                        'providerCheck'=>$paymentProof['providerCheck'] ?? null],JSON_THROW_ON_ERROR),
+                        'providerCheck'=>isset($paymentProof['providerCheck'])
+                            ? json_encode($paymentProof['providerCheck'], JSON_THROW_ON_ERROR)
+                            : null],JSON_THROW_ON_ERROR),
                     'log_date'=>gmdate('Y-m-d H:i:s'),'extension'=>'com_copymypage','user_id'=>(int)$actor->id,
                     'item_id'=>$bookingId,'ip_address'=>'COM_ACTIONLOGS_DISABLED'];
                 $this->db->insertObject('#__action_logs',$audit); $this->assertChanged(1);
